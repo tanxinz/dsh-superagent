@@ -25,3 +25,15 @@ Node 同时满足两仓库引擎要求只是候选条件，不能证明插件兼
 不能通过忽略 peer 校验或只放宽版本字符串把组合改为 VERIFIED。应先选择匹配的发布组合，或完成接口适配、锁文件更新和真实 profile 回归。新增 `scripts/m0-preflight.mjs` 可复验这两个精确声明、Unix socket 和当前 Node 安装目录的开发头文件；它不解析 DSH semver 范围、不校验全部依赖、不替代锁文件/构建/运行验收。
 
 本次新环境复验：Unix socket 为 EPERM；Node 原生 TypeScript 可用；Node-API 开发头文件缺失。后者是绕过 tsx 入口后暴露的第二个前置阻断，不能据此宣称原生 addon 或完整构建通过。详见 [本批接手记录](acceptance/M0-followup-20261112.md)。
+
+## GitHub Actions 复验（run 43177871800）
+
+| 对象 | 冻结安装 | 完整原始构建 | 原始全量测试 | 结论 |
+| --- | --- | --- | --- | --- |
+| SuperAgent 当前源码子树 | PASS | PASS（pnpm check） | 60 文件/1209 项 PASS | 独立回归通过，组合未验 |
+| Harness e8f7b93 原基线 | PASS | PASS | FAIL，900 秒超时且已出现断言失败 | 构建环境阻断已在 CI 解决；组合声明仍不匹配 |
+| Harness d743267 匹配候选 | PASS | PASS | FAIL，900 秒超时且 workflow-ptc 已失败 | CANDIDATE，不标 VERIFIED |
+
+候选为上游正式发布记录中的 `dsh-v0.2.1-alpha.2`（预发布），tag object `6851e496285b2c9670066fdd142e7e46da586649` 指向 commit `d743267388641bc76f17c45ce8b4c231aed1d32c`。其 DSH 为 0.2.1-alpha.2、Cordis 为 4.0.5-alpha.1、Schemastery 为 3.18.5-alpha.1、pnpm 为 11.28.5；仅消除了已发现的两个精确 peer 声明冲突，未证明全部 peer/实际 profile 兼容。当前 gitlink 保持原基线，避免在测试未通过时换版。
+
+CI 使用 Ubuntu 24.04 / Node 24.22.1，保留原生 addon 步骤，没有替换 tsx 入口。旧的本地 EPERM 记录仍然有效，但不再代表这个 CI 环境不能构建。证据见 [CI 验收记录](acceptance/M0-ci-review-20261112.md)。

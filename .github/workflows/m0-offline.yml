@@ -1,0 +1,127 @@
+name: M0 offline review and build
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+env:
+  DSH_TELEMETRY_DISABLED: '1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m0-offline-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24.22.1
+      - name: Preflight regression
+        run: python scripts/ci_record.py --id preflight-tests --cwd . --output artifacts -- node --test scripts/m0-preflight.test.mjs
+      - name: Evidence recorder regression
+        run: python scripts/ci_record.py --id recorder-tests --cwd . --output artifacts -- python -m unittest discover -s scripts -p 'test_*.py' -v
+      - name: Checklist claims and prerequisites
+        run: python scripts/ci_record.py --id checklist-audit --cwd . --output artifacts -- python scripts/checklist_audit.py
+      - name: Upload offline evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: m0-review-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artifacts/**/command.log
+            artifacts/**/result.json
+          if-no-files-found: error
+
+  superagent:
+    needs: review
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24.22.1
+      - name: Frozen install
+        run: python scripts/ci_record.py --id superagent-install --cwd upstream/superagent --output artifacts -- npm exec --yes --package=pnpm@11.7.0 -- pnpm install --frozen-lockfile
+      - name: Full typecheck, tests and build
+        run: python scripts/ci_record.py --id superagent-check --cwd upstream/superagent --output artifacts -- npm exec --yes --package=pnpm@11.7.0 -- pnpm check
+      - name: Verify dependency files stayed frozen
+        run: git diff --exit-code -- upstream/superagent/package.json upstream/superagent/pnpm-lock.yaml
+      - name: Upload offline evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: m0-superagent-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artifacts/**/command.log
+            artifacts/**/result.json
+          if-no-files-found: error
+
+  harness:
+    needs: review
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      # Matches the pinned upstream CI: inline Vitest projects read this variable.
+      DSH_COVERAGE_TEST_TIMEOUT_MS: '90000'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: baseline
+            sha: e8f7b93a344964de3dca1ace9e72b6e4d6de87cb
+          - label: matching-release-candidate
+            sha: d743267388641bc76f17c45ce8b4c231aed1d32c
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Fetch isolated Harness candidate
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: deepseek-ai/deepseek-harness
+          ref: ${{ matrix.sha }}
+          path: harness-under-test
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24.22.1
+      - name: Verify selected source and package manager
+        env:
+          EXPECTED_SHA: ${{ matrix.sha }}
+        run: |
+          test "$(git -C harness-under-test rev-parse HEAD)" = "$EXPECTED_SHA"
+          node -e "const p=require('./harness-under-test/package.json'); if(p.packageManager!=='pnpm@11.28.5') process.exit(1)"
+      - name: Frozen install
+        run: python scripts/ci_record.py --id harness-install --cwd harness-under-test --output artifacts --timeout 1200 -- npm exec --yes --package=pnpm@11.28.5 -- pnpm install --frozen-lockfile
+      - name: Prepare and probe upstream Linux sandbox
+        run: python scripts/ci_record.py --id harness-sandbox-setup --cwd harness-under-test --output artifacts --timeout 180 -- bash scripts/prepare-ci-bubblewrap.sh
+      - name: Complete original build
+        run: python scripts/ci_record.py --id harness-build --cwd harness-under-test --output artifacts --timeout 1200 -- npm exec --yes --package=pnpm@11.28.5 -- pnpm build
+      - name: Reproduce observed workflow cleanup regression
+        run: python scripts/ci_record.py --id harness-workflow-regression --cwd harness-under-test --output artifacts --timeout 180 -- npm exec --yes --package=pnpm@11.28.5 -- pnpm exec vitest run packages/workflow/workflow-ptc/tests/workflow-ptc.spec.ts
+      - name: Complete original unit test command
+        run: python scripts/ci_record.py --id harness-test --cwd harness-under-test --output artifacts --timeout 2400 -- npm exec --yes --package=pnpm@11.28.5 -- pnpm test
+      - name: Verify dependency files stayed frozen
+        run: git -C harness-under-test diff --exit-code -- package.json pnpm-lock.yaml
+      - name: Upload offline evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: m0-harness-${{ matrix.label }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artifacts/**/command.log
+            artifacts/**/result.json
+          if-no-files-found: error

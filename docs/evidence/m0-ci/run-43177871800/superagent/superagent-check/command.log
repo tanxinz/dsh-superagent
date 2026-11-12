@@ -1,0 +1,121 @@
+$ pnpm typecheck && pnpm test && pnpm build
+$ tsc --noEmit
+$ vitest run
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.8 [39m[90m<cwd>[39m
+
+ [32m✓[39m tests/core-engine.spec.ts [2m([22m[2m113 tests[22m[2m)[22m[32m 196[2mms[22m[39m
+ [32m✓[39m tests/sources.spec.ts [2m([22m[2m71 tests[22m[2m)[22m[33m 4468[2mms[22m[39m
+     [33m[2m✓[22m[39m reads each PR once per round and takes its end, auto-merge and CI from that read [33m 339[2mms[22m[39m
+     [33m[2m✓[22m[39m drops the events it reads once the Source is off [33m 1364[2mms[22m[39m
+     [33m[2m✓[22m[39m starts the consumer again after it exits, and is ready once the next run listens [33m 1061[2mms[22m[39m
+ [32m✓[39m tests/policy.spec.ts [2m([22m[2m328 tests[22m[2m)[22m[32m 82[2mms[22m[39m
+ [32m✓[39m tests/migration.spec.ts [2m([22m[2m19 tests[22m[2m)[22m[33m 351[2mms[22m[39m
+ [32m✓[39m tests/runtime.spec.ts [2m([22m[2m91 tests[22m[2m)[22m[33m 5586[2mms[22m[39m
+   [33m[2m✓[22m[39m records worker reports, binds the task PR, ends the ticket on ready without a PR, and relays attention [33m 363[2mms[22m[39m
+ [32m✓[39m tests/model-surface.spec.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 313[2mms[22m[39m
+ [32m✓[39m tests/views.spec.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 185[2mms[22m[39m
+ [32m✓[39m tests/tools.spec.ts [2m([22m[2m26 tests[22m[2m)[22m[33m 1567[2mms[22m[39m
+ [32m✓[39m tests/cards.spec.ts [2m([22m[2m55 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m tests/followups.spec.ts [2m([22m[2m16 tests[22m[2m)[22m[33m 1350[2mms[22m[39m
+ [32m✓[39m tests/store.spec.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 256[2mms[22m[39m
+ [32m✓[39m tests/prompts.spec.ts [2m([22m[2m18 tests[22m[2m)[22m[33m 389[2mms[22m[39m
+ [32m✓[39m tests/commands.spec.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 52[2mms[22m[39m
+ [32m✓[39m tests/runtime-concurrency.spec.ts [2m([22m[2m56 tests[22m[2m)[22m[33m 10184[2mms[22m[39m
+   [33m[2m✓[22m[39m drops a delivery whose ticket a person stopped while it waited for the worker Session [33m 417[2mms[22m[39m
+     [33m[2m✓[22m[39m holds a delivery that reached a worker while a hand-off stopped its subagents until the stop ended [33m 4033[2mms[22m[39m
+   [33m[2m✓[22m[39m reports nothing for a worker whose turn ends while it waits out the backoff of a passing failure [33m 325[2mms[22m[39m
+ [32m✓[39m tests/panel-source.spec.tsx [2m([22m[2m15 tests[22m[2m)[22m[33m 1079[2mms[22m[39m
+ [32m✓[39m tests/panel-prompts.spec.tsx [2m([22m[2m15 tests[22m[2m)[22m[33m 779[2mms[22m[39m
+ [32m✓[39m tests/panel-execution.spec.tsx [2m([22m[2m12 tests[22m[2m)[22m[33m 812[2mms[22m[39m
+ [32m✓[39m tests/environment.spec.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 161[2mms[22m[39m
+ [32m✓[39m tests/assessment.spec.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+ [32m✓[39m tests/registry.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m tests/panel-eval.spec.tsx [2m([22m[2m10 tests[22m[2m)[22m[33m 979[2mms[22m[39m
+ [32m✓[39m tests/panel-overview.spec.tsx [2m([22m[2m13 tests[22m[2m)[22m[33m 508[2mms[22m[39m
+ [32m✓[39m tests/effects.spec.ts [2m([22m[2m13 tests[22m[2m)[22m[33m 403[2mms[22m[39m
+ [32m✓[39m tests/panel-settings.spec.tsx [2m([22m[2m6 tests[22m[2m)[22m[33m 695[2mms[22m[39m
+ [32m✓[39m tests/retry-health.spec.ts [2m([22m[2m29 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m tests/panel-trigger.spec.tsx [2m([22m[2m8 tests[22m[2m)[22m[33m 984[2mms[22m[39m
+   [33m[2m✓[22m[39m reads back the Triggers between the newest page and the earlier ones it shows, once more arrive than a page holds [33m 468[2mms[22m[39m
+ [32m✓[39m tests/deployment.spec.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 122[2mms[22m[39m
+ [32m✓[39m tests/feishu-read.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m tests/service-script.spec.ts [2m([22m[2m15 tests[22m[2m)[22m[33m 6734[2mms[22m[39m
+   [33m[2m✓[22m[39m keeps a stop per profile [33m 303[2mms[22m[39m
+   [33m[2m✓[22m[39m restarts the service, and a restart whose graceful stop timed out does not keep recovery off [33m 1306[2mms[22m[39m
+   [33m[2m✓[22m[39m exits 1 when the started service does not answer in time, and leaves its process running [33m 2126[2mms[22m[39m
+   [33m[2m✓[22m[39m does not signal a process that took the recorded service PID, and keeps a stop that timed out [33m 1358[2mms[22m[39m
+ [32m✓[39m tests/draft.spec.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m tests/delivery.spec.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 47[2mms[22m[39m
+ [32m✓[39m tests/client.spec.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 138[2mms[22m[39m
+ [32m✓[39m tests/http.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m tests/bundle-patch.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 49[2mms[22m[39m
+ [32m✓[39m tests/panel-deployment.spec.tsx [2m([22m[2m7 tests[22m[2m)[22m[33m 887[2mms[22m[39m
+ [32m✓[39m tests/settings.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 297[2mms[22m[39m
+ [32m✓[39m tests/stage.spec.ts [2m([22m[2m31 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m tests/github-read.spec.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m tests/mesh-m0.spec.ts [2m([22m[2m11 tests[22m[2m)[22m[33m 1884[2mms[22m[39m
+   [33m[2m✓[22m[39m recovers the actual SQLite database after SIGKILL at before-enqueue [33m 514[2mms[22m[39m
+   [33m[2m✓[22m[39m recovers the actual SQLite database after SIGKILL at before-commit [33m 370[2mms[22m[39m
+   [33m[2m✓[22m[39m recovers the actual SQLite database after SIGKILL at after-commit [33m 419[2mms[22m[39m
+   [33m[2m✓[22m[39m proves in-flight ownership is volatile: a crash after an external effect permits duplicate execution [33m 495[2mms[22m[39m
+ [32m✓[39m tests/feishu-image.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+ [32m✓[39m tests/controls.spec.tsx [2m([22m[2m6 tests[22m[2m)[22m[32m 138[2mms[22m[39m
+ [32m✓[39m tests/admission-context.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m tests/panel-panel.spec.tsx [2m([22m[2m8 tests[22m[2m)[22m[33m 420[2mms[22m[39m
+ [32m✓[39m tests/navigation.spec.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m tests/role-models.spec.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+ [32m✓[39m tests/docs.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m tests/timeline.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 54[2mms[22m[39m
+ [32m✓[39m tests/background.spec.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m tests/prompt-config.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m tests/health.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 251[2mms[22m[39m
+ [32m✓[39m tests/locales.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m tests/marks.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m tests/index.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 60[2mms[22m[39m
+ [32m✓[39m tests/passes.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m tests/markdown.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m tests/styles.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 32[2mms[22m[39m
+ [32m✓[39m tests/class-docs.spec.ts [2m([22m[2m1 test[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m tests/cache.spec.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m tests/queue.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 1044[2mms[22m[39m
+   [33m[2m✓[22m[39m delivers the relays, subscription changes and notifications that a version before the effect queue kept, once the migration queued them [33m 1005[2mms[22m[39m
+ [32m✓[39m tests/outbox.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 980[2mms[22m[39m
+   [33m[2m✓[22m[39m holds every message while processing is paused, and sends it once processing resumes [33m 942[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m60 passed[39m[22m[90m (60)[39m
+[2m      Tests [22m [1m[32m1209 passed[39m[22m[90m (1209)[39m
+[2m   Start at [22m 07:48:07
+[2m   Duration [22m 24.26s[2m (transform 3.18s, setup 0ms, import 11.86s, tests 44.84s, environment 7.65s)[22m
+
+$ tsdown
+[34mℹ[39m [34mtsdown v0.22.14[39m powered by [38;2;255;126;23mrolldown v1.2.7[39m
+[34mℹ[39m config file: [4m<cwd>/tsdown.config.ts[24m 
+[34mℹ[39m entry: [34msrc/index.ts, src/sources/github.ts, src/sources/feishu.ts[39m
+[34mℹ[39m target: [34mes2024[39m
+[34mℹ[39m tsconfig: [34mtsconfig.json[39m
+[34mℹ[39m entry: [34msrc/client/index.tsx[39m
+[34mℹ[39m target: [34mnode22.19.0[39m
+[34mℹ[39m tsconfig: [34mtsconfig.json[39m
+[34mℹ[39m Build start
+
+[43m WARN [49m We recommend using the ESM format instead of CommonJS.
+The ESM format is compatible with modern platforms and runtimes, and most new libraries are now distributed only in ESM format.
+Learn more at https://nodejs.org/en/learn/modules/publishing-a-package#how-did-we-get-here
+
+[34mℹ[39m [33m[CJS][39m [2mlib/[22m[1mclient.js[22m  [2m358.52 kB[22m [2m│ gzip: 86.64 kB[22m
+[34mℹ[39m [33m[CJS][39m 1 files, total: 358.52 kB
+[32m✔[39m Build complete in [32m1779ms[39m
+[34mℹ[39m [34m[ESM][39m [2mlib/[22m[1mindex.js[22m                 [2m450.63 kB[22m [2m│ gzip: 127.60 kB[22m
+[34mℹ[39m [34m[ESM][39m [2mlib/[22m[1mgithub-watch.js[22m          [2m 33.91 kB[22m [2m│ gzip:  11.00 kB[22m
+[34mℹ[39m [34m[ESM][39m [2mlib/[22m[1mfeishu-watch.js[22m          [2m  0.60 kB[22m [2m│ gzip:   0.29 kB[22m
+[34mℹ[39m [34m[ESM][39m [2mlib/[22mfeishu-Df9wX1sN.js       [2m 48.38 kB[22m [2m│ gzip:  14.62 kB[22m
+[34mℹ[39m [34m[ESM][39m [2mlib/[22mpoll-Dh7J1cdM.js         [2m 38.48 kB[22m [2m│ gzip:  13.83 kB[22m
+[34mℹ[39m [34m[ESM][39m [2mlib/[22mgithub-pull-gSbjzypm.js  [2m 25.42 kB[22m [2m│ gzip:   8.23 kB[22m
+[34mℹ[39m [34m[ESM][39m [2mlib/[22m[32m[1mindex.d.ts[22m[39m               [2m 24.97 kB[22m [2m│ gzip:   7.72 kB[22m
+[34mℹ[39m [34m[ESM][39m [2mlib/[22m[32m[1mfeishu-watch.d.ts[22m[39m        [2m  5.98 kB[22m [2m│ gzip:   2.00 kB[22m
+[34mℹ[39m [34m[ESM][39m [2mlib/[22m[32m[1mgithub-watch.d.ts[22m[39m        [2m  0.39 kB[22m [2m│ gzip:   0.22 kB[22m
+[34mℹ[39m [34m[ESM][39m [2mlib/[22m[32mkind-CC2z1Ko1.d.ts[39m       [2m 35.84 kB[22m [2m│ gzip:   9.06 kB[22m
+[34mℹ[39m [34m[ESM][39m [2mlib/[22m[32mintake-BntR4bhz.d.ts[39m     [2m 29.31 kB[22m [2m│ gzip:   9.22 kB[22m
+[34mℹ[39m [34m[ESM][39m 11 files, total: 693.92 kB
+[32m✔[39m Build complete in [32m1925ms[39m

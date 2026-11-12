@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "check_id": "harness-workflow-regression",
+  "mode": "OFFLINE_BUILD_OR_TEST",
+  "started_at": "2026-11-12T13:54:10.549284+00:00",
+  "finished_at": "2026-11-12T13:54:30.720496+00:00",
+  "duration_seconds": 20.171,
+  "command": [
+    "npm",
+    "exec",
+    "--yes",
+    "--package=pnpm@11.28.5",
+    "--",
+    "pnpm",
+    "exec",
+    "vitest",
+    "run",
+    "packages/workflow/workflow-ptc/tests/workflow-ptc.spec.ts"
+  ],
+  "source_commit": "d743267388641bc76f17c45ce8b4c231aed1d32c",
+  "exit_code": 1,
+  "timed_out": false,
+  "launch_error": null,
+  "status": "FAIL",
+  "log": "command.log",
+  "log_sha256": "8ba3bb21a907573ff3414a46e7def31f48747cdb5d5c797cc39b5ed484a6cd9d",
+  "lockfile_sha256": "b45f8695fb0dca90d3ed07afc766e923356539962706ee36ac8cdb396e6d734d",
+  "online_sdk": "NOT_RUN",
+  "real_session": "NOT_RUN",
+  "m0_exit": "BLOCKED"
+}

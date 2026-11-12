@@ -1,0 +1,106 @@
+{
+  "run_id": 43177871800,
+  "head_commit": "368e0de14a1d51c36383bb04cb4715ea6e8ab813",
+  "url": "https://github.com/tanxinz/dsh-superagent/actions/runs/43177871800",
+  "artifacts": [
+    {
+      "label": "review",
+      "artifact_id": 13925560392,
+      "archive_sha256": "c7ef09ced952b6dbe48c68b2544da5d57a0aa3aa4d842d09aa7f38f43654ad88",
+      "checks": [
+        {
+          "id": "recorder-tests",
+          "status": "PASS",
+          "exit_code": 0,
+          "timed_out": false,
+          "log_sha256": "2f12fb505da60d5f74ca8061432ecbc68489a2e2b10ba270a5d2a3d5ddfc1087"
+        },
+        {
+          "id": "preflight-tests",
+          "status": "PASS",
+          "exit_code": 0,
+          "timed_out": false,
+          "log_sha256": "e4252f58efaae8ad1b7ab42a7c05e8cea6b8d6df9bd9a3c8ac45781f34ff68e4"
+        }
+      ]
+    },
+    {
+      "label": "superagent",
+      "artifact_id": 13925280982,
+      "archive_sha256": "9de9396c5a220451eeec640306c56e441a769aa2b55707887a12ad1fc1ca11ea",
+      "checks": [
+        {
+          "id": "superagent-install",
+          "status": "PASS",
+          "exit_code": 0,
+          "timed_out": false,
+          "log_sha256": "2e28c45c9642e4e4c27b1f1cd3f8fb983d6386020d643b39d5d449ebbb510aa2"
+        },
+        {
+          "id": "superagent-check",
+          "status": "PASS",
+          "exit_code": 0,
+          "timed_out": false,
+          "log_sha256": "a83a99a818f91586f44487f60e0cff481b8d88b64d42ca74157627527d1c0bf1"
+        }
+      ]
+    },
+    {
+      "label": "harness-candidate",
+      "artifact_id": 13925518189,
+      "archive_sha256": "f2736981431ba909ab53a0e5fa60954d0cefc0caee572806934ca4bf28142232",
+      "checks": [
+        {
+          "id": "harness-install",
+          "status": "PASS",
+          "exit_code": 0,
+          "timed_out": false,
+          "log_sha256": "ddfa3c69f6ff692d0a3c4c76a55b72f5a96f6f6a2b1d026403d415230dcda01b"
+        },
+        {
+          "id": "harness-build",
+          "status": "PASS",
+          "exit_code": 0,
+          "timed_out": false,
+          "log_sha256": "e011c002e0901ad84d8c0cbadeaef7ea66cbeffcac68dbebe98f655e333d7652"
+        },
+        {
+          "id": "harness-test",
+          "status": "FAIL",
+          "exit_code": -9,
+          "timed_out": true,
+          "log_sha256": "11a60b923e2ca71bdf6123645cc054915cb3cae3cc50cafb16a9d6f94e715a45"
+        }
+      ]
+    },
+    {
+      "label": "harness-baseline",
+      "artifact_id": 13925254473,
+      "archive_sha256": "ce0de882631a8f7d70b27109b95f0a94fd6d62a735963c9eb2604f88bcffd186",
+      "checks": [
+        {
+          "id": "harness-install",
+          "status": "PASS",
+          "exit_code": 0,
+          "timed_out": false,
+          "log_sha256": "e6a18ddcf42820668388e0e3288c34b2d41e1f59b01c18c3f923c0b2688336d0"
+        },
+        {
+          "id": "harness-build",
+          "status": "PASS",
+          "exit_code": 0,
+          "timed_out": false,
+          "log_sha256": "822e657058103e1803e104288276b2f97dd4681894c2d1875fbc7d960cf1ea89"
+        },
+        {
+          "id": "harness-test",
+          "status": "FAIL",
+          "exit_code": -9,
+          "timed_out": true,
+          "log_sha256": "d6198f6d866a83dce2357370decdd5abeab76e3d52ed60cc4ecbdf4f5471c301"
+        }
+      ]
+    }
+  ],
+  "m0_exit": "BLOCKED"
+}

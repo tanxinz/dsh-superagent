@@ -12,6 +12,18 @@ const peerPaths = {
 };
 const exactVersion = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
 
+/** Only the audited upstream engine expressions are supported; new ranges need review. */
+export function checkNodeEngine(range, version) {
+  const match = /^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.exec(version ?? '');
+  if (!match) return 'UNTESTED';
+  const [major, minor] = match.slice(1).map(Number);
+  if (range === '>=24.9.0') return major > 24 || (major === 24 && minor >= 9) ? 'MATCH' : 'MISMATCH';
+  if (range === '^22.19.0 || >=24.0.0') {
+    return major >= 24 || (major === 22 && minor >= 19) ? 'MATCH' : 'MISMATCH';
+  }
+  return 'UNTESTED';
+}
+
 export function compareExactPeer(required, actual) {
   if (typeof required !== 'string' || typeof actual !== 'string' || !exactVersion.test(actual)) {
     throw new Error('Missing or invalid peer version');
@@ -40,6 +52,10 @@ export function inspectManifests(root) {
   return {
     manifests_sha256: files,
     declaredPackageManagers: { superagent: superagent.packageManager, harness: harness.packageManager },
+    nodeCompatibility: [superagent, harness].map(p => ({
+      name: p.name, required: p.engines?.node, actual: process.version,
+      status: checkNodeEngine(p.engines?.node, process.version),
+    })),
     dsh: { required: superagent.engines?.dsh, actual: harness.version, status: 'UNTESTED' },
     exactPeers,
     declarationCompatibility: exactPeers.some(x => x.status === 'MISMATCH')
@@ -63,6 +79,7 @@ export async function probeUnixSocket() {
 
 export function summarize(manifests, environment) {
   const blocked = manifests.declarationCompatibility !== 'EXACT_PEERS_MATCH_ONLY'
+    || manifests.nodeCompatibility?.length !== 2 || !manifests.nodeCompatibility.every(x => x.status === 'MATCH')
     || environment.unixSocket.status !== 'PASS' || environment.nodeApiHeaders !== 'PRESENT'
     || environment.nativeTypeScript !== true;
   return {

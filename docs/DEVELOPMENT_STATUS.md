@@ -2,6 +2,17 @@
 
 更新日期：2026-11-12（北京时间）。本批继续执行 M0；阶段状态 BLOCKED，M0-14 未通过。
 
+## 当前接手：自动检查与 CI 复验
+
+- 工作分支 `feat/m0-ci-review-20261112`，PR #3，基于 PR #2；按原清单 100 项任务的依赖顺序推进，未完成项不勾选。
+- 已运行 GitHub Actions 43177871800：SuperAgent 冻结安装、60 文件/1209 测试、类型检查和构建 PASS，依赖文件无漂移。Harness 原基线 e8f7b93 与匹配候选 d743267 的冻结安装及完整原始构建均 PASS。
+- 两套 Harness 原始全量测试均在 900 秒处超时，且已出现真实失败用例。共同失败为 workflow-ptc 的取消后延迟发布清理；基线另有 worktree/forge 超时失败。全量测试保持 FAIL，不能把已通过构建当作组合通过。
+- 找到发布候选 dsh-v0.2.1-alpha.2（d743267388641bc76f17c45ce8b4c231aed1d32c），Cordis 4.0.5-alpha.1、Schemastery 3.18.5-alpha.1 声明匹配。尚不切换 Harness gitlink，真实 profile/Session 未验收。
+- 自动审查修复：上一版预检未检查 Node engines，现增加已核对表达式的判定，未知表达式保留 UNTESTED，9 项回归通过。新增清单结构/前置依赖/DONE 证据声明检查，防止缺项或提前勾选；它不是实际能力认证。
+- 新增 CI 证据记录器，记录失败/信号/超时和文件哈希，在线 SDK/真实 Session 显式 NOT_RUN。14 项 Python 回归通过（记录器 8、清单审查 6）。新版 CI 待复跑。
+- 下一步先独立复现 workflow-ptc，读取完整断言再修复；全量测试时限扩大到 2400 秒用于取得完整结果，原 900 秒失败记录保留。
+- 完整清单尚未完成；M0-01/02/03/08/09/13 仍 IN_PROGRESS，M0-14/M1 仍 BLOCKED。详细记录见 acceptance/M0-ci-review-20261112.md。
+
 ## 后续接手批次：M0-01 预检
 
 - 执行负责人：当前获授权开发会话；分支 `fix/m0-baseline-verification-20261112`，基于 `bc841de6c78d6ebcb8e0d812eb13473e09d80a68`。人工合并审核人尚未指定。

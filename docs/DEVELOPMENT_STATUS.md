@@ -2,6 +2,16 @@
 
 更新日期：2026-11-12（北京时间）。本批继续执行 M0；阶段状态 BLOCKED，M0-14 未通过。
 
+## 后续接手批次：M0-01 预检
+
+- 执行负责人：当前获授权开发会话；分支 `fix/m0-baseline-verification-20261112`，基于 `bc841de6c78d6ebcb8e0d812eb13473e09d80a68`。人工合并审核人尚未指定。
+- 范围：依赖声明及本地构建前置诊断、6 项预检回归、独立证据目录；未改 SuperAgent 产品源码或 Harness gitlink。
+- 新确认：Cordis 和 Schemastery 均不满足 SuperAgent 精确 peer；当前环境最小 Unix socket 报 EPERM；直接执行锁版 native 构建脚本又在 Node-API 头文件检查处失败。
+- 已实现：`scripts/m0-preflight.mjs`，不依赖 npm 安装，输出输入文件哈希及受限结论。6 项测试 PASS；真实预检 BLOCKED（退出 2），不是验收失败被隐藏。
+- 限制：仅经连接器取得所需源码快照并逐文件核对 Git blob；本地 GitHub/npm 直连超时，未完成 clone/冻结安装/完整构建或原有 1209 项测试复跑。未使用远端设备。
+- 下一步：具备网络、Unix socket、对应 Node 开发头文件的环境中，选择匹配发布组合或适配组合，再按原始完整命令安装/构建/测试；之后继续 M0-02。M0-01 仍 IN_PROGRESS，M0-14/M1 仍 BLOCKED。
+- 本批详细验收和可重复命令见 [M0 follow-up](acceptance/M0-followup-20261112.md)；原始验收与日志保持原样。
+
 ## 已提交的代码与证据
 
 1. SuperAgent 由上游基线引用转为仓库内可编辑目录 upstream/superagent，保留许可证。

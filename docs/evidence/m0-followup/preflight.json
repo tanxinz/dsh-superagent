@@ -1,0 +1,48 @@
+{
+  "manifests_sha256": {
+    "upstream/superagent/package.json": "f5170d812137dd370c568decb481e19f4da9a3d1fd7bad341a0f07942020a559",
+    "upstream/harness/package.json": "61f908005c8c0cdfe532bf888400b0628c3fa6e8946306f2f90fd5c73dc4fdba",
+    "upstream/harness/vendor/cordis/package.json": "f2f434042ae760e4a19a792873a174c9c69b5a984d0a3a196a0b5cfc42e1f2f1",
+    "upstream/harness/vendor/schemastery/package.json": "0229c7870c40fe6c33b8b3224ea835c5c5cb2194503d596d0b56121ec71c5ae0"
+  },
+  "declaredPackageManagers": {
+    "superagent": "pnpm@11.7.0",
+    "harness": "pnpm@11.28.5"
+  },
+  "dsh": {
+    "required": "^0.2.1-alpha.2",
+    "actual": "0.2.2-rc.2",
+    "status": "UNTESTED"
+  },
+  "exactPeers": [
+    {
+      "name": "@deepseek-ai/cordis",
+      "required": "4.0.5-alpha.1",
+      "actual": "4.1.0",
+      "status": "MISMATCH"
+    },
+    {
+      "name": "@deepseek-ai/schemastery",
+      "required": "3.18.5-alpha.1",
+      "actual": "3.19.0",
+      "status": "MISMATCH"
+    }
+  ],
+  "declarationCompatibility": "MISMATCH",
+  "environment": {
+    "node": "v24.22.1",
+    "platform": "linux",
+    "arch": "x64",
+    "nativeTypeScript": true,
+    "nodeApiHeaders": "MISSING",
+    "unixSocket": {
+      "status": "BLOCKED",
+      "code": "EPERM"
+    }
+  },
+  "preflight": "BLOCKED",
+  "fullBuild": "NOT_RUN",
+  "fullTests": "NOT_RUN",
+  "runtimeCompatibility": "UNTESTED",
+  "m0Exit": "BLOCKED"
+}

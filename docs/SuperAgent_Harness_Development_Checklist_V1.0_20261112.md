@@ -13,7 +13,9 @@
 
 > **M0 执行更新（2026-11-12，北京时间）**：已导入可编辑 SuperAgent 源码，修复飞书健康状态覆盖与 Store 异步事务边界，增加 11 项原生 Effects/事务/真实 SIGKILL 探针；`pnpm check` 的类型检查、60 个测试文件 / 1209 项测试与构建全部通过。M0-01/02/03/08/09/13 处于 IN_PROGRESS；其余任务保留原状态。Harness 构建遇 IPC EPERM，且最新源码与原型锁定依赖版本不同，组合兼容性仍未验证。M0-14 不通过，不进入 M1 集成。证据见 [M0 验收记录](acceptance/M0.md) 和 [当前交接状态](DEVELOPMENT_STATUS.md)。
 
-> **CI 复验更新（2026-11-12）**：PR #3 / run 43177871800 已完成 SuperAgent 1209 项回归及两套 Harness 完整构建；Harness 全量测试均超时且有已观察失败，未准出。新增自动检查和预检缺口修复，详见 [CI 验收记录](acceptance/M0-ci-review-20261112.md)。未满足完整验收的任务保持未勾选。
+> **首轮 CI 历史记录（2026-11-12）**：PR #3 / run 43177871800 已完成 SuperAgent 1209 项回归及两套 Harness 完整构建；Harness 全量测试均超时且有已观察失败，未准出。新增自动检查和预检缺口修复，详见 [CI 验收记录](acceptance/M0-ci-review-20261112.md)。未满足完整验收的任务保持未勾选。
+
+> **Bridge 接续更新（2026-11-12）**：第三轮两版 Harness 原始全量已通过，失败历史继续保留；PR #5 的新一轮两版原始全量也已通过，完整原包另存。已新增原生 M0 Bridge、4 项 Cordis 生命周期回归及真实未配置 profile 两次启停，完整 pnpm check 为 61 文件/1213 项通过。M0-04 改为 IN_PROGRESS，前置和服务/权限验收未闭合，不勾选整项。见 [Bridge 验收记录](acceptance/M0-bundle-profile-20261112.md)。
 
 ## 1. 使用方式与开发边界
 
@@ -78,7 +80,7 @@
 #### M0-01 建立可复现版本基线
 
 - [ ] **状态：IN_PROGRESS**｜优先级：P0｜责任角色：平台工程。
-- **本轮实证（未整项完成）**：原基线与匹配发布候选的冻结安装、完整构建均在 CI 通过；全量测试 FAIL，组合 profile 未验，详见 acceptance/M0-ci-review-20261112.md。
+- **本轮实证（未整项完成）**：第三轮原基线与匹配发布候选的冻结安装、完整构建、原始全量均 PASS；PR #5 新一轮两版原始全量亦 PASS。另新增隔离 npm fixture 和真实未配置 profile 两次启停，组合仍为 CANDIDATE；不改子模块。详见 acceptance/M0-bundle-profile-20261112.md。
 - **前置任务**：无；本轮起点。设计依据：§2.4、§17.2。
 - **开发内容**：取得 Harness 与 SuperAgent 固定 Commit；分别使用各仓库声明的 pnpm 与 lockfile；核对 Node 引擎、DSH/Cordis 解析版本、Jev SDK 候选版本；记录安装、类型检查、测试和构建命令。设计中的版本只作为候选，不直接写成已兼容。
 - **交付物/建议落点**：docs/compatibility-matrix.md、docs/runtime-baseline.json；两仓库 SHA、lockfile SHA-256 与构建日志。
@@ -102,7 +104,8 @@
 
 #### M0-04 完成 Bundle 桥接生命周期
 
-- [ ] **状态：TODO**｜优先级：P0｜责任角色：平台工程。
+- [ ] **状态：IN_PROGRESS**｜优先级：P0｜责任角色：平台工程。
+- **本轮实证（未整项完成）**：原生 Runtime ready 后安装 Bridge；真实 Cordis 重启/卸载及真实未配置 profile 两次启停通过。M0-01/02/03 前置仍未闭合，Service/权限未验，不勾选整项。
 - **前置任务**：M0-03。设计依据：§5.2.1、§14.1.0。
 - **开发内容**：在 src/extensions/mesh/index.ts 安装最小桥接；沿用 src/index.ts、Runtime 和已有 cordis.patch.yml；实现启动、注销、重载时资源释放，防止重复注册。
 - **交付物/建议落点**：桥接入口、配置树快照、installed/disposed 日志、生命周期集成用例。
@@ -175,7 +178,7 @@
 #### M0-13 搭建测试、故障注入与证据骨架
 
 - [ ] **状态：IN_PROGRESS**｜优先级：P0｜责任角色：测试工程。
-- **本轮实证（未整项完成）**：已接入真实 GitHub Actions、证据记录与清单结构审查；上游完整回归有失败，在线/权限/服务前置仍未闭合，不勾选完成。
+- **本轮实证（未整项完成）**：已接入真实 GitHub Actions、证据记录与清单结构审查；失败历史保留，第三轮两版全量已通过；本批增加真实未配置 profile CI 骨架，在线/权限/服务前置仍未闭合，不勾选完成。
 - **前置任务**：M0-06、M0-09、M0-12。设计依据：§16.1、§16.3、§17.2。
 - **开发内容**：沿用 Vitest/tsc/tsdown 和仓库命令；配置临时独立 SQLite、可信时钟、隔离 Mock RPC/Channel、恶意输入 Fixture、进程强杀点和证据目录；CI 区分离线确定性测试与在线 SDK/Session 测试。
 - **交付物/建议落点**：test/fixtures、test/integration、test/faults；docs/evidence-template.md；CI 流程。

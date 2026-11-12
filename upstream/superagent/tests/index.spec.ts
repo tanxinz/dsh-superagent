@@ -21,7 +21,7 @@ function context() {
     on: vi.fn((name: string, handler: () => void) => { handlers.set(name, handler) }),
     inject: vi.fn((_services: string[], callback: (child: unknown) => void) => { callback({ effect: (effect: () => unknown) => effect(), settings: { configure } }) }),
     effect: vi.fn(),
-    fiber: { restart: vi.fn(async () => {}) },
+    fiber: { restart: vi.fn(async () => {}), assertActive: vi.fn() },
     get: vi.fn((name: string) => name === 'settings' ? { describe } : undefined),
     logger: { info: vi.fn(), error: vi.fn() },
   }

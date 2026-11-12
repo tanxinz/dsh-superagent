@@ -1,0 +1,17 @@
+{
+  "base_commit": "5f8aba71847651926b1432c7bd15c4294c5bb05f",
+  "tested_worktree_sha256": {
+    "upstream/superagent/src/index.ts": "714a51b2a6dbc399a4a897ab11501ce8be5222b13f3edfc6bea737ee8d0ad212",
+    "upstream/superagent/src/extensions/mesh/index.ts": "766de5b0cc55fa244aefbf6327d421645c11c6d113f5f16220ee9aef5ee8ffff",
+    "upstream/superagent/tests/mesh-bridge.spec.ts": "b4bf697db131165403d9ec39a128a61bbf0f97d06d5502e6bbb7d31cbd46ae10",
+    "upstream/superagent/tests/index.spec.ts": "153aed3347445ee94109f149c04c723c9f12ff081c412e1a3a148372d2d6b7dc",
+    "upstream/superagent/pnpm-lock.yaml": "ba6b997c448984a04b28eeb5b620c14c7cfeff5eb170e1abd6e0734007405c39",
+    "scripts/m0-profile-probe.mjs": "2672213d38e5d317071c1e6145ad48a3e2c2d3f73d5415ed3eb57407fafb6918",
+    "scripts/fixtures/m0-profile-runtime/package.json": "03c2d61882911768216fa0b49bae7b18658e8f45b6c2b869a79301d019793deb",
+    "scripts/fixtures/m0-profile-runtime/package-lock.json": "a24c63d231ed2f8a7b3ff848151f79c0d2a07121546036050130a4b19b01a83b",
+    ".github/workflows/m0-offline.yml": "a810f8eb5bf4ad4d5bfc2b4b76f3d037dd71ab5c65cee0f745d1eae313bb74a9"
+  },
+  "built_entry_sha256": "7fe889b1a04dabb27a489679d179b7023ff4d232ed32cd252762c6d37b01acc4",
+  "npm_release_source_mapping": "UNVERIFIED",
+  "m0_exit": "BLOCKED"
+}

@@ -10,6 +10,7 @@
 | src/sources/feishu-loops.ts | stdout 与 stderr 没有全局顺序，迟到 ready 覆盖事件解析错误；此项为基线修复例外，不扩展来源权限 | sources.spec 的原有失败复现与修复；完整 pnpm check |
 | tests/store.spec.ts；tests/mesh-m0.spec.ts；tests/fixtures/mesh-crash.ts | 验证拒绝、联合事务、真实杀进程恢复与重复执行边界 | 1209 项测试全部通过 |
 | docs/007-architecture.md | 原生文档测试要求登记新增测试文件 | docs.spec 通过 |
+| src/index.ts；src/extensions/mesh/index.ts | 在原生 Runtime ready 后安装最小 M0 Bridge，生命周期由原生 fiber 管理，避免重复安装；不增加领域写入或第二个服务端 | 真实 Cordis 重启/卸载回归；61 文件/1213 测试、类型检查、构建；真实未配置 profile 两次启动/关闭 |
 
 Store 的运行时检查只能保证拒绝 async 回调及返回的异步结果，不可能撤销同步回调在返回前擅自启动的网络或其他副作用；这些调用仍必须放在事务外，并由后续 M0-13 静态检查约束。
 

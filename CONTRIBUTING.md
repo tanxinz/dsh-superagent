@@ -29,6 +29,8 @@ npm exec --yes --package=pnpm@11.7.0 -- pnpm check
 
 新增测试和源码模块必须同步登记到该目录 docs/007-architecture.md 的 Tests / Modules 表，保留原生文档测试。pnpm check 包含类型检查、全部单元测试和构建。M0 崩溃探针仅使用临时 SQLite 和无害文件，不调用模型、不使用业务凭据。
 
-Harness 自有 pnpm 为 11.28.5；当前完整构建受到 IPC 限制阻断，详情见 M0 验收记录。配置树、真实 Session、隔离和在线 SDK 测试缺失时记 BLOCKED/NOT_RUN，不能记 PASS。CI 门禁仍待 M0-13 补全。
+Harness 自有 pnpm 为 11.28.5；两版完整构建已在 GitHub CI 通过，本地 IPC 阻断只保留为历史证据。最新全量结果及完整日志见 docs/acceptance/M0-ci-process-review-20261112.md。配置树、真实 Session、隔离和在线 SDK 测试缺失时记 BLOCKED/NOT_RUN，不能记 PASS。CI 门禁仍待 M0-13 补全。
+
+CI 命令使用 scripts/ci_record.py 留存退出码、超时、取消信号和脱敏完整日志；scripts/evidence_audit.py 核对原始命令、日志摘要、必需证据和可选源码 SHA。证据完整性 PASS 与命令 PASS 分别报告，均不授予 M0 准出。SIGKILL、runner 丢失或外部平台未上传工件时，缺失结果保持 UNKNOWN，不按取消处理成功。
 
 提交前检查 diff，排除 .env、Token、私钥、生产数据、node_modules 与缓存。日志须脱敏并记录源码版本、退出码和证据引用。

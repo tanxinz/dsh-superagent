@@ -2,6 +2,8 @@
 
 记录日期：2026-11-12（北京时间）。本次运行 Node 24.22.1，Linux x64。
 
+首表保留首次本地批次结果；CI 当前结果以文末及 [接手复审记录](acceptance/M0-ci-process-review-20261112.md) 为准，不将历史 IPC 失败视为当前 CI 构建状态。
+
 | 对象 | 声明 / 实际版本 | 安装 | 类型检查 / 测试 / 构建 | 组合结论 |
 | --- | --- | --- | --- | --- |
 | SuperAgent 原型及本次补丁 | 基线 8c32a9d；pnpm 11.7.0；DSH 包 0.2.1-alpha.2；Cordis 4.0.5-alpha.1 | 按声明 pnpm 和 frozen-lockfile 成功 | tsc 通过；1209/1209 测试通过；tsdown 通过 | CANDIDATE，尚缺真实 profile 与 Session 等验收 |
@@ -37,3 +39,7 @@ Node 同时满足两仓库引擎要求只是候选条件，不能证明插件兼
 候选为上游正式发布记录中的 `dsh-v0.2.1-alpha.2`（预发布），tag object `6851e496285b2c9670066fdd142e7e46da586649` 指向 commit `d743267388641bc76f17c45ce8b4c231aed1d32c`。其 DSH 为 0.2.1-alpha.2、Cordis 为 4.0.5-alpha.1、Schemastery 为 3.18.5-alpha.1、pnpm 为 11.28.5；仅消除了已发现的两个精确 peer 声明冲突，未证明全部 peer/实际 profile 兼容。当前 gitlink 保持原基线，避免在测试未通过时换版。
 
 CI 使用 Ubuntu 24.04 / Node 24.22.1，保留原生 addon 步骤，没有替换 tsx 入口。旧的本地 EPERM 记录仍然有效，但不再代表这个 CI 环境不能构建。证据见 [CI 验收记录](acceptance/M0-ci-review-20261112.md)。
+
+## 第三轮全量复验（run 43232199162）
+
+匹配候选 d743267 的完整原始 pnpm test 已退出 0：1975 文件通过、17 跳过；41652 测试通过、1 预期失败、185 跳过。完整构建、沙箱探针与定向测试也通过。基线 e8f7b93 的原始全量也已退出 0：2701 文件通过、20 跳过；56662 测试通过、1 预期失败、199 跳过。独立测试通过不证明 SuperAgent 组合 profile、真实 Session 或全部 peer 兼容；候选仍为 CANDIDATE，gitlink 不切换，M0 仍 BLOCKED。

@@ -10,6 +10,39 @@ import re
 import signal
 import subprocess
 import time
+from contextlib import contextmanager
+
+
+class CommandInterrupted(Exception):
+    def __init__(self, signum):
+        self.signum = signum
+
+
+@contextmanager
+def interruption_handlers():
+    previous = {}
+
+    def interrupt(signum, _frame):
+        # Further cancellation signals must not interrupt cleanup or evidence writes.
+        for number in previous:
+            signal.signal(number, signal.SIG_IGN)
+        raise CommandInterrupted(signum)
+
+    try:
+        for number in (signal.SIGINT, signal.SIGTERM):
+            previous[number] = signal.signal(number, interrupt)
+        yield
+    finally:
+        for number, handler in previous.items():
+            signal.signal(number, handler)
+
+
+def stop_group(child):
+    try:
+        os.killpg(child.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+    return child.wait()
 
 
 def redact(text, cwd):
@@ -38,9 +71,10 @@ def record_command(command, cwd, output, check_id, timeout):
     target.mkdir(parents=True, exist_ok=False)  # never silently overwrite an attempt
     started = datetime.datetime.now(datetime.timezone.utc).isoformat()
     start = time.monotonic()
-    code, error, timed_out = None, None, False
+    code, error, timed_out, interrupted = None, None, False, None
+    child = None
     raw = target / 'command.raw'
-    with raw.open('wb') as log:
+    with raw.open('wb') as log, interruption_handlers():
         try:
             child = subprocess.Popen(command, cwd=cwd, stdout=log, stderr=subprocess.STDOUT,
                                      start_new_session=True)
@@ -48,12 +82,11 @@ def record_command(command, cwd, output, check_id, timeout):
                 code = child.wait(timeout=timeout)
             except subprocess.TimeoutExpired:
                 timed_out = True
-                # CI targets Linux. Stop descendants too, not only the package-manager parent.
-                try:
-                    os.killpg(child.pid, signal.SIGKILL)
-                except ProcessLookupError:
-                    pass
-                code = child.wait()
+                code = stop_group(child)
+        except CommandInterrupted as exc:
+            interrupted = exc.signum
+            if child is not None:
+                code = stop_group(child)
         except OSError as exc:
             error = exc.__class__.__name__
             log.write(str(exc).encode('utf-8', errors='replace'))
@@ -62,13 +95,14 @@ def record_command(command, cwd, output, check_id, timeout):
     logfile.write_text(cleaned, encoding='utf-8')
     raw.unlink()
     record = {
-        'schema_version': 1, 'check_id': check_id, 'mode': 'OFFLINE_BUILD_OR_TEST',
+        'schema_version': 2, 'check_id': check_id, 'mode': 'OFFLINE_BUILD_OR_TEST',
         'started_at': started, 'finished_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
         'duration_seconds': round(time.monotonic() - start, 3),
         'command': [redact(arg, cwd) for arg in command],
         'source_commit': source_sha(cwd),
         'exit_code': code, 'timed_out': timed_out, 'launch_error': error,
-        'status': 'PASS' if code == 0 and not timed_out and error is None else 'FAIL',
+        'interrupted_signal': interrupted,
+        'status': 'PASS' if code == 0 and not timed_out and error is None and interrupted is None else 'FAIL',
         'log': 'command.log', 'log_sha256': hashlib.sha256(logfile.read_bytes()).hexdigest(),
         'lockfile_sha256': hashlib.sha256((cwd / 'pnpm-lock.yaml').read_bytes()).hexdigest()
             if (cwd / 'pnpm-lock.yaml').is_file() else None,

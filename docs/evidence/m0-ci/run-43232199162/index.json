@@ -1,0 +1,63 @@
+{
+  "run_id": 43232199162,
+  "url": "https://github.com/tanxinz/dsh-superagent/actions/runs/43232199162",
+  "head_commit": "7ca9fcb5633100d4a35b9898e554918d06e3b178",
+  "tested_parent_merge": "06fc982632238789f25b572a2cf8c876269c507b",
+  "jobs": [
+    {
+      "id": 131230144257,
+      "name": "review",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 131230284365,
+      "name": "harness (baseline, e8f7b93a344964de3dca1ace9e72b6e4d6de87cb)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 131230284385,
+      "name": "superagent",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 131230284494,
+      "name": "harness (matching-release-candidate, d743267388641bc76f17c45ce8b4c231aed1d32c)",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "artifacts": [
+    {
+      "artifact_id": 13954177145,
+      "name": "m0-harness-baseline-43232199162-1",
+      "archive_sha256": "9348875e0c640fdc12626697e14c3d9ed5751cb9399ba48e13c534456aea7576",
+      "expires_at": "2027-02-10T13:56:59Z",
+      "full_logs_saved": true
+    },
+    {
+      "artifact_id": 13952541382,
+      "name": "m0-harness-matching-release-candidate-43232199162-1",
+      "archive_sha256": "49e9388e199d40b2d5d592eb1c98a5f2b1e60bf407d45a2e3ea7c64def84534e",
+      "expires_at": "2027-02-10T13:56:59Z",
+      "full_logs_saved": true
+    },
+    {
+      "artifact_id": 13950997573,
+      "name": "m0-review-43232199162-1",
+      "archive_sha256": "e0089e40acef524a6c149a252f618b257b518d61d2917f7cecb962c8b77e1f50",
+      "expires_at": "2027-02-10T13:56:59Z",
+      "full_logs_saved": true
+    },
+    {
+      "artifact_id": 13949973090,
+      "name": "m0-superagent-43232199162-1",
+      "archive_sha256": "27659243e9ea0fec33e459a5862fdf674780e7f7b606cbd793a1ea50d7b3870b",
+      "expires_at": "2027-02-10T13:56:59Z",
+      "full_logs_saved": true
+    }
+  ],
+  "m0_exit": "BLOCKED"
+}

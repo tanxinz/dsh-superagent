@@ -1,0 +1,26 @@
+{
+  "schema_version": 2,
+  "check_id": "cancellation-before",
+  "mode": "OFFLINE_BUILD_OR_TEST",
+  "started_at": "2026-11-12T14:21:37.955536+00:00",
+  "finished_at": "2026-11-12T14:21:38.574221+00:00",
+  "duration_seconds": 0.619,
+  "command": [
+    "python",
+    "/tmp/m0-recorder-baseline/test_ci_record.py",
+    "EvidenceTests.test_cancellation_preserves_redacted_evidence_and_kills_descendants",
+    "-v"
+  ],
+  "source_commit": "7d9f51d0d1f63c5cd2fd189b1b81bca64c437779",
+  "exit_code": 1,
+  "timed_out": false,
+  "launch_error": null,
+  "interrupted_signal": null,
+  "status": "FAIL",
+  "log": "command.log",
+  "log_sha256": "e8d08d274ce2e9bc40164f55cfd3032b6a36c9351f8ed5f3e4f70eeebf647203",
+  "lockfile_sha256": null,
+  "online_sdk": "NOT_RUN",
+  "real_session": "NOT_RUN",
+  "m0_exit": "BLOCKED"
+}

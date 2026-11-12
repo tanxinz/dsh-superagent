@@ -1,0 +1,26 @@
+{
+  "schema_version": 2,
+  "check_id": "checklist-stage",
+  "mode": "OFFLINE_BUILD_OR_TEST",
+  "started_at": "2026-11-12T14:22:17.029523+00:00",
+  "finished_at": "2026-11-12T14:22:17.095114+00:00",
+  "duration_seconds": 0.066,
+  "command": [
+    "python",
+    "scripts/checklist_audit.py",
+    "--require-stage",
+    "M0"
+  ],
+  "source_commit": "7d9f51d0d1f63c5cd2fd189b1b81bca64c437779",
+  "exit_code": 2,
+  "timed_out": false,
+  "launch_error": null,
+  "interrupted_signal": null,
+  "status": "FAIL",
+  "log": "command.log",
+  "log_sha256": "ded35f05c3f0d2d61eea65ff348cf76c49d0c0a5fcb7c4d04220d790002b0507",
+  "lockfile_sha256": null,
+  "online_sdk": "NOT_RUN",
+  "real_session": "NOT_RUN",
+  "m0_exit": "BLOCKED"
+}

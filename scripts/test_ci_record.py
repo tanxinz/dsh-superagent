@@ -3,9 +3,11 @@ import json
 import os
 from pathlib import Path
 import signal
+import subprocess
 import sys
 import tempfile
 import unittest
+import time
 from unittest.mock import patch
 
 from ci_record import record_command
@@ -46,6 +48,58 @@ class EvidenceTests(unittest.TestCase):
         record = self.run_code('import time; time.sleep(10)', timeout=0.05)
         self.assertEqual(record['status'], 'FAIL')
         self.assertTrue(record['timed_out'])
+
+    @unittest.skipUnless(sys.platform == 'linux', 'CI recorder targets Linux process groups')
+    def test_cancellation_preserves_redacted_evidence_and_kills_descendants(self):
+        recorder = Path(__file__).with_name('ci_record.py').resolve()
+        for signum in (signal.SIGINT, signal.SIGTERM):
+            with self.subTest(signal=signum):
+                marker = self.root / f'ready-{signum}.json'
+                check_id = f'cancel-{signum}'
+                code = (
+                    "import subprocess,sys,os,json,pathlib,time; "
+                    "child=subprocess.Popen([sys.executable,'-c','import time; time.sleep(30)']); "
+                    "print(os.environ['FIXTURE_TOKEN'],flush=True); "
+                    f"pathlib.Path({str(marker)!r}).write_text(json.dumps([os.getpid(),child.pid])); "
+                    "time.sleep(30)"
+                )
+                proc = subprocess.Popen([
+                    sys.executable, str(recorder), '--id', check_id, '--cwd', str(self.root),
+                    '--output', str(self.root / 'evidence'), '--', sys.executable, '-c', code,
+                ], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    env={**os.environ, 'FIXTURE_TOKEN': 'fixture-secret-value'})
+                try:
+                    deadline = time.monotonic() + 5
+                    while not marker.exists() and proc.poll() is None and time.monotonic() < deadline:
+                        time.sleep(.01)
+                    self.assertTrue(marker.exists(), 'fixture did not start')
+                    pids = json.loads(marker.read_text())
+                    proc.send_signal(signum)
+                    stdout, stderr = proc.communicate(timeout=5)
+                    self.assertEqual(proc.returncode, 1, (stdout, stderr))
+                    target = self.root / 'evidence' / check_id
+                    record = json.loads((target / 'result.json').read_text())
+                    self.assertEqual(record['status'], 'FAIL')
+                    self.assertEqual(record['interrupted_signal'], signum)
+                    self.assertFalse(record['timed_out'])
+                    self.assertNotIn('fixture-secret-value', (target / 'command.log').read_text())
+                    self.assertFalse((target / 'command.raw').exists())
+                    self.assertEqual(record['log_sha256'], hashlib.sha256(
+                        (target / 'command.log').read_bytes()).hexdigest())
+                    for pid in pids:
+                        stat = Path(f'/proc/{pid}/stat')
+                        if stat.exists():
+                            self.assertEqual(stat.read_text().rsplit(')', 1)[1].split()[0], 'Z')
+                finally:
+                    if proc.poll() is None:
+                        proc.terminate()
+                        proc.communicate(timeout=5)
+                    if marker.exists():
+                        for pid in json.loads(marker.read_text()):
+                            try:
+                                os.kill(pid, signal.SIGKILL)
+                            except ProcessLookupError:
+                                pass
 
     def test_missing_executable_cannot_pass(self):
         record = record_command([str(self.root / 'missing')], self.root,

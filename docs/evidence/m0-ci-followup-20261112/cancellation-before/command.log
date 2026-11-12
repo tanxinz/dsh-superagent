@@ -1,0 +1,24 @@
+test_cancellation_preserves_redacted_evidence_and_kills_descendants (__main__.EvidenceTests.test_cancellation_preserves_redacted_evidence_and_kills_descendants) ... 
+  test_cancellation_preserves_redacted_evidence_and_kills_descendants (__main__.EvidenceTests.test_cancellation_preserves_redacted_evidence_and_kills_descendants) (signal=<Signals.SIGINT: 2>) ... FAIL
+  test_cancellation_preserves_redacted_evidence_and_kills_descendants (__main__.EvidenceTests.test_cancellation_preserves_redacted_evidence_and_kills_descendants) (signal=<Signals.SIGTERM: 15>) ... FAIL
+
+======================================================================
+FAIL: test_cancellation_preserves_redacted_evidence_and_kills_descendants (__main__.EvidenceTests.test_cancellation_preserves_redacted_evidence_and_kills_descendants) (signal=<Signals.SIGINT: 2>)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/m0-recorder-baseline/test_ci_record.py", line 79, in test_cancellation_preserves_redacted_evidence_and_kills_descendants
+    self.assertEqual(proc.returncode, 1, (stdout, stderr))
+AssertionError: -2 != 1 : (b'', b'Traceback (most recent call last):\n  File "/tmp/m0-recorder-baseline/ci_record.py", line 96, in <module>\n    raise SystemExit(main())\n                     ^^^^^^\n  File "/tmp/m0-recorder-baseline/ci_record.py", line 90, in main\n    record = record_command(command, args.cwd, args.output, args.id, args.timeout)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File "/tmp/m0-recorder-baseline/ci_record.py", line 48, in record_command\n    code = child.wait(timeout=timeout)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/subprocess.py", line 1264, in wait\n    return self._wait(timeout=timeout)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/subprocess.py", line 2047, in _wait\n    time.sleep(delay)\nKeyboardInterrupt\n')
+
+======================================================================
+FAIL: test_cancellation_preserves_redacted_evidence_and_kills_descendants (__main__.EvidenceTests.test_cancellation_preserves_redacted_evidence_and_kills_descendants) (signal=<Signals.SIGTERM: 15>)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/m0-recorder-baseline/test_ci_record.py", line 79, in test_cancellation_preserves_redacted_evidence_and_kills_descendants
+    self.assertEqual(proc.returncode, 1, (stdout, stderr))
+AssertionError: -15 != 1 : (b'', b'')
+
+----------------------------------------------------------------------
+Ran 1 test in 0.428s
+
+FAILED (failures=2)

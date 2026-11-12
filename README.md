@@ -1,33 +1,28 @@
 # dsh-superagent
 
-SuperAgent × DeepSeek Harness 协作开发仓库。
+SuperAgent × DeepSeek Harness 协作开发仓库，当前处于 M0 底座验证阶段。
 
-当前处于 M0 基线核验阶段。已恢复设计和开发清单，并记录本会话取得的两份上游源码固定版本。源码通过 Git 子模块引用，克隆时须初始化；它们是未修改的上游基线，不能视为已实现本项目的 17 个模块。
+`upstream/superagent/` 是本仓库可直接修改和提交的 SuperAgent 源码，源自固定上游 Commit，保留原许可证和说明；`upstream/harness/` 仍为固定版本 Git 子模块。
 
-## 开始协作
+## 获取当前开发版本
 
-```bash
-git clone --recurse-submodules https://github.com/tanxinz/dsh-superagent.git
-cd dsh-superagent
-git switch -c feat/your-task
-```
-
-已有克隆：
+PR 合并前使用协作分支：
 
 ```bash
-git pull --ff-only
-git submodule update --init --recursive
+git clone --branch chore/team-handoff-20261112 --recurse-submodules https://github.com/tanxinz/dsh-superagent.git
+cd dsh-superagent/upstream/superagent
+npm exec --yes --package=pnpm@11.7.0 -- pnpm install --frozen-lockfile
+npm exec --yes --package=pnpm@11.7.0 -- pnpm check
 ```
 
-- [协作流程](CONTRIBUTING.md)
+本次 Node 为 24.22.1。检查结果：类型检查通过、60 个测试文件 / 1209 项测试通过、构建通过；新增 11 项原生事务/Effects 崩溃探针。M0 尚未准出，不能按完成产品部署。
+
 - [当前交接状态](docs/DEVELOPMENT_STATUS.md)
-- [固定源码版本](docs/UPSTREAM_BASELINE.md)
+- [M0 验收与阻断项](docs/acceptance/M0.md)
+- [兼容矩阵](docs/compatibility-matrix.md)
+- [上游能力核验](docs/upstream-capabilities.md)
+- [协作流程](CONTRIBUTING.md)
 - [设计基线](docs/SuperAgent_Harness_Design_Final.md)
 - [开发清单，正文 V1.1](docs/SuperAgent_Harness_Development_Checklist_V1.0_20261112.md)
-- [验证版设计](docs/SuperAgent_Harness_Design_Validated_20261112.md)
 
-## 验收状态
-
-SuperAgent 上游基线的类型检查通过；测试 1197 项中 1196 项通过、1 项失败，因检查脚本短路，构建未执行。完整 M0 验收尚未完成，详见交接状态。
-
-提交前排除凭据、生产数据、依赖目录和临时文件。上游许可证与声明保留在各子模块中。
+按清单依赖继续推进。单仓库测试通过不代表 Harness 组合、受限 Session、操作系统隔离或全部 17 模块通过。上传前排除凭据和生产数据。

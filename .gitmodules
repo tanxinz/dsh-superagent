@@ -1,6 +1,3 @@
-[submodule "upstream/superagent"]
-	path = upstream/superagent
-	url = https://github.com/deepseek-ai/dsh-superagent-prototype.git
 [submodule "upstream/harness"]
 	path = upstream/harness
 	url = https://github.com/deepseek-ai/deepseek-harness.git

@@ -1,38 +1,28 @@
 # 开发交接状态
 
-更新日期：2026-11-12（北京时间）。
+更新日期：2026-11-12（北京时间）。本批继续执行 M0；阶段状态 BLOCKED，M0-14 未通过。
 
-## 已有成果
+## 已提交的代码与证据
 
-- main 已有最终设计、验证版设计和正文 V1.1 开发清单。
-- 本会话取得 SuperAgent 与 Harness 的固定上游 Commit，具体见 UPSTREAM_BASELINE.md。
-- 两份本地工作树当前均无未提交源码改动；本次同步交付的是上游基线引用和进度记录。
-- 尚无可据此认定完成的本项目 17 模块实现。开发清单任务不得因此批量标记完成。
+1. SuperAgent 由上游基线引用转为仓库内可编辑目录 upstream/superagent，保留许可证。
+2. 修复飞书消费进程健康状态的跨 stdout/stderr 时序问题：同次连接内的解析错误或警告不再被迟到的 ready 覆盖；新连接重新计算健康状态。
+3. Store.atomic 拒绝原生 async 回调，在执行前抛错；普通同步回调返回 Promise/thenable 时在提交前拒绝并回滚，afterCommit 不执行。
+4. 新增 11 项 M0 探针，覆盖同步故障、原生入队失败、嵌套回滚、重开数据库重放、同键载荷覆盖、失败/完成项重新入队、真实 SIGKILL 和在途重复执行。
+5. 上游已有的飞书失败已复现并修复。最终 pnpm check：类型检查通过、60 个测试文件 / 1209 项测试通过、构建通过。
 
-## 实际检查证据
+完整日志及元数据见 [M0 验收记录](acceptance/M0.md)、evidence/m0/ 和 runtime-baseline.json。
 
-来源：本会话 m0-evidence/superagent-baseline-check.log，检查命令为 pnpm check，展开为 pnpm typecheck && pnpm test && pnpm build。
+## 清单状态
 
-| 检查 | 结果 |
-| --- | --- |
-| SuperAgent 类型检查 | 通过，后续测试阶段已启动 |
-| SuperAgent 测试文件 | 58 个通过，1 个失败，共 59 个 |
-| SuperAgent 测试用例 | 1196 项通过，1 项失败，共 1197 项 |
-| SuperAgent 构建 | 测试失败导致命令链中断，未执行 |
-| Harness 完整构建与测试 | 无完成证据，待执行 |
-| M0 事务、Effects 与 Session 权限探针 | 待实现和运行验收 |
+M0-01、M0-02、M0-03、M0-08、M0-09、M0-13 为 IN_PROGRESS，已经产生实现或核验记录。其余任务保留原状态。探针通过不等于整项依赖已经闭合，不勾选完成。
 
-失败定位：upstream/superagent/tests/sources.spec.ts:1097，feishu event consumer 下的 takes in the event lines it reads, records each chat as direct or not, and reports a malformed line without stopping。测试期望 health.feishu.state 为 error，实际为 ready，detail 为 Listening for bot events。检查进程非零退出。
+没有实现业务 ActionPlan、受限 Session、M2 启动预算闸或 17 个模块。没有运行真实 Agent 或外部副作用。
 
-尚未定位根因，不将其标为偶发、环境问题或已修复。这里只保存核验摘要；原始日志未作为仓库附件上传，复现时需在上述固定 Commit 重新运行并保存新证据。
+## 当前阻断与下一步
 
-## 下一步
-
-1. 复现并定位上述基线失败，同时独立运行构建，分别记录结果。
-2. 完成 Harness 版本、依赖锁文件及与原型 DSH 包版本的兼容核验。
-3. 实现并运行事务、Effects、Session 权限探针，核对设计中的安全前置关系。
-4. 按开发清单安排后续任务；M0 未通过前，不宣称 M1 或生产准出完成。
-
-## 会话交接约定
-
-每次结束开发时，将任务编号、源码 Commit、测试命令及结果、阻断问题和下一步更新到本文件或对应 PR。仓库里的提交记录作为跨成员接力依据；聊天记录中的口头进度不代替代码与测试证据。
+1. Harness 原命令在 tsx 创建 Unix IPC 管道时收到 EPERM。改用 Node ESM loader 能运行顶层构建，但原生 addon 子步骤仍调用 tsx CLI 后失败；其余依赖步骤 SKIPPED。不能将这个结果算作 Harness 构建通过。
+2. 当前 Harness 为 DSH 0.2.2-rc.2 / Cordis 4.1.0；原型锁文件为 DSH 0.2.1-alpha.2 / Cordis 4.0.5-alpha.1。两份最新源码不能直接视为兼容组合。下一步优先选定并验证与原型相符的发布版或适配组合。
+3. M0-04/05 尚未新增并经真实 profile 验证 Bridge/CognitiveMeshService。
+4. 接着完成 M0-06/07 的受信身份与持久迁移，以及 M0-10/11/12 的受限 Session、OS 隔离和最终拒绝。当前 Sessions.ensure 仍含上游 danger-full-access，不能启用业务 Worker。
+5. 原生 Effects 在途认领只在内存，崩溃可重复执行；M2 必须按设计增加业务效果键、一次性许可、结果对账与受控入队，不能把原生重新入队误当为一次性副作用。
+6. M0-13 的 CI 与在线用例分类仍待完成；M0-14 未通过前不进入 M1 运行集成。

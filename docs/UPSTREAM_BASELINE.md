@@ -1,14 +1,15 @@
 # 上游源码基线
 
-记录日期：2026-11-12（北京时间）。
+日期：2026-11-12（北京时间）。
 
-| 组件 | 仓库 | 固定 Commit | 本地改动 |
+| 组件 | 仓库 | 基线 Commit | 当前存放方式 |
 | --- | --- | --- | --- |
-| SuperAgent 原型 | https://github.com/deepseek-ai/dsh-superagent-prototype | 8c32a9dc5d72c033816c6a8110b37f40cf94fba4 | 本次核验工作树干净，无业务源码改动 |
-| DeepSeek Harness | https://github.com/deepseek-ai/deepseek-harness | e8f7b93a344964de3dca1ace9e72b6e4d6de87cb | 本次核验工作树干净，无业务源码改动 |
+| SuperAgent | https://github.com/deepseek-ai/dsh-superagent-prototype | 8c32a9dc5d72c033816c6a8110b37f40cf94fba4 | upstream/superagent 普通可编辑源码目录，包含本次补丁 |
+| Harness | https://github.com/deepseek-ai/deepseek-harness | e8f7b93a344964de3dca1ace9e72b6e4d6de87cb | upstream/harness 固定 gitlink，未修改 |
 
-两份源码分别登记为 upstream/superagent 和 upstream/harness Git 子模块。主仓库保留设计和交接记录，不复制依赖安装目录或构建产物。
+SuperAgent 导入 218 个源码、测试、配置与文档文件；没有复制 .git、node_modules、构建产物或本地配置。许可证和原说明保留。本次源码子树 Git SHA 为 3ecda4a7ff8487a840df907ec3f9883f2e548df1，对应已测试的源文件快照。
 
-克隆后运行 git submodule update --init --recursive，并用 git submodule status 核对完整 SHA。本次登记固定版本不证明两仓库 API 或发布包相互兼容；该兼容性属于 M0 待验证项。
+SuperAgent lockfile SHA-256：ba6b997c448984a04b28eeb5b620c14c7cfeff5eb170e1abd6e0734007405c39。
+Harness lockfile SHA-256：c42783bd9f1c61f18867e0b41b60f7514d1447c09f993673cc02dbe90fab21c0。
 
-SuperAgent 的 package.json 指定 pnpm@11.7.0，Node ^22.19.0 或 >=24.0.0，开发依赖中 DSH 包为 0.2.1-alpha.2；Harness 源码版本必须另行核对，不能仅因下载成功就视为兼容。
+两者组合尚未验证兼容。版本声明与实测见 compatibility-matrix.md 和 runtime-baseline.json。真实 DSH profile、Session 及 OS 隔离尚未验收。

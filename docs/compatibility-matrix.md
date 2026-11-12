@@ -43,3 +43,15 @@ CI 使用 Ubuntu 24.04 / Node 24.22.1，保留原生 addon 步骤，没有替换
 ## 第三轮全量复验（run 43232199162）
 
 匹配候选 d743267 的完整原始 pnpm test 已退出 0：1975 文件通过、17 跳过；41652 测试通过、1 预期失败、185 跳过。完整构建、沙箱探针与定向测试也通过。基线 e8f7b93 的原始全量也已退出 0：2701 文件通过、20 跳过；56662 测试通过、1 预期失败、199 跳过。独立测试通过不证明 SuperAgent 组合 profile、真实 Session 或全部 peer 兼容；候选仍为 CANDIDATE，gitlink 不切换，M0 仍 BLOCKED。
+
+## 原生 Bridge / 未配置 profile 的候选组合
+
+| 验证对象 | 实际结果 | 组合结论 |
+| --- | --- | --- |
+| npm CLI 0.2.1-alpha.2，无额外精确锁 | 宽范围解析到 Cordis 4.0.5、Schemastery 3.18.5，与原型精确 peer 不同；原始解析 lock 保留 | 声明不匹配，不启动该组合 |
+| 独立 fixture：CLI 0.2.1-alpha.2 + Cordis 4.0.5-alpha.1 + Schemastery 3.18.5-alpha.1 | 全部 23 个 peer 与原型锁版参考值一致；全新临时目录 npm ci 成功；真实配置树与两次未配置启动/关闭通过 | CANDIDATE；尚缺配置完毕、Service、Session/权限等验收 |
+| SuperAgent 本批 Bridge | pnpm check：61 文件/1213 测试、类型检查、构建 PASS；4 项真实 Cordis 生命周期回归 | 最小 Bridge 实证，不等于 M0-04 整项准出 |
+
+该 npm fixture 独立保存 package-lock.json，不修改产品 pnpm-lock.yaml 或 Harness gitlink。发布产物与 d743267 源码的逐字节对应未验证。日志、命令及版本见 [Bridge 验收记录](acceptance/M0-bundle-profile-20261112.md)。
+
+PR #5 的复测 run 43241222611 也已完成两版原始全量及证据完整性审核，测试/跳过/预期失败计数与第三轮相同。该运行不包含后续 Bridge 源码；完整 ZIP 在 evidence/m0-ci/run-43241222611/，不挪作 Bridge 新 CI 通过证据。

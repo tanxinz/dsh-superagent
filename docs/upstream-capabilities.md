@@ -4,7 +4,7 @@
 
 | 符号 / 扩展点 | 真实落点 | 核验结果 | 尚待验证 |
 | --- | --- | --- | --- |
-| Bundle name/inject/apply | src/index.ts；package.json 的 dsh.bundle；cordis.patch.yml | 存在；apply 创建 Runtime 并登记 stop；本次未修改入口 | 真实 profile 配置树和重载 |
+| Bundle name/inject/apply | src/index.ts；package.json 的 dsh.bundle；cordis.patch.yml；src/extensions/mesh/index.ts | 原生 apply 创建 Runtime 并登记 stop，ready 后接入 M0 Bridge；真实 dsh 配置树仅一个原生条目，未配置 profile 两次启停通过；Cordis 同进程重启/注销回归通过 | 配置完毕的 profile、CognitiveMeshService；尚不授予 M0 准出 |
 | SourceKind / 注册 | src/sources/kind.ts；src/sources/registry.ts 的 register | 存在；返回注销函数；原生来源测试通过 | 新企业 Source 的真实认证和接线 |
 | Assessor | src/app/assessment.ts；src/core/ports.ts | MasterAssessor 使用持久 assessment Effect；Engine 决策在事务内 | Jev SDK、输出映射与异常回退 |
 | Engine | src/core/engine.ts | receive/decide/reply 等使用原生 repo.atomic | 受信扩展命令与 ActionPlan |
@@ -25,3 +25,22 @@
 11 项 M0 探针证实：事务提交前被 SIGKILL，probe 与 Effect 均不可见；提交后未执行被杀，重启可重放；执行后尚未删除 Effect 被杀，则副作用见证文件出现两次执行。这个队列可支撑持久重试，不能独自提供业务副作用恰好一次。
 
 本次只利用原生队列和 probe 表，不新增第二个调度器、ActionRun 租约或业务主库。
+
+## 原生 profile 接续实证
+
+详见 acceptance/M0-bundle-profile-20261112.md。独立 npm fixture 锁定发布 CLI 0.2.1-alpha.2 及原型要求的 Cordis/Schemastery；仅固定 CLI 的宽范围安装会发生 vendor 版本漂移，不能凭 CLI 版本号断言组合兼容。fixture 解析出的全部 23 个 peer 与原型 devDependencies 锁版参考值一致，真实 profile 启动时停在 repositoryUnset / setupPending，不创建业务 Worker。此实证验证配置树和最小生命周期，没有证明 npm 发布产物与候选源码逐字节对应，也不替代权限或模型请求核验。
+
+## 后续服务与 Session 改造的实际入口
+
+以下是本分支锁版源码的静态调用核对，不是对应路径的执行验收。位置按符号引用，避免后续插行使行号失效。
+
+| 路径 | 已核对的调用次序 | 后续实现必须覆盖 |
+| --- | --- | --- |
+| Runtime.initialize | 注册 HTTP → Setup.run；未配置即返回；配置成功后 Sessions.install → Executor.install → ensure 主 Session → Policy sync → resume → passes/effects start | 关键 Mesh Service/安全依赖须在主 Session 和后台循环前落实；不能仅在 ready 后注册健康日志就声称控制 Intake/分配 |
+| Sessions.ensure | resolveAgent → 不存在时 create/再次 resolve → initializeRoleModel → decorate → permissionPresets.set(danger-full-access) → rename | 新建和同 ID 恢复都会经过当前宽权限设置；M0-10 必须替换并核验有效预设，不能只修改 create 参数 |
+| Sessions.install | agent/created 触发 decorate；agent-preset/selected 尝试恢复角色预设，失败被 catch；session/event 维护重试健康 | 角色选择失败的默认拒绝、恢复加载和重选路径仍需真实受限 Session 反例 |
+| Sessions.decorate / limitSubagent | 主/Worker 注册各自工具约束；其他 Agent 沿 parentSession 向上查找至 Worker，最多 8 层，再套用 workOnly | 这只是工具可见性及 Ticket 存活 guard，不等于子 Session 的资源/环境隔离或完整权限交集；未知或越界父链的安全策略未验 |
+| DshExecutor.start / launchQueued / launch | 先把 launch 放入原生 Effects；执行时校验当前 Ticket/Assignment → 必要时 prepareDirectory/外部 prepare 命令 → Sessions.ensure → 递送工作输入 | M2 启动授权/预算闸必须早于 prepare 和 Session；只在 prompt 的 authorize 回调校验会晚于目录及 shell 副作用 |
+| DshExecutor.resume / deliverQueued | resume 中断旧 Assignment 或将 pending 重入 launch；delivery 路径也可能调用 Sessions.ensure | 不可只拦首次 launch；恢复、重新递送和同 ID ensure 同样需要统一拒绝 |
+
+本批未修改上述权限或调度代码。Bridge 位于 ready 后，仅证明生命周期；CognitiveMeshService 及安全前置接线仍待后续实现。

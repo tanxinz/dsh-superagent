@@ -4,7 +4,14 @@
 
 ## 当前接手：自动检查与 CI 复验
 
-### 本次个人任务分支
+### 本次接续：原生 Bundle Bridge 与真实未配置 profile
+
+- 负责人：当前获授权 Codex 开发会话；分支 `feat/m0-bundle-profile-verification-20261112`，基于 PR #5 的 `5f8aba71847651926b1432c7bd15c4294c5bb05f`。未改 #5，其 run 43241222611 现已完成：自动审查、SuperAgent 完整检查、两版 Harness 原始全量及证据审核均通过；完整原包存于 docs/evidence/m0-ci/run-43241222611/。
+- 已实现 M0-04 最小 Bridge：在原生 Runtime ready 后安装，按 owning fiber 去重并随重启/卸载清理。完整 `pnpm check` PASS：61 文件 / 1213 项测试、类型检查、构建；新增 4 项真实 Cordis 生命周期用例。
+- 新建隔离 profile 验证器及独立 npm fixture lock：发现仅固定 CLI 仍会把宽范围解析到不匹配的稳定版 Cordis/Schemastery；fixture 锁定原型精确版本，全部 23 个 peer 与锁版参考值一致。从新目录 npm ci 后，真实 `dsh --dump-config`、共享临时状态的两次未配置 profile 启动/优雅关闭均 PASS，每次 Bridge 安装与清理各一次，运行及排队 Worker 为 0。
+- 这不包含配置完毕的组合、真实模型 Session、CognitiveMeshService、身份/安全迁移和隔离拒绝。M0-04 改为 IN_PROGRESS，其他原任务状态不提前勾选；M0-14 / M1 仍 BLOCKED。详情见 [Bridge 验收记录](acceptance/M0-bundle-profile-20261112.md)。
+
+### 前一批个人任务分支（PR #5）
 
 - 负责人：当前获授权的 Codex 开发会话；任务 M0-01 / M0-13；分支 `fix/m0-ci-process-evidence-20261112`，基于 PR #4 的 `7d9f51d0d1f63c5cd2fd189b1b81bca64c437779`。PR #1—#4 核对时均未合并，head 与交接一致；本分支不修改其他成员的分支。
 - 第三轮 `43232199162` 匹配候选 d743267 的原始全量 `pnpm test` 已 PASS：1975 文件通过、17 跳过；41652 测试通过、1 预期失败、185 跳过；退出 0，完整日志和归档摘要已校验。基线 e8f7b93 的原始全量也已 PASS / 0：2701 文件通过、20 跳过；56662 测试通过、1 预期失败、199 跳过。两版结果分别存证，不将跳过项计为通过。
@@ -44,7 +51,7 @@
 
 ## 清单状态
 
-M0-01、M0-02、M0-03、M0-08、M0-09、M0-13 为 IN_PROGRESS，已经产生实现或核验记录。其余任务保留原状态。探针通过不等于整项依赖已经闭合，不勾选完成。
+M0-01、M0-02、M0-03、M0-04、M0-08、M0-09、M0-13 为 IN_PROGRESS，已经产生实现或核验记录。其余任务保留原状态。探针通过不等于整项依赖已经闭合，不勾选完成。
 
 没有实现业务 ActionPlan、受限 Session、M2 启动预算闸或 17 个模块。没有运行真实 Agent 或外部副作用。
 
@@ -52,7 +59,7 @@ M0-01、M0-02、M0-03、M0-08、M0-09、M0-13 为 IN_PROGRESS，已经产生实�
 
 1. 本地曾受 Unix IPC EPERM 和开发头文件限制；后续 GitHub CI 已完成两版 Harness 原始构建并通过，本地失败仅保留为历史证据。当前阻断是全量测试结果和真实组合/profile 验收，不再把本地环境错误列为 CI 构建失败。
 2. 当前 Harness 为 DSH 0.2.2-rc.2 / Cordis 4.1.0；原型锁文件为 DSH 0.2.1-alpha.2 / Cordis 4.0.5-alpha.1。两份最新源码不能直接视为兼容组合。下一步优先选定并验证与原型相符的发布版或适配组合。
-3. M0-04/05 尚未新增并经真实 profile 验证 Bridge/CognitiveMeshService。
+3. M0-04 Bridge 已实现并经真实未配置 profile 核验，前置任务仍未闭合；下一步为 M0-05 CognitiveMeshService 的真实注册、消费、卸载拒绝及依赖缺失行为，不能用 Bridge 日志替代 Service。
 4. 接着完成 M0-06/07 的受信身份与持久迁移，以及 M0-10/11/12 的受限 Session、OS 隔离和最终拒绝。当前 Sessions.ensure 仍含上游 danger-full-access，不能启用业务 Worker。
 5. 原生 Effects 在途认领只在内存，崩溃可重复执行；M2 必须按设计增加业务效果键、一次性许可、结果对账与受控入队，不能把原生重新入队误当为一次性副作用。
 6. M0-13 的 CI 与在线用例分类仍待完成；M0-14 未通过前不进入 M1 运行集成。

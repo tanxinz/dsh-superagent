@@ -1,0 +1,14 @@
+{
+  "evidence_integrity": "PASS",
+  "checks": {
+    "harness-build": "PASS",
+    "harness-install": "PASS",
+    "harness-sandbox-setup": "PASS",
+    "harness-test": "PASS",
+    "harness-workflow-regression": "PASS"
+  },
+  "errors": [],
+  "required_commands_pass": true,
+  "m0_exit": "BLOCKED",
+  "real_session": "NOT_RUN"
+}

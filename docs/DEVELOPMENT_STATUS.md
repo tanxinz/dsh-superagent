@@ -9,11 +9,11 @@
 - 两套 Harness 原始全量测试均在 900 秒处超时，且已出现真实失败用例。共同失败为 workflow-ptc 的取消后延迟发布清理；基线另有 worktree/forge 超时失败。全量测试保持 FAIL，不能把已通过构建当作组合通过。
 - 找到发布候选 dsh-v0.2.1-alpha.2（d743267388641bc76f17c45ce8b4c231aed1d32c），Cordis 4.0.5-alpha.1、Schemastery 3.18.5-alpha.1 声明匹配。尚不切换 Harness gitlink，真实 profile/Session 未验收。
 - 自动审查修复：上一版预检未检查 Node engines，现增加已核对表达式的判定，未知表达式保留 UNTESTED，9 项回归通过。新增清单结构/前置依赖/DONE 证据声明检查，防止缺项或提前勾选；它不是实际能力认证。
-- 新增 CI 证据记录器，记录失败/信号/超时和文件哈希，在线 SDK/真实 Session 显式 NOT_RUN。14 项 Python 回归通过（记录器 8、清单审查 6）。新版 CI 待复跑。
-- 下一步先独立复现 workflow-ptc，读取完整断言再修复；全量测试时限扩大到 2400 秒用于取得完整结果，原 900 秒失败记录保留。
+- 新增 CI 证据记录器，记录失败/信号/超时和文件哈希，在线 SDK/真实 Session 显式 NOT_RUN。14 项 Python 回归通过（记录器 8、清单审查 6），第二、三轮 CI 自动审查均通过。
+- 第二轮 43231192738 独立复现两版 workflow-ptc，均在子代理启动前报 sandbox-unavailable：CI 漏配沙箱前提，并非已经证实取消清理缺陷。已提交 7ca9fcb，执行锁版上游 bubblewrap 准备及探针，关闭遥测并对齐上游用例超时设置。第三轮 43232199162 中两版真实沙箱探针、SuperAgent 和自动审查已通过，Harness 后续测试仍在运行；全量结论待结果。
 - 完整清单尚未完成；M0-01/02/03/08/09/13 仍 IN_PROGRESS，M0-14/M1 仍 BLOCKED。详细记录见 acceptance/M0-ci-review-20261112.md。
 
-## 后续接手批次：M0-01 预检
+## 历史批次：M0-01 本地预检
 
 - 执行负责人：当前获授权开发会话；分支 `fix/m0-baseline-verification-20261112`，基于 `bc841de6c78d6ebcb8e0d812eb13473e09d80a68`。人工合并审核人尚未指定。
 - 范围：依赖声明及本地构建前置诊断、6 项预检回归、独立证据目录；未改 SuperAgent 产品源码或 Harness gitlink。
@@ -41,7 +41,7 @@ M0-01、M0-02、M0-03、M0-08、M0-09、M0-13 为 IN_PROGRESS，已经产生实�
 
 ## 当前阻断与下一步
 
-1. Harness 原命令在 tsx 创建 Unix IPC 管道时收到 EPERM。改用 Node ESM loader 能运行顶层构建，但原生 addon 子步骤仍调用 tsx CLI 后失败；其余依赖步骤 SKIPPED。不能将这个结果算作 Harness 构建通过。
+1. 本地曾受 Unix IPC EPERM 和开发头文件限制；后续 GitHub CI 已完成两版 Harness 原始构建并通过，本地失败仅保留为历史证据。当前阻断是全量测试结果和真实组合/profile 验收，不再把本地环境错误列为 CI 构建失败。
 2. 当前 Harness 为 DSH 0.2.2-rc.2 / Cordis 4.1.0；原型锁文件为 DSH 0.2.1-alpha.2 / Cordis 4.0.5-alpha.1。两份最新源码不能直接视为兼容组合。下一步优先选定并验证与原型相符的发布版或适配组合。
 3. M0-04/05 尚未新增并经真实 profile 验证 Bridge/CognitiveMeshService。
 4. 接着完成 M0-06/07 的受信身份与持久迁移，以及 M0-10/11/12 的受限 Session、OS 隔离和最终拒绝。当前 Sessions.ensure 仍含上游 danger-full-access，不能启用业务 Worker。

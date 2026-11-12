@@ -7,5 +7,13 @@
   "included_logs": "Complete targeted candidate regression log and its result; other steps remain in Actions artifacts.",
   "root_cause": "sandbox-unavailable before child startup; no sandbox backend usable",
   "full_suite": "NOT_RUN after targeted regression failed",
-  "m0_exit": "BLOCKED"
+  "m0_exit": "BLOCKED",
+  "baseline": {
+    "artifact_id": 13951565192,
+    "archive_sha256": "790130ff68301872055229569fbbf84bfa551436b710d091e416a1c821d53beb",
+    "archive_digest_verified": true,
+    "targeted_test": "41 PASS / 1 FAIL",
+    "root_cause": "sandbox-unavailable before child startup",
+    "full_suite": "NOT_RUN"
+  }
 }

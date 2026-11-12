@@ -205,3 +205,44 @@ it('refuses a second handler for a kind', () => {
   effects.handle('relay', async () => {})
   expect(() => effects.handle('relay', async () => {})).toThrow('The relay effects already have a handler')
 })
+
+it('rechecks admission between rows and kinds when a handler revokes readiness in the same dispatch', async () => {
+  let ready = true
+  const guarded = new Effects(store, board, () => clock, () => ready)
+  const calls: string[] = []
+  guarded.handle('relay', async (_payload, key) => {
+    calls.push(key)
+    if (key === 'first') ready = false
+  }, { limit: () => 8 })
+  guarded.handle('notice', async () => { calls.push('other-kind') })
+  guarded.enqueue('relay', 'first', relay('a'))
+  guarded.enqueue('relay', 'held', relay('b'))
+  guarded.enqueue('notice', 'next-kind', { value: {}, summary: 'c' })
+  guarded.start()
+  await guarded.idle()
+  expect(calls).toEqual(['first'])
+  expect(guarded.pending('relay', 'held')).toBe(true)
+  expect(guarded.pending('notice', 'next-kind')).toBe(true)
+  ready = true
+  await guarded.idle()
+  expect(calls).toEqual(['first', 'held', 'other-kind'])
+  expect(guarded.pending('relay')).toBe(false)
+  expect(guarded.pending('notice')).toBe(false)
+  await guarded.drain()
+})
+
+it('rechecks admission after a handler limit callback changes readiness', async () => {
+  let ready = true, revoke = true
+  const guarded = new Effects(store, board, () => clock, () => ready)
+  const run = vi.fn(async () => {})
+  guarded.handle('relay', run, { limit: () => { if (revoke) ready = false; return 4 } })
+  guarded.enqueue('relay', 'held', relay('a'))
+  guarded.start()
+  await guarded.idle()
+  expect(run).not.toHaveBeenCalled()
+  expect(guarded.pending('relay', 'held')).toBe(true)
+  revoke = false; ready = true
+  await guarded.idle()
+  expect(run).toHaveBeenCalledOnce()
+  await guarded.drain()
+})

@@ -2,7 +2,13 @@
 
 更新日期：2026-11-12（北京时间）。本批继续执行 M0；阶段状态 BLOCKED，M0-14 未通过。
 
-## 当前接手：M0-05 CognitiveMeshService（2026-11-13）
+## 当前接手：M0-05 依赖边界复审（2026-11-13）
+
+分支 fix/m0-service-dependency-boundaries-20261113，基于 PR #8 的 7e47fe1。实际复现并修复上一版单轮派发中首个 handler/limit 回调撤销依赖后仍启动后续工作的缺口：每个 kind 和工作项启动前复查。新增异步 Setup 后/Session 准备后的启动拒绝回归。完整 pnpm check 62 文件/1233 测试、类型检查、构建 PASS；真实临时未配置 profile 两次优雅启停 PASS；22 项根回归 PASS，原失败保持 FAIL。详情见 acceptance/M0-service-boundaries-20261113.md。
+
+PR #7 的 SuperAgent/真实 profile 和候选 Harness 原始全量通过（41652 测试、185 跳过、1 expected fail），完整原包已下载核验（本批新包公开写入被自动审批拦截，见验收记录）；基线 Harness 仍在运行，未提前声称两版通过。PR #8 原 profile 上传已获用户批准并完成，不再作为当前公开归档阻断。M0-05 保持 IN_PROGRESS，真实已配置 profile 动态切换及前置整项仍待闭合；M0-14 / M1 仍 BLOCKED。
+
+## 前批：M0-05 CognitiveMeshService（2026-11-13）
 
 个人分支 `feat/m0-cognitive-mesh-service-20261113` 从 PR #6 的 e8fb99f 建立。核对 PR #1—#6 均 open/unmerged，依赖链 main → #1 → #2 → #3 → #4 → #5 → #6；没有更新他人分支。
 

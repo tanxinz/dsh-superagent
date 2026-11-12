@@ -23,3 +23,5 @@ SuperAgent 原先以 gitlink 引用只读上游；本批将固定版本快照导
 ## M0-05 接续（2026-11-13）
 
 白名单增量：Runtime 原生组合根注册/消费 CognitiveMeshService；index inject 与 contracts 共用依赖常量；Effects 仅新增默认 true 的可选派发谓词和一处派发前检查，Runtime 用于依赖失效时保留原生队列。没有第二队列或持久租约。回归覆盖原生全套 62 文件/1229 测试、真实 Cordis 消费/卸载及 Runtime 缺失依赖和恢复；真实已配置 profile 的依赖切换仍待实证。安全权限与身份改造没有据此关闭。
+
+M0-05 依赖边界复审追加：Effects 对每个 kind/每个工作项再次检查停止及依赖状态，防止同轮前序回调撤销后继续派发。原反例两项已复现 FAIL，修复后完整 1233 项通过；Runtime 增加两项异步边界回归且无需修改其源码。仍为原单 Engine/Effects/SQLite。

@@ -103,6 +103,7 @@ export class Effects {
   private dispatch(): void {
     if (!this.started || this.stopped || !this.dispatchAllowed()) return
     for (const [kind, handler] of this.handlers) {
+      if (this.stopped || !this.dispatchAllowed()) return
       try {
         const running = new Set([...this.tasks].filter(task => task.kind === kind).map(task => task.key))
         // Ordered kinds block behind their oldest row even when it is not yet due; limit() is queried only after ready rows exist.
@@ -113,6 +114,8 @@ export class Effects {
         const ready = handler.ordered && running.size ? [] : rows.filter(row => row.due <= this.now() && !running.has(row.key))
         let room = ready.length ? handler.limit() - running.size : 0
         for (const row of ready) {
+          // A preceding handler or limit callback may revoke dependencies synchronously.
+          if (this.stopped || !this.dispatchAllowed()) return
           if (room-- <= 0) break
           this.run(kind, handler, row)
         }

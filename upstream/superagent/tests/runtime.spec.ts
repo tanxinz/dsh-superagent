@@ -7,6 +7,11 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest'
 import type { UserMessage } from '@deepseek-ai/dsh-llm'
 import { renderPrompt } from '@deepseek-ai/dsh-system-prompt'
+import { Setup } from '../src/app/setup.ts'
+import { Sessions } from '../src/app/sessions.ts'
+import { DshExecutor } from '../src/executor/dsh.ts'
+import { Passes } from '../src/app/passes.ts'
+import { deferred } from './fixtures/async.ts'
 import { Effects } from '../src/app/effects.ts'
 import { Runtime } from '../src/app/runtime.ts'
 import { jobRegistry } from './fixtures/host.ts'
@@ -1830,4 +1835,57 @@ it('refuses new intake during dependency loss and resumes durable work only afte
   expect(runtime.effects.pending('relay', 'mesh-held')).toBe(false)
   await receive(trigger)
   expect(runtime.store.triggers.get(trigger.id)).toBeDefined()
+})
+
+
+it('rechecks Mesh after asynchronous setup before creating the main Session', async () => {
+  await runtime.stop()
+  const ctx = new Context()
+  const dispose: Record<string, () => void> = {}
+  for (const [name, service] of Object.entries(services)) dispose[name] = ctx.reflect.provide(name, service)
+  const reached = deferred<void>(), release = deferred<void>()
+  const original = Setup.prototype.run
+  vi.spyOn(Setup.prototype, 'run').mockImplementation(async function(this: Setup, settings) {
+    const configured = await original.call(this, settings)
+    reached.resolve(); await release.promise
+    return configured
+  })
+  controller.create.mockClear()
+  const start = vi.spyOn(Effects.prototype, 'start')
+  const passes = vi.spyOn(Passes.prototype, 'start')
+  const resume = vi.spyOn(DshExecutor.prototype, 'resume')
+  runtime = new Runtime(ctx, testMachine({ stateDir: directory }), restarts)
+  // Attach a rejection handler before releasing startup.
+  const refused = expect(runtime.ready).rejects.toThrow('permissionPresets')
+  try {
+    await reached.promise
+    dispose.permissionPresets!()
+    release.resolve()
+    await refused
+    expect(controller.create).not.toHaveBeenCalled()
+    expect(start).not.toHaveBeenCalled()
+    expect(passes).not.toHaveBeenCalled()
+    expect(resume).not.toHaveBeenCalled()
+  } finally { release.resolve() }
+})
+
+it('rechecks Mesh after awaiting Session preparation before starting recovery and loops', async () => {
+  await runtime.stop()
+  const ctx = new Context()
+  const dispose: Record<string, () => void> = {}
+  for (const [name, service] of Object.entries(services)) dispose[name] = ctx.reflect.provide(name, service)
+  const original = Sessions.prototype.ensure
+  vi.spyOn(Sessions.prototype, 'ensure').mockImplementation(async function(this: Sessions, ...args) {
+    const result = await original.apply(this, args)
+    dispose.permissionPresets!()
+    return result
+  })
+  const start = vi.spyOn(Effects.prototype, 'start')
+  const passes = vi.spyOn(Passes.prototype, 'start')
+  const resume = vi.spyOn(DshExecutor.prototype, 'resume')
+  runtime = new Runtime(ctx, testMachine({ stateDir: directory }), restarts)
+  await expect(runtime.ready).rejects.toThrow('permissionPresets')
+  expect(start).not.toHaveBeenCalled()
+  expect(passes).not.toHaveBeenCalled()
+  expect(resume).not.toHaveBeenCalled()
 })

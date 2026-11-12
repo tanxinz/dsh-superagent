@@ -1,4 +1,5 @@
 // Isolated profile/configuration probe. Never supplies accounts, model keys or business input.
+import { pathToFileURL, fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { once } from 'node:events';
 import { closeSync, mkdirSync, mkdtempSync, openSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
@@ -10,9 +11,10 @@ import { spawn, spawnSync } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 
 const [cliArg, bundleArg, outputArg, mode] = process.argv.slice(2);
-if (!cliArg || !bundleArg || !outputArg || !['--dump-only', '--boot-unconfigured'].includes(mode)) {
-  throw new Error('Usage: node scripts/m0-profile-probe.mjs <dsh/lib/bin.js> <bundle> <new-output-directory> --dump-only|--boot-unconfigured');
+if (!cliArg || !bundleArg || !outputArg || !['--dump-only', '--boot-unconfigured', '--boot-service-dependency-cycle'].includes(mode)) {
+  throw new Error('Usage: node scripts/m0-profile-probe.mjs <dsh/lib/bin.js> <bundle> <new-output-directory> --dump-only|--boot-unconfigured|--boot-service-dependency-cycle');
 }
+const dependencyMode = mode === '--boot-service-dependency-cycle';
 const cli = resolve(cliArg), bundle = resolve(bundleArg), output = resolve(outputArg);
 mkdirSync(output); // Never replace another attempt.
 const home = mkdtempSync(join(tmpdir(), 'm0-dsh-profile-'));
@@ -45,7 +47,7 @@ async function boot(number, index) {
   const child = spawn(process.execPath, [cli, '--profile', 'm0-probe', '--no-open'], { env, stdio: ['ignore', fd, fd] });
   closeSync(fd);
   const closed = once(child, 'close');
-  let state, forced = false;
+  let state, dependencyCycle, forced = false;
   try {
     const deadline = Date.now() + 30000;
     while (Date.now() < deadline && child.exitCode === null && child.signalCode === null) {
@@ -54,7 +56,14 @@ async function boot(number, index) {
           { headers: { 'x-orchestrator-request': '1' }, signal: AbortSignal.timeout(500) });
         if (response.ok) {
           const value = await response.json();
-          if (value.health?.runtime?.state === 'paused' && value.setup?.problem?.code === 'repositoryUnset') { state = value; break; }
+          if (value.health?.runtime?.state === 'paused' && value.setup?.problem?.code === 'repositoryUnset') {
+            if (dependencyMode) {
+              const match = readFileSync(raw, 'utf8').match(/^M0_DEPENDENCY_CYCLE (.+)$/m);
+              if (!match) { await delay(100); continue; }
+              dependencyCycle = JSON.parse(match[1]);
+            }
+            state = value; break;
+          }
         }
       } catch { /* The owned loopback server is not ready yet. */ }
       await delay(200);
@@ -66,14 +75,14 @@ async function boot(number, index) {
   }
   const text = readFileSync(raw, 'utf8').replace(/([?&]token=)[^\s&]+/g, '$1<redacted>');
   writeFileSync(file, text);
-  const cycle = { index, state, forced, exit_code: child.exitCode, signal: child.signalCode,
+  const cycle = { index, state, dependencyCycle, forced, exit_code: child.exitCode, signal: child.signalCode,
     installed: text.split('[cognitive-mesh] m0 bridge installed').length - 1,
     disposed: text.split('[cognitive-mesh] m0 bridge disposed').length - 1, log_sha256: hash(file) };
   report.cycles.push(cycle);
   json(`boot-${index}.json`, cycle);
   if (!state || state.health?.runtime?.state !== 'paused' || state.setup?.problem?.code !== 'repositoryUnset'
       || state.load?.running !== 0 || state.load?.queued !== 0 || state.setup?.accounts !== null
-      || forced || child.exitCode !== 0 || cycle.installed !== 1 || cycle.disposed !== 1) throw new Error(`unconfigured profile cycle ${index} failed`);
+      || forced || child.exitCode !== 0 || cycle.installed !== (dependencyMode ? 2 : 1) || cycle.disposed !== (dependencyMode ? 2 : 1) || (dependencyMode && dependencyCycle?.status !== 'PASS')) throw new Error(`unconfigured profile cycle ${index} failed`);
 }
 try {
   const version = run('cli-version', ['--version']).trim();
@@ -111,7 +120,17 @@ try {
       if (text.startsWith('[cognitive-mesh]')) process.stdout.write(text + '\\n');
     } });
   }\n`);
-  const number = mode === '--boot-unconfigured' ? await port() : 3082;
+  if (dependencyMode) {
+    // Import only the provider package's public export and the repository's test fixture.
+    const providerEntry = require.resolve('@deepseek-ai/dsh-permission-presets');
+    report.dependency_provider_entry_sha256 = hash(providerEntry);
+    report.dependency_observer_sha256 = hash(fileURLToPath(new URL('./fixtures/m0-profile-runtime/mesh-dependency-observer.mjs', import.meta.url)));
+    const providerModule = pathToFileURL(providerEntry).href;
+    const helper = pathToFileURL(fileURLToPath(new URL('./fixtures/m0-profile-runtime/mesh-dependency-observer.mjs', import.meta.url))).href;
+    writeFileSync(join(observer, 'index.js'), `export { apply } from ${JSON.stringify(helper)};\n`);
+    writeFileSync(join(observer, 'cordis.patch.yml'), '- insert:\n    - id: m0-probe-log\n      name: m0-probe-log\n      config:\n        providerModule: ' + JSON.stringify(providerModule) + '\n');
+  }
+  const number = mode !== '--dump-only' ? await port() : 3082;
   const patch = `- id: webserver\n  config:\n    host: 127.0.0.1\n    port: ${number}\n- id: dsh-superagent\n  config:\n    stateDir: ${join(home, 'state')}\n- id: dsh-superagent-github\n  disabled: true\n`;
   writeFileSync(join(profile, 'cordis.patch.yml'), patch);
   save('profile.patch.yml', patch);
@@ -121,7 +140,7 @@ try {
   if (readFileSync(join(output, 'config-dump.stderr.log'), 'utf8').includes('skipping profile bundle')) throw new Error('Bundle was skipped');
   report.config_tree = 'PASS';
   report.config_tree_sha256 = hash(join(output, 'config-dump.stdout.log'));
-  if (mode === '--boot-unconfigured') {
+  if (mode !== '--dump-only') {
     report.boot = 'FAIL';
     await boot(number, 1);
     await boot(number, 2);

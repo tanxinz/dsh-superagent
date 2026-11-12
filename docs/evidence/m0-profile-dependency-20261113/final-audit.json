@@ -1,0 +1,21 @@
+{
+  "evidence_integrity": "PASS",
+  "checks": {
+    "complete-check": "PASS",
+    "dependency-profile": "PASS",
+    "dependency-profile-diagnosis": "PASS",
+    "dependency-profile-final": "PASS",
+    "dependency-profile-repeat": "PASS",
+    "dependency-profile-reviewed": "FAIL",
+    "dump-only-regression": "PASS",
+    "frozen-install": "PASS",
+    "original-profile-regression": "PASS",
+    "preflight-regressions": "PASS",
+    "root-regressions": "FAIL",
+    "root-regressions-repeat": "PASS"
+  },
+  "errors": [],
+  "required_commands_pass": true,
+  "m0_exit": "BLOCKED",
+  "real_session": "NOT_RUN"
+}

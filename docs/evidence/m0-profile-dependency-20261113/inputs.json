@@ -1,0 +1,12 @@
+{
+  "base_commit": "15364bd81d04546f851b7495668b99c1cd2f8445",
+  "worktree_inputs_sha256": {
+    "scripts/m0-profile-probe.mjs": "269b247aadfb387a35f036554d98f657df8ff04c02b6d235349e5337eb3d8260",
+    "scripts/fixtures/m0-profile-runtime/mesh-dependency-observer.mjs": "d9152bdcaf2f925970dd8b6fdacd120173aba8cb44d42bda6c2a016b48488fe1",
+    ".github/workflows/m0-offline.yml": "3f137ec4ab54c8d021148325e5c3a8d358b3d539db1443a498d45b2c417c0ca8",
+    "upstream/superagent/package.json": "f5170d812137dd370c568decb481e19f4da9a3d1fd7bad341a0f07942020a559",
+    "upstream/superagent/pnpm-lock.yaml": "ba6b997c448984a04b28eeb5b620c14c7cfeff5eb170e1abd6e0734007405c39"
+  },
+  "built_entry_sha256": "dbc5f557114d5a60f282daa3e208531fb5b08782863b0491864c0f01376cc660",
+  "note": "Local command source_commit records base HEAD; these hashes identify the actual root probe/workflow patch. Product source unchanged."
+}

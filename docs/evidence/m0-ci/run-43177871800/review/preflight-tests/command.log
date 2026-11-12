@@ -1,0 +1,14 @@
+✔ exact prerelease peer rejects a newer stable provider (0.602062ms)
+✔ matching exact versions do not imply range verification (0.085378ms)
+✔ missing or malformed package versions fail closed (0.201112ms)
+✔ even successful preflight never declares a build or M0 passed (0.109384ms)
+✔ each environmental prerequisite and unverified declaration blocks readiness (0.101122ms)
+✔ manifest reader checks package identity and fingerprints actual input bytes (2.652146ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 45.92997

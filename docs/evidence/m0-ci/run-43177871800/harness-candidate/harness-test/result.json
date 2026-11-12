@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "check_id": "harness-test",
+  "mode": "OFFLINE_BUILD_OR_TEST",
+  "started_at": "2026-11-12T07:51:34.156207+00:00",
+  "finished_at": "2026-11-12T08:06:34.204521+00:00",
+  "duration_seconds": 900.048,
+  "command": [
+    "npm",
+    "exec",
+    "--yes",
+    "--package=pnpm@11.28.5",
+    "--",
+    "pnpm",
+    "test"
+  ],
+  "source_commit": "d743267388641bc76f17c45ce8b4c231aed1d32c",
+  "exit_code": -9,
+  "timed_out": true,
+  "launch_error": null,
+  "status": "FAIL",
+  "log": "command.log",
+  "log_sha256": "11a60b923e2ca71bdf6123645cc054915cb3cae3cc50cafb16a9d6f94e715a45",
+  "lockfile_sha256": "b45f8695fb0dca90d3ed07afc766e923356539962706ee36ac8cdb396e6d734d",
+  "online_sdk": "NOT_RUN",
+  "real_session": "NOT_RUN",
+  "m0_exit": "BLOCKED"
+}

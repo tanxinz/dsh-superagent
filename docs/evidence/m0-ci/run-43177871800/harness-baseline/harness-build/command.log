@@ -1,0 +1,25 @@
+$ tsx scripts/build.ts
+run-gates: build running 10 gate(s) with 4 worker(s) from 4 available CPU(s).
+run-gates: start native addon
+run-gates: start Host Typert
+run-gates: PASS native addon (1.50s)
+run-gates: PASS Host Typert (10.11s)
+run-gates: start host compiler
+run-gates: PASS host compiler (71.58s)
+run-gates: start Host bundle
+run-gates: start host aggregate check
+run-gates: PASS Host bundle (11.10s)
+run-gates: start Desktop bundle
+run-gates: PASS Desktop bundle (3.04s)
+run-gates: start client compiler
+run-gates: PASS client compiler (71.15s)
+run-gates: start Client bundle
+run-gates: start client aggregate check
+run-gates: PASS Client bundle (15.54s)
+run-gates: start Web build
+run-gates: PASS host aggregate check (102.74s)
+run-gates: PASS Web build (10.08s)
+run-gates: PASS client aggregate check (67.02s)
+
+run-gates: 10 passed, 0 failed, 0 skipped in 234.02s.
+build: recorded 369 client artifact(s) with 2 public value(s)

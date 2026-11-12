@@ -1,0 +1,13 @@
+test_attempt_cannot_be_overwritten (test_ci_record.EvidenceTests.test_attempt_cannot_be_overwritten) ... ok
+test_invalid_timeout_and_id_do_not_execute (test_ci_record.EvidenceTests.test_invalid_timeout_and_id_do_not_execute) ... ok
+test_missing_executable_cannot_pass (test_ci_record.EvidenceTests.test_missing_executable_cannot_pass) ... ok
+test_nonzero_exit_cannot_pass (test_ci_record.EvidenceTests.test_nonzero_exit_cannot_pass) ... ok
+test_redaction_happens_before_hash_and_raw_file_is_removed (test_ci_record.EvidenceTests.test_redaction_happens_before_hash_and_raw_file_is_removed) ... ok
+test_signal_cannot_pass (test_ci_record.EvidenceTests.test_signal_cannot_pass) ... ok
+test_success_is_only_command_success_and_hashes_saved_bytes (test_ci_record.EvidenceTests.test_success_is_only_command_success_and_hashes_saved_bytes) ... ok
+test_timeout_cannot_pass (test_ci_record.EvidenceTests.test_timeout_cannot_pass) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.144s
+
+OK

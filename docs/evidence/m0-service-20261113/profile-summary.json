@@ -1,0 +1,30 @@
+{
+  "status": "PASS",
+  "config_tree": "PASS",
+  "boot": "PASS",
+  "business_worker": "NOT_RUN",
+  "real_model_session": "NOT_RUN",
+  "m0_exit": "BLOCKED",
+  "cycles": [
+    {
+      "index": 1,
+      "forced": false,
+      "exit_code": 0,
+      "signal": null,
+      "installed": 1,
+      "disposed": 1,
+      "log_sha256": "c55521c91d30efd8d16dba92e2a51120afabeb20719bb8ffaa0d39a7b9ff4481"
+    },
+    {
+      "index": 2,
+      "forced": false,
+      "exit_code": 0,
+      "signal": null,
+      "installed": 1,
+      "disposed": 1,
+      "log_sha256": "c55521c91d30efd8d16dba92e2a51120afabeb20719bb8ffaa0d39a7b9ff4481"
+    }
+  ],
+  "original_report_sha256": "caa21873541e771f707404236b2f7aa3a0135b9c64db42b253a22b869b23b109",
+  "profile_originals_publication": "WITHHELD_PENDING_USER_APPROVAL"
+}

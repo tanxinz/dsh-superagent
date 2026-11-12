@@ -292,6 +292,8 @@ Some generic modules still refer directly to GitHub or Feishu:
 | --- | --- |
 | `src/index.ts` | The main plugin entry: reads the machine settings, starts the Runtime, and gives it the restart that a save of a Source's account uses |
 | `src/extensions/mesh/index.ts` | M0 桥接生命周期；Runtime ready 后安装，每个 Cordis fiber 至多一次，随注销或重载清理；尚不注册领域 Service |
+| `src/extensions/mesh/contracts.ts` | Read-only M0 health contract and critical host dependencies |
+| `src/extensions/mesh/service.ts` | Native CognitiveMeshService; dependency and lifetime refusal before startup and admission |
 | `src/deployment.ts` | The plugin `Config` and `Machine`; `resolveDeployment` and `resolveFeishuBot` read the repository and the accounts from the Source settings, each CLI run as Executor shells run it; `SETUP_FIELDS` lists the Source fields setup reads. The code names no person, account or organization |
 | `src/setup.ts` | Setup problems: `SetupError`, with a code, the place that fixes it and the English text the log, the main Session and the panel share |
 | `src/policy.ts` | The Policy: the settings schemas by block, the Policy version, the gate and Mandate revalidation |
@@ -417,6 +419,7 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `tests/bundle-patch.spec.ts` | The bundle's patch, read as DeepSeek Harness reads it, and the agent preset of Executor Sessions it defines |
 | `tests/effects.spec.ts` | The effect queue: coalescing, limits, retries with backoff, health and shutdown |
 | `tests/mesh-m0.spec.ts` | M0 原生 Store/Effects 联合事务、真实 SIGKILL 恢复、重新入队及在途重复执行边界；`tests/fixtures/mesh-crash.ts` 提供独立进程故障点 |
+| `tests/mesh-service.spec.ts` | Native Cordis service registration, real injected consumption, dependency loss/restoration and retained-handle refusal |
 | `tests/mesh-bridge.spec.ts` | 真实 Cordis fiber 的单次安装、重复调用、重启、独立生命周期及销毁后拒绝；不等同真实 DSH profile 启动 |
 | `tests/passes.spec.ts` | Passes: one at a time, the ones asked for during a pass run as one after it, and the runtime health a failed pass reports |
 | `tests/outbox.spec.ts` | The Outbox on a running Runtime: messages wait while processing is paused or their Source is not installed |

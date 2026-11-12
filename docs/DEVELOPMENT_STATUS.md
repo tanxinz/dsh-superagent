@@ -2,7 +2,17 @@
 
 更新日期：2026-11-12（北京时间）。本批继续执行 M0；阶段状态 BLOCKED，M0-14 未通过。
 
-## 当前接手：自动检查与 CI 复验
+## 当前接手：M0-05 CognitiveMeshService（2026-11-13）
+
+个人分支 `feat/m0-cognitive-mesh-service-20261113` 从 PR #6 的 e8fb99f 建立。核对 PR #1—#6 均 open/unmerged，依赖链 main → #1 → #2 → #3 → #4 → #5 → #6；没有更新他人分支。
+
+PR #6 run 43249058103 已完成，四个 job success；两版原始全量 pnpm test 均退出 0。基线 2701 文件/56662 测试通过，20 文件/199 测试跳过；候选 1975 文件/41652 测试通过，17 文件/185 测试跳过，各有 1 expected fail。四份最终原 ZIP、原始退出码和日志哈希已校验归档到 docs/evidence/m0-ci/run-43249058103/，实际 CI 合并快照 3eefe007 与分支 e8fb99f 分开记录。
+
+新增原生 CognitiveMeshService：只提供 health/assertReady，Runtime 构造、主 Session 前、后台循环前实际消费；所有原生 Bundle 注入项共用同一依赖清单。依赖缺失拒绝 Intake 并暂停原生 Effects 派发，恢复后由原生 pump 处理原 SQLite 队列。保留服务句柄在卸载或 Runtime 停止后拒绝调用。不新增队列/Engine，不修改 Harness gitlink。
+
+M0-05 IN_PROGRESS，前置 M0-04 未整项闭合；M0-14 / M1 仍 BLOCKED。此检查不是身份授权/权限隔离，也不撤回已经运行的副作用。详情见 acceptance/M0-service-20261113.md。
+
+## 前序接手：自动检查与 CI 复验
 
 ### 本次接续：原生 Bundle Bridge 与真实未配置 profile
 

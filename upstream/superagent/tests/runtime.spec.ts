@@ -7,6 +7,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest'
 import type { UserMessage } from '@deepseek-ai/dsh-llm'
 import { renderPrompt } from '@deepseek-ai/dsh-system-prompt'
+import { Effects } from '../src/app/effects.ts'
 import { Runtime } from '../src/app/runtime.ts'
 import { jobRegistry } from './fixtures/host.ts'
 import { evalsHealth } from '../src/app/views/overview.ts'
@@ -74,6 +75,7 @@ async function receive(trigger: Trigger, target = runtime) {
   await target.idle()
   return result
 }
+let serviceDisposers: Record<string, () => void>
 let services: Record<string, unknown>
 /** DSH's job registry the Runtime's Executor reads its workers' shell jobs from. */
 let jobs: ReturnType<typeof jobRegistry>
@@ -203,8 +205,9 @@ beforeEach(async () => {
     inspect: vi.fn(async () => ({ events: [] })),
   }
   jobs = jobRegistry()
-  services = { agents, llm: { resolveCallConfig: vi.fn(async value => value) }, sessionController: controller, sessionPersistence: { flush: vi.fn(async () => {}), open: vi.fn(async () => ({ read: async () => ({ events: [] }), [Symbol.asyncDispose]: async () => {} })) }, workspaceRegistry: { create: async (cwd: string) => ({ id: cwd }) }, permissionPresets: { set: () => {} }, subprocess, webServer: { host: '127.0.0.1', port: 3082, register: (route: { handler: HttpHandler }) => { http = route.handler; return () => {} } }, jobs: jobs.service }
-  for (const [name, service] of Object.entries(services)) ctx.reflect.provide(name, service)
+  services = { tools: {}, systemPrompt: {}, skills: {}, agents, llm: { resolveCallConfig: vi.fn(async value => value) }, sessionController: controller, sessionPersistence: { flush: vi.fn(async () => {}), open: vi.fn(async () => ({ read: async () => ({ events: [] }), [Symbol.asyncDispose]: async () => {} })) }, workspaceRegistry: { create: async (cwd: string) => ({ id: cwd }) }, permissionPresets: { set: () => {} }, subprocess, webServer: { host: '127.0.0.1', port: 3082, register: (route: { handler: HttpHandler }) => { http = route.handler; return () => {} } }, jobs: jobs.service }
+  serviceDisposers = {}
+  for (const [name, service] of Object.entries(services)) serviceDisposers[name] = ctx.reflect.provide(name, service)
   for (const cli of [AGENT(), OTHER(), BOT()]) writeFileSync(cli, '#!/bin/sh\n', { mode: 0o755 })
   const store = new Store(join(directory, 'orchestrator.sqlite')); seed(store); store.close()
   runtime = new Runtime(ctx, testMachine({ stateDir: directory }), restarts)
@@ -1793,4 +1796,38 @@ it('keeps the Policy the main Session judges by in its prompt, after admission a
   await runtime.settings.save('policy', { ...saved.policy, rules: rules.map(rule => ({ ...rule, enabled: false })) }, runtime.store.blockRevision('policy'), 'panel')
   expect(policy()).toContain('No rule is enabled: a proactive candidate can only be ignored.')
   expect(policy()).toContain('The accept mode and the rules decide proactive candidates only')
+})
+
+it('consumes Mesh before startup; a missing critical dependency refuses before Session or loops', async () => {
+  await runtime.stop()
+  const ctx = new Context()
+  for (const [name, service] of Object.entries(services)) if (name !== 'sessionController') ctx.reflect.provide(name, service)
+  controller.create.mockClear()
+  const start = vi.spyOn(Effects.prototype, 'start')
+  expect(() => new Runtime(ctx, testMachine({ stateDir: directory }), restarts)).toThrow('sessionController')
+  expect(controller.create).not.toHaveBeenCalled()
+  expect(start).not.toHaveBeenCalled()
+  // The failed constructor released the directory lock; a new healthy Runtime can recover.
+  runtime = await restart()
+  await runtime.ready
+  expect(start).toHaveBeenCalledTimes(1)
+})
+
+it('refuses new intake during dependency loss and resumes durable work only after restoration', async () => {
+  const ctx = (runtime as unknown as { ctx: Context }).ctx
+  const mesh = ctx.cognitiveMesh
+  serviceDisposers.permissionPresets!()
+  const trigger = feishu('999', '@bot hold')
+  expect(() => runtime.receive(trigger)).toThrow('permissionPresets')
+  expect(runtime.store.triggers.get(trigger.id)).toBeUndefined()
+  runtime.effects.enqueue('relay', 'mesh-held', { text: 'held through dependency outage' })
+  await runtime.pump()
+  await runtime.idle()
+  expect(runtime.effects.pending('relay', 'mesh-held')).toBe(true)
+  ctx.reflect.provide('permissionPresets', services.permissionPresets)
+  expect(mesh.health().state).toBe('ready')
+  await runtime.pump(); await runtime.idle()
+  expect(runtime.effects.pending('relay', 'mesh-held')).toBe(false)
+  await receive(trigger)
+  expect(runtime.store.triggers.get(trigger.id)).toBeDefined()
 })

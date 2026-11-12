@@ -76,5 +76,5 @@
     }
   ],
   "zip_and_all_result_log_hashes_verified": true,
-  "publication_note": "Four original ZIPs downloaded and verified locally. SuperAgent artifact 13957892664 upload blocked by automatic approval review for profile/environment metadata; not included in Git tree pending user approval. Other three ZIPs archived unchanged."
+  "publication_note": "User explicitly approved public upload of complete profile artifacts on 2026-11-13 (Asia/Shanghai). All four original ZIPs archived unchanged; all ZIP digests and full command log hashes verified."
 }

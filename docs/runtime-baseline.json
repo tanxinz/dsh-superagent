@@ -1,0 +1,107 @@
+{
+  "date": "2026-11-12",
+  "timezone": "Asia/Shanghai",
+  "node": "v24.22.1",
+  "platform": "linux-x64",
+  "superagent": {
+    "baseline_commit": "8c32a9dc5d72c033816c6a8110b37f40cf94fba4",
+    "source_tree_sha": "3ecda4a7ff8487a840df907ec3f9883f2e548df1",
+    "pnpm": "11.7.0",
+    "lockfile_sha256": "ba6b997c448984a04b28eeb5b620c14c7cfeff5eb170e1abd6e0734007405c39",
+    "dsh_resolved": "0.2.1-alpha.2",
+    "cordis_resolved": "4.0.5-alpha.1",
+    "typecheck": "PASS",
+    "tests": {
+      "files": 60,
+      "passed": 1209,
+      "failed": 0,
+      "new_m0_probes": 11
+    },
+    "build": "PASS",
+    "changed_files_sha256": {
+      "src/app/store.ts": "999de64208b4106f91d4ff2b770f2a9293e96d7a2c2cc609260d0b8075a4f9e9",
+      "src/sources/feishu-loops.ts": "330f1229a276a57efd7c3dd08decbac1b79ef669620851b68a22b4b9f6a6ceec",
+      "tests/store.spec.ts": "1edaa77d995015d87c8a09b582ea42a038b5a0957278ec680a1c5b7f19fe8ed9",
+      "tests/mesh-m0.spec.ts": "cf8d7fc1aa34bebe22a4b96f5239c97114ff591cfd7e34cea949749e960dd463",
+      "tests/fixtures/mesh-crash.ts": "ecbebf6a5e750e546cdfa1c4b65b742a46153d6cccfbc27cb8bdb43dbdd30b7a",
+      "docs/007-architecture.md": "abccd289c8bd442c4b7b4c89560e0c8c999eb4280ea13902f5ee414a4c5ed87f"
+    }
+  },
+  "harness": {
+    "commit": "e8f7b93a344964de3dca1ace9e72b6e4d6de87cb",
+    "pnpm": "11.28.5",
+    "lockfile_sha256": "c42783bd9f1c61f18867e0b41b60f7514d1447c09f993673cc02dbe90fab21c0",
+    "dsh": "0.2.2-rc.2",
+    "cordis": "4.1.0",
+    "build": "BLOCKED",
+    "reason": "tsx CLI Unix IPC listen EPERM",
+    "full_tests": "NOT_RUN",
+    "diagnostic_loader_child_pnpm": "11.25.0"
+  },
+  "jev_sdk": {
+    "candidate": "@typesafe-ai/sdk",
+    "exact_version": null,
+    "online_request": "NOT_RUN"
+  },
+  "combination": "UNTESTED",
+  "m0_exit": "BLOCKED",
+  "m1_integration": "BLOCKED",
+  "checks": {
+    "sources-reproduction.log": {
+      "command": "pnpm exec vitest run tests/sources.spec.ts",
+      "cwd": "upstream/superagent",
+      "exit_code": 1,
+      "status": "FAIL",
+      "sha256": "e94189e824121442af5e1e1f25d9763d952bea6748792f28c5989e19720b11d4",
+      "path": "docs/evidence/m0/sources-reproduction.log"
+    },
+    "superagent-install-pinned.log": {
+      "command": "npm exec --yes --package=pnpm@11.7.0 -- pnpm install --frozen-lockfile",
+      "cwd": "upstream/superagent",
+      "exit_code": 0,
+      "status": "PASS",
+      "sha256": "8e718889913a572800f44d789a51e2140eb32703cda968b389cff08439b93713",
+      "path": "docs/evidence/m0/superagent-install-pinned.log"
+    },
+    "superagent-check-final.log": {
+      "command": "npm exec --yes --package=pnpm@11.7.0 -- pnpm check",
+      "cwd": "upstream/superagent",
+      "exit_code": 0,
+      "status": "PASS",
+      "sha256": "6d2d986b18d3704d498d8dc71ef1e22460353d97a53edf6cd3332249573c605c",
+      "path": "docs/evidence/m0/superagent-check-final.log"
+    },
+    "m0-crash-probes.log": {
+      "command": "npm exec --yes --package=pnpm@11.7.0 -- pnpm exec vitest run tests/mesh-m0.spec.ts",
+      "cwd": "upstream/superagent",
+      "exit_code": 0,
+      "status": "PASS",
+      "sha256": "d8fe0a31e066b880df159480708d09bb5e7107f9e10ed06d3d2b60a48c253ddf",
+      "path": "docs/evidence/m0/m0-crash-probes.log"
+    },
+    "harness-install-pinned.log": {
+      "command": "npm exec --yes --package=pnpm@11.28.5 -- pnpm install --frozen-lockfile",
+      "cwd": "upstream/harness",
+      "exit_code": 0,
+      "status": "PASS",
+      "sha256": "d521d7de444293dc6f91617e63754879199be1dbafd3269c85235d1342ea2112",
+      "path": "docs/evidence/m0/harness-install-pinned.log"
+    },
+    "harness-build.log": {
+      "command": "npm exec --yes --package=pnpm@11.28.5 -- pnpm build",
+      "cwd": "upstream/harness",
+      "exit_code": 1,
+      "status": "BLOCKED",
+      "sha256": "141128c238a7a27d92806a2bc838c630a881852045c3d2fd2729ec54f7afd73a",
+      "path": "docs/evidence/m0/harness-build.log"
+    },
+    "harness-build-loader.log": {
+      "command": "node --import tsx/esm scripts/build.ts",
+      "cwd": "upstream/harness",
+      "exit_code": 1,
+      "status": "BLOCKED",
+      "sha256": "56d0ab8a51caa0cbfac79561939fd770dff914351ddde1aa90ad16e2e659eb32",
+      "path": "docs/evidence/m0/harness-build-loader.log"
+    }
+  }
+}

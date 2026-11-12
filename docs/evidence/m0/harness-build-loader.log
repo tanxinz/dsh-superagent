@@ -1,0 +1,83 @@
+run-gates: build running 10 gate(s) with 9 worker(s) from 9 local default worker(s) of 9 CPU(s).
+run-gates: start native addon
+run-gates: start Host Typert
+
+== FAILED native addon (1.28s) ==
+command: pnpm run build:native-system
+outcome: exit 1
+$ tsx native/system/scripts/build.ts --host-addon-only
+node:net:2368
+      const error = new UVExceptionWithHostPort(rval, 'listen', address, port);
+                    ^
+
+Error: listen EPERM: operation not permitted /tmp/tsx-1000/89.pipe
+    at Server.setupListenHandle [as _listen2] (node:net:2368:21)
+    at listenInCluster (node:net:2499:12)
+    at Server.listen (node:net:2641:5)
+    at file://<workspace>/upstream/harness/node_modules/.pnpm/tsx@4.23.13/node_modules/tsx/dist/cli.mjs:53:31472
+    at new Promise (<anonymous>)
+    at createIpcServer (file://<workspace>/upstream/harness/node_modules/.pnpm/tsx@4.23.13/node_modules/tsx/dist/cli.mjs:53:31450)
+    at async file://<workspace>/upstream/harness/node_modules/.pnpm/tsx@4.23.13/node_modules/tsx/dist/cli.mjs:55:542 {
+  code: 'EPERM',
+  errno: -1,
+  syscall: 'listen',
+  address: '/tmp/tsx-1000/89.pipe',
+  port: -1
+}
+
+Node.js v24.22.1
+[ELIFECYCLE] Command failed with exit code 1.
+run-gates: PASS Host Typert (10.25s)
+
+== SKIPPED host compiler (0.00s) ==
+command: tsc -b <tsconfig.host.json references>
+outcome: dependency failed or skipped: native
+
+== SKIPPED Host bundle (0.00s) ==
+command: pnpm exec tsdown --config-loader native --env.DSH_BUILD_FACE host
+outcome: dependency failed or skipped: host-src
+
+== SKIPPED Desktop bundle (0.00s) ==
+command: pnpm --filter @deepseek-ai/dsh-desktop run bundle
+outcome: dependency failed or skipped: host-bundle
+
+== SKIPPED client compiler (0.00s) ==
+command: tsc -b <tsconfig.client.json references>
+outcome: dependency failed or skipped: desktop-bundle
+
+== SKIPPED Client bundle (0.00s) ==
+command: pnpm exec tsdown --config-loader native --env.DSH_BUILD_FACE client
+outcome: dependency failed or skipped: client-src
+
+== SKIPPED Web build (0.00s) ==
+command: pnpm run build:web
+outcome: dependency failed or skipped: client-bundle
+
+== SKIPPED host aggregate check (0.00s) ==
+command: tsc -p tsconfig.host.json
+outcome: dependency failed or skipped: host-src
+
+== SKIPPED client aggregate check (0.00s) ==
+command: tsc -p tsconfig.client.json
+outcome: dependency failed or skipped: client-src
+
+run-gates: 1 passed, 1 failed, 8 skipped in 10.26s.
+run-gates: unsuccessful gates:
+  - FAILED native addon (1.28s, exit 1)
+    pnpm run build:native-system
+  - SKIPPED host compiler (0.00s, dependency failed or skipped: native)
+    tsc -b <tsconfig.host.json references>
+  - SKIPPED Host bundle (0.00s, dependency failed or skipped: host-src)
+    pnpm exec tsdown --config-loader native --env.DSH_BUILD_FACE host
+  - SKIPPED Desktop bundle (0.00s, dependency failed or skipped: host-bundle)
+    pnpm --filter @deepseek-ai/dsh-desktop run bundle
+  - SKIPPED client compiler (0.00s, dependency failed or skipped: desktop-bundle)
+    tsc -b <tsconfig.client.json references>
+  - SKIPPED Client bundle (0.00s, dependency failed or skipped: client-src)
+    pnpm exec tsdown --config-loader native --env.DSH_BUILD_FACE client
+  - SKIPPED Web build (0.00s, dependency failed or skipped: client-bundle)
+    pnpm run build:web
+  - SKIPPED host aggregate check (0.00s, dependency failed or skipped: host-src)
+    tsc -p tsconfig.host.json
+  - SKIPPED client aggregate check (0.00s, dependency failed or skipped: client-src)
+    tsc -p tsconfig.client.json

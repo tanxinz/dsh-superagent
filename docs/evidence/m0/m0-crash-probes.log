@@ -1,0 +1,10 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+ RUN  v4.1.8 <workspace>/upstream/superagent
+
+
+ Test Files  1 passed (1)
+      Tests  11 passed (11)
+   Start at  14:03:29
+   Duration  2.25s (transform 364ms, setup 0ms, import 535ms, tests 1.55s, environment 0ms)
+

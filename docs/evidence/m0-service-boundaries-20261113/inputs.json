@@ -1,0 +1,10 @@
+{
+  "base_commit": "7e47fe11ae9ae689724b6fdb4bda53a429db235d",
+  "worktree_inputs_sha256": {
+    "upstream/superagent/src/app/effects.ts": "d1b4f5004acbbc8e54fbaf369d2d3aeba068a210cfe955276b9d216182f0cd9e",
+    "upstream/superagent/tests/effects.spec.ts": "ed744ae11e86589633a45ad465d1e3a60fbb9b7cbc722521b96e990d709345a0",
+    "upstream/superagent/tests/runtime.spec.ts": "e2819850f109e62c021caec6c9abc50527665e50a5d8fece74a8ff2df633489a"
+  },
+  "built_entry_sha256": "dbc5f557114d5a60f282daa3e208531fb5b08782863b0491864c0f01376cc660",
+  "note": "Local command source_commit is base HEAD; worktree hashes identify the actual patch."
+}

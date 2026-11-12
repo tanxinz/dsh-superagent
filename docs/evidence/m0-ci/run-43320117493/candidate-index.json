@@ -1,0 +1,22 @@
+{
+  "run_id": 43320117493,
+  "artifact_id": 13990729002,
+  "head_sha": "8cc9ec09ff83a85498dbc231258b1031b4237a19",
+  "sha256": "ea72f8299522268fb6a50744c9cf20d4d262e847713eab36bfdc64d5031e0edf",
+  "audit": {
+    "evidence_integrity": "PASS",
+    "checks": {
+      "harness-build": "PASS",
+      "harness-install": "PASS",
+      "harness-sandbox-setup": "PASS",
+      "harness-test": "PASS",
+      "harness-workflow-regression": "PASS"
+    },
+    "errors": [],
+    "required_commands_pass": true,
+    "m0_exit": "BLOCKED",
+    "real_session": "NOT_RUN"
+  },
+  "baseline_full_suite": "PENDING_AT_CAPTURE",
+  "publication": "LOCAL_VERIFIED; Git tree upload blocked by automatic review pending explicit file-specific publication confirmation"
+}

@@ -1,0 +1,31 @@
+{
+  "schema_version": 2,
+  "check_id": "regressions-final",
+  "mode": "OFFLINE_BUILD_OR_TEST",
+  "started_at": "2026-11-12T14:45:02.375691+00:00",
+  "finished_at": "2026-11-12T14:45:02.891800+00:00",
+  "duration_seconds": 0.516,
+  "command": [
+    "python",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "scripts",
+    "-p",
+    "test_*.py",
+    "-v"
+  ],
+  "source_commit": "7d9f51d0d1f63c5cd2fd189b1b81bca64c437779",
+  "exit_code": 0,
+  "timed_out": false,
+  "launch_error": null,
+  "interrupted_signal": null,
+  "status": "PASS",
+  "log": "command.log",
+  "log_sha256": "89b8d94b25d5b5265528efc2a220c6bcaaa1d006f3f6c79a153e80caab7b979d",
+  "lockfile_sha256": null,
+  "online_sdk": "NOT_RUN",
+  "real_session": "NOT_RUN",
+  "m0_exit": "BLOCKED"
+}

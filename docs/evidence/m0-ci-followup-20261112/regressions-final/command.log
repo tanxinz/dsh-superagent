@@ -1,0 +1,27 @@
+test_checkbox_without_done_fails (test_checklist_audit.ChecklistTests.test_checkbox_without_done_fails) ... ok
+test_deleted_or_duplicated_tasks_fail (test_checklist_audit.ChecklistTests.test_deleted_or_duplicated_tasks_fail) ... ok
+test_done_with_open_prerequisite_fails (test_checklist_audit.ChecklistTests.test_done_with_open_prerequisite_fails) ... ok
+test_done_without_evidence_fails (test_checklist_audit.ChecklistTests.test_done_without_evidence_fails) ... ok
+test_structure_pass_is_not_completion (test_checklist_audit.ChecklistTests.test_structure_pass_is_not_completion) ... ok
+test_unknown_prerequisite_and_cycle_fail (test_checklist_audit.ChecklistTests.test_unknown_prerequisite_and_cycle_fail) ... ok
+test_attempt_cannot_be_overwritten (test_ci_record.EvidenceTests.test_attempt_cannot_be_overwritten) ... ok
+test_cancellation_preserves_redacted_evidence_and_kills_descendants (test_ci_record.EvidenceTests.test_cancellation_preserves_redacted_evidence_and_kills_descendants) ... ok
+test_invalid_timeout_and_id_do_not_execute (test_ci_record.EvidenceTests.test_invalid_timeout_and_id_do_not_execute) ... ok
+test_missing_executable_cannot_pass (test_ci_record.EvidenceTests.test_missing_executable_cannot_pass) ... ok
+test_nonzero_exit_cannot_pass (test_ci_record.EvidenceTests.test_nonzero_exit_cannot_pass) ... ok
+test_redaction_happens_before_hash_and_raw_file_is_removed (test_ci_record.EvidenceTests.test_redaction_happens_before_hash_and_raw_file_is_removed) ... ok
+test_signal_cannot_pass (test_ci_record.EvidenceTests.test_signal_cannot_pass) ... ok
+test_success_is_only_command_success_and_hashes_saved_bytes (test_ci_record.EvidenceTests.test_success_is_only_command_success_and_hashes_saved_bytes) ... ok
+test_timeout_cannot_pass (test_ci_record.EvidenceTests.test_timeout_cannot_pass) ... ok
+test_cancellation_cannot_claim_pass_even_after_zero_exit (test_evidence_audit.AuditTests.test_cancellation_cannot_claim_pass_even_after_zero_exit) ... ok
+test_focused_command_cannot_be_claimed_as_full (test_evidence_audit.AuditTests.test_focused_command_cannot_be_claimed_as_full) ... ok
+test_full_command_pass_is_not_stage_acceptance (test_evidence_audit.AuditTests.test_full_command_pass_is_not_stage_acceptance) ... ok
+test_legacy_failed_log_is_valid_evidence_but_not_command_pass (test_evidence_audit.AuditTests.test_legacy_failed_log_is_valid_evidence_but_not_command_pass) ... ok
+test_missing_checks_wrong_source_and_invalid_json_fail (test_evidence_audit.AuditTests.test_missing_checks_wrong_source_and_invalid_json_fail) ... ok
+test_missing_full_log_and_changed_bytes_fail (test_evidence_audit.AuditTests.test_missing_full_log_and_changed_bytes_fail) ... ok
+test_original_artifact_archive_is_checked_without_extracting_or_rewriting (test_evidence_audit.AuditTests.test_original_artifact_archive_is_checked_without_extracting_or_rewriting) ... ok
+
+----------------------------------------------------------------------
+Ran 22 tests in 0.365s
+
+OK

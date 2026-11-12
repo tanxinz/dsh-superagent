@@ -5,6 +5,9 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
+env:
+  DSH_TELEMETRY_DISABLED: '1'
+
 permissions:
   contents: read
 
@@ -70,6 +73,9 @@ jobs:
     needs: review
     runs-on: ubuntu-24.04
     timeout-minutes: 90
+    env:
+      # Matches the pinned upstream CI: inline Vitest projects read this variable.
+      DSH_COVERAGE_TEST_TIMEOUT_MS: '90000'
     strategy:
       fail-fast: false
       matrix:
@@ -100,6 +106,8 @@ jobs:
           node -e "const p=require('./harness-under-test/package.json'); if(p.packageManager!=='pnpm@11.28.5') process.exit(1)"
       - name: Frozen install
         run: python scripts/ci_record.py --id harness-install --cwd harness-under-test --output artifacts --timeout 1200 -- npm exec --yes --package=pnpm@11.28.5 -- pnpm install --frozen-lockfile
+      - name: Prepare and probe upstream Linux sandbox
+        run: python scripts/ci_record.py --id harness-sandbox-setup --cwd harness-under-test --output artifacts --timeout 180 -- bash scripts/prepare-ci-bubblewrap.sh
       - name: Complete original build
         run: python scripts/ci_record.py --id harness-build --cwd harness-under-test --output artifacts --timeout 1200 -- npm exec --yes --package=pnpm@11.28.5 -- pnpm build
       - name: Reproduce observed workflow cleanup regression

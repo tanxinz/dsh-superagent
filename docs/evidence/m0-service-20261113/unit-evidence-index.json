@@ -1,0 +1,21 @@
+{
+  "archive": "unit-evidence.zip",
+  "sha256": "0707b98d838070c5ea65885499aaa68c4adf8d3a882004c9306dc6ce34eb9a0d",
+  "files": [
+    "docs/evidence/m0-service-20261113/local/root-regressions/command.log",
+    "docs/evidence/m0-service-20261113/local/root-regressions/result.json",
+    "docs/evidence/m0-service-20261113/local/service-final-check/command.log",
+    "docs/evidence/m0-service-20261113/local/service-final-check/result.json",
+    "docs/evidence/m0-service-20261113/local/service-first-check/command.log",
+    "docs/evidence/m0-service-20261113/local/service-first-check/result.json",
+    "docs/evidence/m0-service-20261113/local/service-fixed-check/command.log",
+    "docs/evidence/m0-service-20261113/local/service-fixed-check/result.json",
+    "docs/evidence/m0-service-20261113/local/service-loading-fixed-check/command.log",
+    "docs/evidence/m0-service-20261113/local/service-loading-fixed-check/result.json",
+    "docs/evidence/m0-service-20261113/local/service-loading-reviewed-check/command.log",
+    "docs/evidence/m0-service-20261113/local/service-loading-reviewed-check/result.json",
+    "docs/evidence/m0-service-20261113/local/service-reviewed-check/command.log",
+    "docs/evidence/m0-service-20261113/local/service-reviewed-check/result.json"
+  ],
+  "profile_configuration_and_logs_included": false
+}

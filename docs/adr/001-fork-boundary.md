@@ -19,3 +19,7 @@ Store 的运行时检查只能保证拒绝 async 回调及返回的异步结果�
 ## 源码协作方式
 
 SuperAgent 原先以 gitlink 引用只读上游；本批将固定版本快照导入同一路径成为本仓库普通源码，便于获授权成员直接提交。保留上游许可证、基线 Commit 和原始说明，未导入其 .git 或依赖目录。Harness 保留固定 gitlink。这样无需新增外部仓库，也不会出现引用本地未推送补丁的问题。
+
+## M0-05 接续（2026-11-13）
+
+白名单增量：Runtime 原生组合根注册/消费 CognitiveMeshService；index inject 与 contracts 共用依赖常量；Effects 仅新增默认 true 的可选派发谓词和一处派发前检查，Runtime 用于依赖失效时保留原生队列。没有第二队列或持久租约。回归覆盖原生全套 62 文件/1229 测试、真实 Cordis 消费/卸载及 Runtime 缺失依赖和恢复；真实已配置 profile 的依赖切换仍待实证。安全权限与身份改造没有据此关闭。

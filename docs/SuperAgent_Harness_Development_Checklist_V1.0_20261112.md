@@ -113,7 +113,7 @@
 
 #### M0-05 注册并实际消费 CognitiveMeshService
 
-- [ ] **状态：TODO**｜优先级：P0｜责任角色：平台工程。
+- [ ] **状态：IN_PROGRESS**｜优先级：P0｜责任角色：平台工程。
 - **前置任务**：M0-04。设计依据：§5.1、§5.2、§15.2。
 - **开发内容**：按锁版 Cordis Service/inject API 在 Runtime 装配最小受控服务；提供健康状态和依赖检查；关键服务未就绪停止新 Intake/分配，恢复后才处理已有持久任务。
 - **交付物/建议落点**：src/extensions/mesh/service.ts、contracts.ts；服务注册/消费/卸载用例。

@@ -1,0 +1,17 @@
+{
+  "base_commit": "e8fb99ffe4a94ee82777a1b5222fd60219940a1b",
+  "note": "Final changed worktree source/test hashes; command source_commit records base HEAD, not future commit. Unchanged files inherit base.",
+  "sha256": {
+    "upstream/superagent/docs/007-architecture.md": "00d9c11943c762d04a7606f5349d146b9d97051b177a75254bbc6f473a26fb39",
+    "upstream/superagent/src/app/effects.ts": "c44dbaacd4c998c66a8670ae3b2efef3aa6313a1315daf9b0fddd4d51878f752",
+    "upstream/superagent/src/app/runtime.ts": "d7d8092f793562a8193a213f6e23e234d2da04f05e71279bb2df32fce8c12a00",
+    "upstream/superagent/src/index.ts": "df66e18faf32420503b1d8ddb33a188ba7073bd1956c1e7187b80d54b47bb0a2",
+    "upstream/superagent/tests/fixtures/host.ts": "e79079ac65c219d714dd143bf94f91eb868cdaf9403e0ab1661ee998b212461c",
+    "upstream/superagent/tests/model-surface.spec.ts": "c184291da0ec4abd4eb76d9d8b810718d08a835ffe8f1130c32844b436e102c7",
+    "upstream/superagent/tests/runtime.spec.ts": "7357384c993088a33d86424918dfc0c5a1575b20cbc5cf8a422c518787b9db48",
+    "upstream/superagent/src/extensions/mesh/contracts.ts": "3769b50d8e5f94513b26143faf0f669ae169766a8afc37ef1ab3c21a1cd83b2c",
+    "upstream/superagent/src/extensions/mesh/service.ts": "edc4e52fd44a158506b11a5c2693b409be7a31c69a42d712c43909dce7427bd8",
+    "upstream/superagent/tests/mesh-service.spec.ts": "5ec565a561fa887d429fb4038c32f6e7a238329d7af7c58616be1973463b181c"
+  },
+  "built_entry_sha256": "545e30e98a542610a0d2bf4d10a34920c263e4e26f2374502303ce036e5401f2"
+}

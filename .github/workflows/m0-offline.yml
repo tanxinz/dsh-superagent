@@ -68,12 +68,14 @@ jobs:
           python scripts/ci_record.py --id profile-runtime-install --cwd "$RUNNER_TEMP/m0-profile-runtime" --output artifacts -- npm ci --ignore-scripts --no-audit --no-fund
       - name: Real unconfigured profile lifecycle
         run: python scripts/ci_record.py --id superagent-profile-probe --cwd . --output artifacts --timeout 100 -- node scripts/m0-profile-probe.mjs "$RUNNER_TEMP/m0-profile-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js" upstream/superagent artifacts/profile-details --boot-unconfigured
+      - name: Real native dependency unload and restore
+        run: python scripts/ci_record.py --id superagent-dependency-profile --cwd . --output artifacts --timeout 100 -- node scripts/m0-profile-probe.mjs "$RUNNER_TEMP/m0-profile-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js" upstream/superagent artifacts/dependency-profile-details --boot-service-dependency-cycle
       - name: Verify dependency files stayed frozen
         if: always()
         run: git diff --exit-code -- upstream/superagent/package.json upstream/superagent/pnpm-lock.yaml scripts/fixtures/m0-profile-runtime/package.json scripts/fixtures/m0-profile-runtime/package-lock.json
       - name: Audit complete SuperAgent evidence
         if: always()
-        run: python scripts/evidence_audit.py artifacts --require superagent-install --require superagent-check --require profile-runtime-install --require superagent-profile-probe --output artifacts/evidence-audit.json
+        run: python scripts/evidence_audit.py artifacts --require superagent-install --require superagent-check --require profile-runtime-install --require superagent-profile-probe --require superagent-dependency-profile --output artifacts/evidence-audit.json
       - name: Upload offline evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -84,6 +86,7 @@ jobs:
             artifacts/**/result.json
             artifacts/evidence-audit.json
             artifacts/profile-details/**
+            artifacts/dependency-profile-details/**
           if-no-files-found: error
 
   harness:

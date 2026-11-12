@@ -50,3 +50,7 @@
 `src/extensions/mesh/service.ts` 使用公共 Service(ctx, 'cognitiveMesh') 注册，真实 Cordis inject 消费及卸载句柄拒绝纳入回归。Runtime 在打开 Store 前、ensure 主 Session 前以及启动 resume/passes/effects 前调用 assertReady；构造失败释放目录锁。原生 Effects 增加默认不变的可选 dispatchAllowed 回调，Runtime 接入服务检查以保留待处理行；Source/Runtime Intake、paused/closing 同步检查。依赖恢复后仍由原生 pump 推进，没有新增调度器。
 
 contracts.ts 的 11 项依赖与 Bundle inject 共享。此处只验证服务可用性与生命周期，不认证服务实现、Actor 或模型权限，不替代 M0-06/10/11/12。已经运行的异步副作用不在撤销保证内。验收及剩余条件见 acceptance/M0-service-20261113.md。
+
+## 原生 profile 依赖切换实证（2026-11-13）
+
+根 probe 新模式 --boot-service-dependency-cycle：通过锁版包公共 PermissionPresetService 和 Cordis Registry/Fiber API 在真实未配置 DSH 进程卸载/恢复依赖，观测原生 Bundle 注销/重装、旧服务和 Runtime 拒绝、新服务消费及预设一致性。最终两次进程各 installed/disposed=2，退出 0。只验证未配置 profile；没有用伪服务替代生产权限服务，不等同已配置主 Session、Worker 或持久工作恢复。历史一轮聚合检查失败原因尚未证实，严格断言和新 CI 保留。具体版本、命令及剩余条件见 acceptance/M0-profile-dependency-20261113.md。

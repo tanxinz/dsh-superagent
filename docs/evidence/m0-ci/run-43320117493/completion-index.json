@@ -1,0 +1,49 @@
+{
+  "run_id": 43320117493,
+  "head_sha": "8cc9ec09ff83a85498dbc231258b1031b4237a19",
+  "all_four_jobs": "SUCCESS",
+  "new_original_archives": [
+    {
+      "id": 13992801388,
+      "name": "m0-harness-baseline-43320117493-1",
+      "size_in_bytes": 164596,
+      "archive_download_url": "https://api.github.com/repos/tanxinz/dsh-superagent/actions/artifacts/13992801388/zip",
+      "expired": false,
+      "created_at": "2026-11-12T23:08:23Z",
+      "expires_at": "2027-02-10T22:27:47Z",
+      "updated_at": "2026-11-12T23:08:23Z",
+      "digest": "sha256:de72a5bf0b339175e751af35f64427399861bc14b09066e45b54c81df703debd",
+      "workflow_run": {
+        "id": 43320117493,
+        "repository_id": 1454829976,
+        "head_repository_id": 1454829976,
+        "head_branch": "feat/m0-cognitive-mesh-service-20261113",
+        "head_sha": "8cc9ec09ff83a85498dbc231258b1031b4237a19"
+      }
+    },
+    {
+      "id": 13990600501,
+      "name": "m0-review-43320117493-1",
+      "size_in_bytes": 7496,
+      "archive_download_url": "https://api.github.com/repos/tanxinz/dsh-superagent/actions/artifacts/13990600501/zip",
+      "expired": false,
+      "created_at": "2026-11-12T22:28:00Z",
+      "expires_at": "2027-02-10T22:27:47Z",
+      "updated_at": "2026-11-12T22:28:00Z",
+      "digest": "sha256:0ace40cd5b1b0dd12c9695aefbfb58d8189add67aa2d89a9233e823b811e5b59",
+      "workflow_run": {
+        "id": 43320117493,
+        "repository_id": 1454829976,
+        "head_repository_id": 1454829976,
+        "head_branch": "feat/m0-cognitive-mesh-service-20261113",
+        "head_sha": "8cc9ec09ff83a85498dbc231258b1031b4237a19"
+      }
+    }
+  ],
+  "zip_digest_and_complete_logs": "VERIFIED",
+  "existing_archives": [
+    "13990351052.zip",
+    "13990729002.zip"
+  ],
+  "publication": "All four final artifacts verified; two previously published original ZIPs remain in Git. New baseline/review ZIPs retained locally; public upload blocked by automatic review pending file-specific consent."
+}

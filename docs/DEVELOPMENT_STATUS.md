@@ -2,7 +2,15 @@
 
 更新日期：2026-11-12（北京时间）。本批继续执行 M0；阶段状态 BLOCKED，M0-14 未通过。
 
-## 当前接手：M0-05 依赖边界复审（2026-11-13）
+## 当前接手：原生 profile 依赖卸载/恢复（2026-11-13）
+
+分支 feat/m0-profile-dependency-lifecycle-20261113，基于 PR #10 的 15364bd。新增真实 DSH 未配置 profile 的依赖切换模式：卸载并恢复原生 PermissionPresetService，验证旧 Mesh/Runtime 拒绝、重新加载后新服务就绪、权限预设保持一致且 provider 唯一。最终两次进程 PASS，Bridge 安装/清理每次各 2、优雅退出 0；原有两次启停模式也通过。SuperAgent 完整检查 62 文件/1233 测试、类型检查和构建 PASS；22 Python /9 Node 回归最终通过，原失败记录保留。新 CI 已接入强制命令证据和完整轨迹工件上传。没有修改产品源码或权限策略。
+
+PR #7 run 43320117493 现已四个 job 全部 success，两版 Harness 原始全量均通过；基线/review 最终原包已收取核验，四份原件本地齐全；新两份原包公开上传被自动审批拦截，仅完成索引先提交，详见本批验收记录。该结果属于 8cc9ec0，不包括后续派发修复或本次新 probe。
+
+M0-05 仍 IN_PROGRESS；真实已配置 profile、持久任务恢复及一次历史聚合检查间歇失败的原因仍未闭合。M0-14 / M1 仍 BLOCKED。详见 acceptance/M0-profile-dependency-20261113.md。
+
+## 前批：M0-05 依赖边界复审（2026-11-13）
 
 分支 fix/m0-service-dependency-boundaries-20261113，基于 PR #8 的 7e47fe1。实际复现并修复上一版单轮派发中首个 handler/limit 回调撤销依赖后仍启动后续工作的缺口：每个 kind 和工作项启动前复查。新增异步 Setup 后/Session 准备后的启动拒绝回归。完整 pnpm check 62 文件/1233 测试、类型检查、构建 PASS；真实临时未配置 profile 两次优雅启停 PASS；22 项根回归 PASS，原失败保持 FAIL。详情见 acceptance/M0-service-boundaries-20261113.md。
 

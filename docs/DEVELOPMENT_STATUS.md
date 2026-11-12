@@ -6,7 +6,7 @@
 
 分支 fix/m0-service-dependency-boundaries-20261113，基于 PR #8 的 7e47fe1。实际复现并修复上一版单轮派发中首个 handler/limit 回调撤销依赖后仍启动后续工作的缺口：每个 kind 和工作项启动前复查。新增异步 Setup 后/Session 准备后的启动拒绝回归。完整 pnpm check 62 文件/1233 测试、类型检查、构建 PASS；真实临时未配置 profile 两次优雅启停 PASS；22 项根回归 PASS，原失败保持 FAIL。详情见 acceptance/M0-service-boundaries-20261113.md。
 
-PR #7 的 SuperAgent/真实 profile 和候选 Harness 原始全量通过（41652 测试、185 跳过、1 expected fail），完整原包已下载核验（本批新包公开写入被自动审批拦截，见验收记录）；基线 Harness 仍在运行，未提前声称两版通过。PR #8 原 profile 上传已获用户批准并完成，不再作为当前公开归档阻断。M0-05 保持 IN_PROGRESS，真实已配置 profile 动态切换及前置整项仍待闭合；M0-14 / M1 仍 BLOCKED。
+PR #7 的 SuperAgent/真实 profile 和候选 Harness 原始全量通过（41652 测试、185 跳过、1 expected fail），完整原包已下载核验；本批三份 ZIP 再获用户逐项明确批准后已补齐到后继证据分支（见验收记录）；基线 Harness 仍在运行，未提前声称两版通过。PR #8 原 profile 上传已获用户批准并完成，不再作为当前公开归档阻断。M0-05 保持 IN_PROGRESS，真实已配置 profile 动态切换及前置整项仍待闭合；M0-14 / M1 仍 BLOCKED。
 
 ## 前批：M0-05 CognitiveMeshService（2026-11-13）
 

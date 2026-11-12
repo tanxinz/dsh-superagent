@@ -1,0 +1,73 @@
+[33mThe plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the [1mresolve.tsconfigPaths[22m option. You can remove the plugin and set [1mresolve.tsconfigPaths: true[22m in your Vite config instead.[39m
+[33mThe plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the [1mresolve.tsconfigPaths[22m option. You can remove the plugin and set [1mresolve.tsconfigPaths: true[22m in your Vite config instead.[39m
+[33mThe plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the [1mresolve.tsconfigPaths[22m option. You can remove the plugin and set [1mresolve.tsconfigPaths: true[22m in your Vite config instead.[39m
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m<cwd>[39m
+
+ [31m❯[39m [30m[42m process-bound [49m[39m packages/workflow/workflow-ptc/tests/workflow-ptc.spec.ts [2m([22m[2m42 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[33m 22833[2mms[22m[39m
+       [33m[2m✓[22m[39m awaits an async workflow in a temporary persistent-provider environment [33m 782[2mms[22m[39m
+       [33m[2m✓[22m[39m captures args at start and isolates subsequent caller and script mutations [33m 653[2mms[22m[39m
+       [33m[2m✓[22m[39m runs a script end-to-end: agent() text results, phases, log, args, return value, events [33m 641[2mms[22m[39m
+       [33m[2m✓[22m[39m agent({schema, model}) forwards outputSchema and agentOptions to the provider through PTC bindings [33m 650[2mms[22m[39m
+       [33m[2m✓[22m[39m agent({provider}) forwards provider-only agentOptions through PTC bindings [33m 655[2mms[22m[39m
+       [33m[2m✓[22m[39m a start-request provider override selects every child without changing the engine default [33m 1225[2mms[22m[39m
+       [32m✓[39m rejects invalid start-request provider routes before publishing a run[32m 11[2mms[22m[39m
+       [32m✓[39m rejects invalid per-run total-agent caps before publishing a run[32m 11[2mms[22m[39m
+       [33m[2m✓[22m[39m enforces a per-run total-agent cap below the engine ceiling [33m 634[2mms[22m[39m
+       [33m[2m✓[22m[39m a fatal hook error inside the guest kills the script and reports the error [33m 641[2mms[22m[39m
+       [32m✓[39m rejects an unregistered configured provider before publishing a run[32m 10[2mms[22m[39m
+       [33m[2m✓[22m[39m waits for async provider start before announcing a result that settled early [33m 688[2mms[22m[39m
+       [33m[2m✓[22m[39m announces an asynchronously published child before its early result rejection [33m 696[2mms[22m[39m
+       [33m[2m✓[22m[39m classifies provider start rejection as AGENT_START, drops an early result, and emits no false lifecycle pair [33m 685[2mms[22m[39m
+       [33m[2m✓[22m[39m aborts a pending provider start once without publishing workflow lifecycle [33m 716[2mms[22m[39m
+       [33m[2m✓[22m[39m a child result REJECTION crosses back as a fatal AGENT_RESULT error (a broken provider is not a failed child) [33m 639[2mms[22m[39m
+       [33m[2m✓[22m[39m maps a non-JSON ready-child result to fatal AGENT_RESULT instead of wedging the bridge [33m 651[2mms[22m[39m
+       [33m[2m✓[22m[39m contains a non-JSON result even if the injected subagent service violates its normalization contract [33m 642[2mms[22m[39m
+       [33m[2m✓[22m[39m a child whose dispose() throws synchronously cannot wedge the script (the host acks anyway) [33m 646[2mms[22m[39m
+       [33m[2m✓[22m[39m a child dispose() rejecting an UNRENDERABLE value still acks — the containment warn is total [33m 662[2mms[22m[39m
+       [32m✓[39m start() throws synchronously for invalid meta data or an unparseable body (host-side pre-checks)[32m 15[2mms[22m[39m
+       [33m[2m✓[22m[39m cancel() aborts in-flight children and settles after their cleanup [33m 634[2mms[22m[39m
+       [32m✓[39m an already-aborted request signal prevents script execution[32m 10[2mms[22m[39m
+       [33m[2m✓[22m[39m cancel() right after start() cancels before the body runs; the signal aborting mid-run cancels like cancel() [33m 686[2mms[22m[39m
+       [33m[2m✓[22m[39m removes the exact external abort callback on first settlement or teardown [33m 1329[2mms[22m[39m
+       [33m[2m✓[22m[39m a child-start racing the host cancel is refused: no child starts after cancellation [33m 642[2mms[22m[39m
+       [33m[2m✓[22m[39m post-cancel narration is suppressed host-side, and completion racing a cancel reports cancelled [33m 689[2mms[22m[39m
+       [32m✓[39m cancel() stops a script parked on a promise no hook owns[32m 11[2mms[22m[39m
+       [32m✓[39m dispose() stops a stuck script and waits for cancellation[32m 11[2mms[22m[39m
+       [33m[2m✓[22m[39m dispose() is idempotent and settles cleanly after a completed run [33m 658[2mms[22m[39m
+       [33m[2m✓[22m[39m strays: children fired without await are aborted once the script settles, and dispose() waits for their disposal [33m 694[2mms[22m[39m
+       [33m[2m✓[22m[39m the settle-reap fires the request signal too: a provider honoring ONLY the signal winds its stray down promptly [33m 625[2mms[22m[39m
+       [33m[2m✓[22m[39m the settle-reap aborts a pending provider start before workflow/end [33m 641[2mms[22m[39m
+       [33m[2m✓[22m[39m concurrent child cleanup and handle disposal dispose each child once [33m 642[2mms[22m[39m
+       [33m[2m✓[22m[39m cancellation emits exactly one agent-end per observed start before workflow/end [33m 686[2mms[22m[39m
+[31m       [31m×[31m waits for a late provider publication to release its file after cancellation[39m[32m 24[2mms[22m[39m
+       [33m[2m✓[22m[39m a process exit closes observed child lifecycles and awaits their disposal [33m 691[2mms[22m[39m
+       [33m[2m✓[22m[39m reports an uncaught Node callback exception as a workflow error [33m 668[2mms[22m[39m
+       [33m[2m✓[22m[39m run ids are unique and lifecycle meta is the run's borrowed immutable value [33m 873[2mms[22m[39m
+       [32m✓[39m unregisters ctx.workflowEngine when the engine fiber is disposed (HMR safety)[32m 11[2mms[22m[39m
+       [33m[2m✓[22m[39m keeps a holder-owned run usable when the engine unloads before its child starts [33m 647[2mms[22m[39m
+       [32m✓[39m has the class-plugin export shape (default = the engine service class)[32m 0[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 1 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m [30m[42m process-bound [49m[39m packages/workflow/workflow-ptc/tests/workflow-ptc.spec.ts[2m > [22mdsh-workflow-ptc[2m > [22mprocess failure and pending child cleanup[2m > [22mwaits for a late provider publication to release its file after cancellation
+[31m[1mError[22m: workflow settled before child startup: {"value":null,"stopReason":"error","error":"workflow execution failed (sandbox-unavailable): sandbox mode \"read-only\" is requested but no sandbox backend is usable on this host; refusing to run the command unconfined. Install bubblewrap or run a Landlock-enforcing kernel (Linux), ensure sandbox-exec is usable (macOS), or ensure the ACL restricted-token runner can start (Windows) — otherwise switch the consumer to danger-full-access.","agentsStarted":0}[39m
+[36m [2m❯[22m packages/workflow/workflow-ptc/tests/workflow-ptc.spec.ts:[2m922:50[22m[39m
+    [90m920|[39m         [35mconst[39m request [33m=[39m [35mawait[39m [33mPromise[39m[33m.[39m[34mrace[39m([
+    [90m921|[39m           requested[33m.[39mpromise[33m,[39m
+    [90m922|[39m           handle.result.then((result) => { throw new Error(`workflow s…
+    [90m   |[39m                                                  [31m^[39m
+    [90m923|[39m         ])
+    [90m924|[39m         handle[33m.[39m[34mcancel[39m([32m'cancel pending startup'[39m)
+[90m [2m❯[22m packages/workflow/workflow-ptc/tests/workflow-ptc.spec.ts:[2m920:25[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m41 passed[39m[22m[90m (42)[39m
+[2m   Start at [22m 13:55:53
+[2m   Duration [22m 25.06s[2m (transform 1.66s, setup 74ms, import 2.01s, tests 22.83s, environment 0ms)[22m
+
+
+::error file=<cwd>/packages/workflow/workflow-ptc/tests/workflow-ptc.spec.ts,title=[process-bound] packages/workflow/workflow-ptc/tests/workflow-ptc.spec.ts > dsh-workflow-ptc > process failure and pending child cleanup > waits for a late provider publication to release its file after cancellation,line=922,column=50::Error: workflow settled before child startup: {"value":null,"stopReason":"error","error":"workflow execution failed (sandbox-unavailable): sandbox mode \"read-only\" is requested but no sandbox backend is usable on this host; refusing to run the command unconfined. Install bubblewrap or run a Landlock-enforcing kernel (Linux), ensure sandbox-exec is usable (macOS), or ensure the ACL restricted-token runner can start (Windows) — otherwise switch the consumer to danger-full-access.","agentsStarted":0}%0A ❯ packages/workflow/workflow-ptc/tests/workflow-ptc.spec.ts:922:50%0A ❯ packages/workflow/workflow-ptc/tests/workflow-ptc.spec.ts:920:25%0A%0A

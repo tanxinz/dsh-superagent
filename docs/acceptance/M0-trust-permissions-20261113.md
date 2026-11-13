@@ -61,3 +61,11 @@
 使用 CONTRIBUTING 声明的 pnpm11.7.0 冻结安装后执行原始 `pnpm check`；根命令为 `node --test scripts/m0-preflight.test.mjs`、`python -m unittest discover -s scripts -p 'test_*.py' -v`。profile 运行时用 `scripts/fixtures/m0-profile-runtime/package-lock.json` 冻结 `npm ci --ignore-scripts`，再按 `local-command-index.json` 中完整命令运行三个模式；新输出目录不得复用。新 CI 只测试其实际 head/merge，后续结果另行归档，不回写为旧源码已通过。
 
 本地若干中间失败只有父提交、命令和完整日志，未保存每次完整工作树，不作为整项已闭合的可复现源码证据。最终通过输入以 source-snapshot.json 核验，新 CI 将以实际提交/合并快照补齐；本地记录器 source_commit 仍是未提交工作树的父提交130a766，不能单靠该字段认定它测试了父提交原码。
+
+## PR #12 首轮真实 CI 与归档修复
+
+已推送20c576df642b285a62bb569f16864e4cd168c231并创建草稿 [PR #12](https://github.com/tanxinz/dsh-superagent/pull/12)。[run43361201100](https://github.com/tanxinz/dsh-superagent/actions/runs/43361201100) 合并快照9d8c8025b21a49f96395f8ab8b7df4e9e55dfbf8：review、SuperAgent冻结安装/完整pnpm check/三个真实profile模式及其审计全部PASS；独立OS夹具命令PASS/0（bubblewrap0.9.0，8个真实负向/允许检查和前后哈希通过），但整个 isolation-fixture job FAIL，因为使用sudo启动记录器，artifacts根目录归root，普通用户写evidence-audit.json时报PermissionError。完整job日志原件及ZIP本地保留，未覆盖；原件和日志SHA见ci12-summary.json、ci12-superagent-summary.json。两版Harness当时仍在完整构建，不记通过。
+
+自动修复仅调整CI权限边界：记录器仍以runner普通用户执行，只有受限、拥有测试目标的OS probe通过sudo运行。原始日志/结果/审计输出位于runner可写的artifacts目录，OS配置和负向断言不放宽。对该调整再跑原始完整1252项、根Python22项及三个原生profile；本地不能重现CI命名空间成功，修复后的新CI必须重新验证。旧失败job仍FAIL，不用命令通过覆盖job失败。
+
+OS独立工具夹具不是实际业务Worker执行路径；executionReady仍固定false，M0-11/12与M0-14状态不变。本地/CI#12通过只属于20c576d及其准确合并快照，后继源码提交另记CI。

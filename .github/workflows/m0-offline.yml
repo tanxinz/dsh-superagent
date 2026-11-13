@@ -107,7 +107,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y bubblewrap
       - name: Harmless OS mount, environment and network boundary fixture
         # The disposable host grants namespace setup to this probe only. Business Workers stay disabled.
-        run: sudo -n "$(command -v python)" scripts/ci_record.py --id os-boundary-fixture --cwd . --output artifacts --timeout 30 -- "$(command -v node)" scripts/m0-isolation-probe.mjs artifacts/os-boundary-details
+        run: python scripts/ci_record.py --id os-boundary-fixture --cwd . --output artifacts --timeout 30 -- sudo -n "$(command -v node)" scripts/m0-isolation-probe.mjs artifacts/os-boundary-details
       - name: Audit isolation fixture evidence
         if: always()
         run: python scripts/evidence_audit.py artifacts --require os-boundary-fixture --output artifacts/evidence-audit.json

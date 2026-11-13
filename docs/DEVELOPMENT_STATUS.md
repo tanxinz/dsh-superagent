@@ -1,5 +1,7 @@
 # 开发交接状态
 
+PR #12 已建立，20c576d的首轮CI43361201100中review、SuperAgent完整检查及三个真实profile全PASS；OS夹具命令PASS但证据目录归root导致审计FAIL。已读完整日志并修复记录器权限边界，待新CI；旧失败原件保留。两版Harness当时仍运行，不算本批全量已通过；M0仍0/14整项，M0-14 BLOCKED。
+
 最新接续（2026-11-13，北京时间）：个人分支 `feat/m0-trust-and-permission-baseline-20261113` 从 PR #11 的130a766建立。实际产品补丁完成管理认证、持久安全最小表、只读 Session、权限最终拒绝及自动执行安全门禁；最新完整 pnpm check 65文件1252测试/类型检查/构建 PASS，三个真实临时 profile 模式各两次启停 PASS。配置账户是明确的 CLI Fixture；无模型/业务 Worker 运行。PR #11 CI 最终 failure（两版 Harness 完整通过、依赖探针误判失败）；本批新CI待取。M0-01—13 均 IN_PROGRESS、M0-14 BLOCKED，0/14整项完成。详细证据、历史失败、代码分工及仍待实现部分见 [验收接续](acceptance/M0-trust-permissions-20261113.md)。以下为历史批次，不能据旧表判断当前能力。
 
 更新日期：2026-11-12（北京时间）。本批继续执行 M0；阶段状态 BLOCKED，M0-14 未通过。

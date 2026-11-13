@@ -1,0 +1,24 @@
+{
+  "schema_version": 2,
+  "check_id": "final-auth-full-check-first",
+  "mode": "OFFLINE_BUILD_OR_TEST",
+  "started_at": "2026-11-13T08:35:15.971034+00:00",
+  "finished_at": "2026-11-13T08:35:36.732662+00:00",
+  "duration_seconds": 20.762,
+  "command": [
+    "pnpm",
+    "check"
+  ],
+  "source_commit": "e1bd28add66e95784feaa2b66fa81ddd75a5184a",
+  "exit_code": 0,
+  "timed_out": false,
+  "launch_error": null,
+  "interrupted_signal": null,
+  "status": "PASS",
+  "log": "command.log",
+  "log_sha256": "b4654ebffa48cd9b251cd7ab404ae5a650bce980942c25b107a965858dd232d2",
+  "lockfile_sha256": "ba6b997c448984a04b28eeb5b620c14c7cfeff5eb170e1abd6e0734007405c39",
+  "online_sdk": "NOT_RUN",
+  "real_session": "NOT_RUN",
+  "m0_exit": "BLOCKED"
+}

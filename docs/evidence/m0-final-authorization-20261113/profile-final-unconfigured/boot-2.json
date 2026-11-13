@@ -1,0 +1,76 @@
+{
+  "index": 2,
+  "state": {
+    "setup": {
+      "machine": {
+        "stateDir": "/var/folders/_j/x6wlg74j4nz51xcf6bt5y3ch0000gn/T/m0-dsh-profile-5QONfE/state",
+        "promptMaxChars": 100000,
+        "admissionContextMaxPages": 10,
+        "admissionContextTimeoutMs": 15000
+      },
+      "problem": {
+        "place": "github",
+        "code": "repositoryUnset",
+        "values": {},
+        "detail": "The GitHub Source names no repository."
+      },
+      "feishuProblem": null,
+      "accounts": null
+    },
+    "load": {
+      "running": 0,
+      "queued": 0,
+      "maxWorkers": 3
+    },
+    "masterId": "orchestrator-1eae57da6a62aeb7bf4784070076dd85",
+    "paused": false,
+    "health": {
+      "runtime": {
+        "state": "paused",
+        "detail": "Waiting for the deployment check",
+        "code": "setupPending",
+        "at": "2026-11-13T08:47:30.597Z"
+      },
+      "relay": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T08:47:30.590Z"
+      },
+      "notice": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T08:47:30.590Z"
+      },
+      "launch": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T08:47:30.590Z"
+      },
+      "delivery": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T08:47:30.590Z"
+      },
+      "assessment": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T08:47:30.590Z"
+      },
+      "reply": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T08:47:30.590Z"
+      },
+      "evals": {
+        "state": "ready",
+        "detail": "No unavailable Eval in the last hour"
+      }
+    }
+  },
+  "forced": false,
+  "exit_code": 0,
+  "signal": null,
+  "installed": 1,
+  "disposed": 1,
+  "log_sha256": "5344c49d27e39717a042461bf1d6a699c44a462be88d0c762ac4db48b696b5af"
+}

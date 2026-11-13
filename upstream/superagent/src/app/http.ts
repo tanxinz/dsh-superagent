@@ -52,7 +52,7 @@ export interface HttpHost {
   configured(): boolean
   links(): LinkTarget
   ticketEnvironment(ticket: Ticket): Variable[]
-  checkSetup(): void
+  checkSetup(authorize?: () => void): void
   requestPass(): void
   models(): Promise<ModelCatalog>
 }
@@ -136,6 +136,7 @@ export type PromptsView = ReturnType<typeof promptsView>
 
 interface Input<K extends keyof Api> {
   params: RouteParams<K>; query: Record<string, string>; body: (maxBytes?: number) => Promise<unknown>
+  authorize(): void
 }
 type Routes = { [K in keyof Api]: (input: Input<K>) => ApiResponse<K> | Promise<ApiResponse<K>> }
 const offset = z.coerce.number().int().nonnegative().catch(0)
@@ -162,7 +163,7 @@ function routes(runtime: HttpHost): Routes {
     'GET search': ({ query }) => search(views(runtime), query.q ?? '', runtime.sourceLinks),
     'GET sources': () => sourcesStatus(views(runtime), runtime.health, setupState(runtime)),
     'GET settings': () => settingsView(store, runtime.sources, runtime.health, setupState(runtime), runtime.machine.stateDir),
-    'POST sources/:id/labels': ({ params }) => runtime.settings.refreshLabels(params.id),
+    'POST sources/:id/labels': ({ params, authorize }) => runtime.settings.refreshLabels(params.id, authorize),
     'GET threads': ({ query }) => {
       const { filter, offset, limit } = ThreadsQuery.parse(query)
       return threadList(views(runtime), filter, offset, limit)
@@ -195,22 +196,22 @@ function routes(runtime: HttpHost): Routes {
     'GET tickets/:id': ({ params }) => ticketPage(runtime, params.id),
     'POST tickets/:id/retry': ({ params }) => { const id = ticket(params.id); runtime.engine.retryTicket(id); return { retried: true } },
     'POST tickets/:id/stop': ({ params }) => { const id = ticket(params.id); runtime.engine.stopTicket(id); return { stopped: true } },
-    'POST executor/pause': async ({ body }) => runtime.settings.pause(z.object({ paused: z.boolean() }).parse(await body()).paused, 'panel'),
-    'PUT settings/:block': async ({ params, body }) => {
+    'POST executor/pause': async ({ body, authorize }) => runtime.settings.pause(z.object({ paused: z.boolean() }).parse(await body()).paused, 'panel', authorize),
+    'PUT settings/:block': async ({ params, body, authorize }) => {
       const block = SettingsBlockSchema.parse(params.block)
       const known = !block.startsWith('source:') || runtime.sources.instances().some(instance => `source:${instance.id}` === block)
       if (!known) throw new RouteError(404, 'Source not found')
       const request = SaveRequest.parse(await body())
-      return runtime.settings.save(block, request.value, request.revision, 'panel')
+      return runtime.settings.save(block, request.value, request.revision, 'panel', authorize)
     },
     'GET policy/history': () => policyHistory(store, runtime.sources, policyVersion(store.settings())),
-    'POST policy-sync/:id': async ({ params }) => ({ policy: await runtime.settings.sync(params.id) }),
-    'POST setup/check': () => { runtime.checkSetup(); return { restarting: true } },
+    'POST policy-sync/:id': async ({ params, authorize }) => ({ policy: await runtime.settings.sync(params.id, authorize) }),
+    'POST setup/check': ({ authorize }) => { runtime.checkSetup(authorize); return { restarting: true } },
     'GET models': () => runtime.models(),
     'GET prompts': ({ query }) => { const { revision, offset } = PromptsQuery.parse(query); return promptsView(runtime, revision, offset) },
     'PUT prompts': async input => {
       const request = z.object({ config: z.unknown(), baseRevision: z.number().int().nonnegative() }).parse(await promptBody(input))
-      return savePrompts(runtime, request.config, request.baseRevision, 'panel')
+      return savePrompts(runtime, request.config, request.baseRevision, 'panel', input.authorize)
     },
     'POST prompts/preview': async input => runtime.prompts.preview(await promptBody(input)),
   }
@@ -241,6 +242,7 @@ export function registerHttp(ctx: Context, runtime: HttpHost): () => void {
       const url = new URL(req.url ?? '/', 'http://localhost')
       if (!url.pathname.startsWith('/orchestrator/api/')) { res.writeHead(404); res.end(); return }
       if (!sameOrigin(req, ctx.webServer.port)) { json(res, 403, { error: 'Same-origin management request required' }); return }
+      let recheck: (() => void) | undefined
       try {
         const credential = typeof req.headers.authorization === 'string' ? req.headers.authorization.match(/^Bearer ([^\s]+)$/)?.[1] : undefined
         const mesh = ctx.get('cognitiveMesh')
@@ -249,6 +251,7 @@ export function registerHttp(ctx: Context, runtime: HttpHost): () => void {
           || ['x-tenant-id', 'x-actor-ref', 'x-roles', 'x-request-id'].some(key => req.headers[key] !== undefined)
         // Authenticate before parsing IDs, bodies or route names. Body/query claims confer no authority.
         const authorization = mesh.authorizeRequest(credential ?? '', hasClaims)
+        recheck = () => { authorization.check(hasClaims) }
         await runtime.ready
         const trusted = authorization.check(hasClaims)
         if (url.pathname === '/orchestrator/api/mesh/security' && req.method === 'GET') {
@@ -268,8 +271,16 @@ export function registerHttp(ctx: Context, runtime: HttpHost): () => void {
         const route = match(table, req.method ?? 'GET', url.pathname.slice('/orchestrator/api/'.length).split('/'))
         if (!route) throw new RouteError(404, 'Unknown operation')
         const query = Object.fromEntries(url.searchParams)
-        json(res, 200, await route.run({ params: route.params as never, query, body: async maxBytes => { const value = await readBody(req, maxBytes); authorization.check(hasClaims || bodyClaims(value)); return value } }))
-      } catch (error) { json(res, ...failure(error)) }
+        recheck()
+        const result = await route.run({ params: route.params as never, query, authorize: recheck,
+          body: async maxBytes => { const value = await readBody(req, maxBytes); authorization.check(hasClaims || bodyClaims(value)); return value } })
+        recheck() // Also protects async reads and error responses from disclosing results to a revoked request.
+        json(res, 200, result)
+      } catch (error) {
+        let reported = error
+        try { recheck?.() } catch (denied) { reported = denied }
+        json(res, ...failure(reported))
+      }
     } })]
   return () => { for (const dispose of disposers) dispose() }
 }

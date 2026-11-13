@@ -1,0 +1,24 @@
+{
+  "schema_version": 2,
+  "check_id": "final-auth-full-check-recovered",
+  "mode": "OFFLINE_BUILD_OR_TEST",
+  "started_at": "2026-11-13T08:45:25.332333+00:00",
+  "finished_at": "2026-11-13T08:45:46.184275+00:00",
+  "duration_seconds": 20.852,
+  "command": [
+    "pnpm",
+    "check"
+  ],
+  "source_commit": "e1bd28add66e95784feaa2b66fa81ddd75a5184a",
+  "exit_code": 0,
+  "timed_out": false,
+  "launch_error": null,
+  "interrupted_signal": null,
+  "status": "PASS",
+  "log": "command.log",
+  "log_sha256": "32db5f38d687f8892e6bae59b22b7792d166464b4c9d084caf10e796aeaacab5",
+  "lockfile_sha256": "ba6b997c448984a04b28eeb5b620c14c7cfeff5eb170e1abd6e0734007405c39",
+  "online_sdk": "NOT_RUN",
+  "real_session": "NOT_RUN",
+  "m0_exit": "BLOCKED"
+}

@@ -429,6 +429,7 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `tests/mesh-safety.spec.ts` | Allow/deny intersections, durable Session bindings, direct gateway refusal and real native ToolRuntime final-guard negatives. |
 | `tests/session-bindings.spec.ts` | Trusted issuance, expiry and parent narrowing, cross-tenant collisions, durable revocation/reopen, corruption and fail-closed audit. |
 | `tests/management-security.spec.ts` | Native Mesh service plus original Store/HTTP authorization: server-selected binding inputs and original-context revocation across startup/body awaits. |
+| `tests/management-final-auth.spec.ts` | Original HTTP/Store/Mesh authority across late model/account checks, Source policy/label persistence, retained command dispatch, response disclosure and deferred restart; CLI/agent dependencies are explicit fixtures. |
 | `tests/restricted-session.spec.ts` | Effective read-only permissions, unsafe labels, overrides and owner disposal |
 | `tests/mesh-service.spec.ts` | Native Cordis service registration, real injected consumption, dependency loss/restoration and retained-handle refusal |
 | `tests/mesh-bridge.spec.ts` | 真实 Cordis fiber 的单次安装、重复调用、重启、独立生命周期及销毁后拒绝；不等同真实 DSH profile 启动 |

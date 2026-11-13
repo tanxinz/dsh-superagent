@@ -5,6 +5,7 @@
  */
 import { lstat, mkdir, readdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
 import { realpathSync } from 'node:fs'
+import { randomUUID } from 'node:crypto'
 import { delimiter, join, resolve } from 'node:path'
 import type { SubprocessOutputReader, SubprocessRuntime } from '@deepseek-ai/dsh-subprocess'
 import type { Deployment } from '../deployment.ts'
@@ -63,31 +64,37 @@ async function written(file: string): Promise<boolean> {
   const head = (await readFile(file, 'utf8')).split('\n', 2)
   return [MARKER, ...LEGACY_MARKERS].some(marker => head.includes(marker))
 }
-async function own(file: string, text: string, mode = 0o644): Promise<void> {
+async function own(file: string, text: string, mode: number, authorize: () => void): Promise<void> {
+  authorize()
   let foreign = false
-  try { foreign = !await written(file) } catch { /* The file does not exist yet. */ }
+  try { foreign = !await written(file) } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error }
+  authorize()
   if (foreign) throw new SetupError('foreignFile', { file })
-  const temporary = `${file}.${process.pid}.tmp`
-  await writeFile(temporary, text, { mode })
-  await rename(temporary, file)
+  const temporary = `${file}.${randomUUID()}.tmp`
+  try {
+    authorize(); await writeFile(temporary, text, { mode })
+    authorize(); await rename(temporary, file)
+  } finally { await unlink(temporary).catch(error => { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error }) }
 }
 
 /**
  * Atomically writes worker CLI shims and the isolated git configuration file into the state directory, refusing to overwrite foreign files.
  * Each shim strips the shim directory from PATH before exec so wrapper scripts resolving `gh` or `lark-cli` by name reach the real binary.
  */
-export async function writeEnvironment(deployment: Pick<Deployment, 'stateDir' | 'repository' | 'github' | 'feishu'>, blockedCommands: readonly string[]): Promise<void> {
+export async function writeEnvironment(deployment: Pick<Deployment, 'stateDir' | 'repository' | 'github' | 'feishu'>, blockedCommands: readonly string[], authorize = () => {}): Promise<void> {
   const { stateDir, repository, github, feishu } = deployment
   const dir = workerBin(stateDir)
-  await mkdir(dir, { recursive: true })
+  authorize(); await mkdir(dir, { recursive: true })
   const before = await readdir(dir)
-  for (const name of before) { const file = join(dir, name); if (!await written(file)) throw new SetupError('foreignFile', { file }) }
+  for (const name of before) { authorize(); const file = join(dir, name); if (!await written(file)) throw new SetupError('foreignFile', { file }) }
   // Workers may be running concurrently: write each shim to a temp file and atomically rename it so no command ever resolves past the shim directory.
   const kept = new Set<string>()
   const shim = async (name: string, body: string): Promise<void> => {
-    const temporary = join(dir, `.${name}.${process.pid}.tmp`)
-    await writeFile(temporary, `#!/bin/sh\n${MARKER}\n${body}\n`, { mode: 0o755 })
-    await rename(temporary, join(dir, name))
+    const temporary = join(dir, `.${name}.${randomUUID()}.tmp`)
+    try {
+      authorize(); await writeFile(temporary, `#!/bin/sh\n${MARKER}\n${body}\n`, { mode: 0o755 })
+      authorize(); await rename(temporary, join(dir, name))
+    } finally { await unlink(temporary).catch(error => { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error }) }
     kept.add(name)
   }
   const withoutShims = [
@@ -102,7 +109,7 @@ export async function writeEnvironment(deployment: Pick<Deployment, 'stateDir' |
   for (const name of new Set(blockedCommands.filter(name => !WORKER_COMMANDS.includes(name)))) {
     await shim(name, fail(`${name} is blocked in this installation; use gh, which acts as ${github.login}.`))
   }
-  for (const name of before) if (!kept.has(name)) await unlink(join(dir, name))
+  for (const name of before) if (!kept.has(name)) { authorize(); await unlink(join(dir, name)) }
   await own(workerGitConfig(stateDir), [
     MARKER,
     // Make git refuse to commit without an explicit identity set by the worker instead of guessing from the operator's OS user.
@@ -112,7 +119,7 @@ export async function writeEnvironment(deployment: Pick<Deployment, 'stateDir' |
     '[url "https://github.com/"]', '\tinsteadOf = git@github.com:', '\tinsteadOf = ssh://git@github.com/',
     // Include Git LFS filters because the operator's global gitconfig (which usually holds them) is ignored.
     '[filter "lfs"]', '\tclean = git-lfs clean -- %f', '\tsmudge = git-lfs smudge -- %f', '\tprocess = git-lfs filter-process', '\trequired = true',
-  ].join('\n') + '\n')
+  ].join('\n') + '\n', 0o644, authorize)
 }
 
 /** Applies environment overrides and prepends worker shims to `process.env.PATH`, returning a restore callback. */

@@ -8,12 +8,27 @@ import { SENSITIVE_ENV_PATTERN, type SubprocessRuntime } from '@deepseek-ai/dsh-
 import { GIT_LOCATION, agentVariables, credentialHelper, runAsWorker, verifyDirectory, withoutDirectory, workerBin, workerGitConfig, writeEnvironment }
   from '../src/infra/environment.ts'
 import { CliError } from '../src/infra/commands.ts'
+import { MeshAccessDenied } from '../src/extensions/mesh/auth.ts'
 import { testDeployment } from './fixtures/deployment.ts'
 import { gitEnv } from './fixtures/git.ts'
 
 // Git and shell subprocesses can exceed the 5s default timeout when the test suite runs in parallel.
 vi.setConfig({ testTimeout: 30_000 })
 const exec = promisify(execFile)
+it('refuses to publish a shim when authority is revoked after its temporary file was written', async () => {
+  const deployment = testDeployment({ stateDir: dir })
+  await writeEnvironment(deployment, [])
+  const before = readFileSync(join(workerBin(dir), 'gh'), 'utf8')
+  let revoked = false
+  const authorize = () => {
+    if (readdirSync(workerBin(dir)).some(name => name.startsWith('.gh.') && name.endsWith('.tmp'))) revoked = true
+    if (revoked) throw new MeshAccessDenied()
+  }
+  await expect(writeEnvironment({ ...deployment, github: { ...deployment.github, cli: '/fixture/changed-gh' } }, [], authorize)).rejects.toThrow(MeshAccessDenied)
+  expect(revoked).toBe(true)
+  expect(readFileSync(join(workerBin(dir), 'gh'), 'utf8')).toBe(before)
+  expect(readdirSync(workerBin(dir)).some(name => name.endsWith('.tmp'))).toBe(false)
+})
 let dir: string
 const program = (path: string, body: string): string => { writeFileSync(path, `#!/bin/sh\n${body}\n`); chmodSync(path, 0o755); return path }
 /** Worker shell environment after DSH strips credential-shaped variables. */

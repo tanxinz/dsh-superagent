@@ -54,3 +54,13 @@ contracts.ts 的 11 项依赖与 Bundle inject 共享。此处只验证服务可
 ## 原生 profile 依赖切换实证（2026-11-13）
 
 根 probe 新模式 --boot-service-dependency-cycle：通过锁版包公共 PermissionPresetService 和 Cordis Registry/Fiber API 在真实未配置 DSH 进程卸载/恢复依赖，观测原生 Bundle 注销/重装、旧服务和 Runtime 拒绝、新服务消费及预设一致性。最终两次进程各 installed/disposed=2，退出 0。只验证未配置 profile；没有用伪服务替代生产权限服务，不等同已配置主 Session、Worker 或持久工作恢复。历史一轮聚合检查失败原因尚未证实，严格断言和新 CI 保留。具体版本、命令及剩余条件见 acceptance/M0-profile-dependency-20261113.md。
+
+## 2026-11-13 身份/权限接续（覆盖上述历史 Session 未修复描述）
+
+- `Sessions.ensure/decorate/workOnly/limitSubagent` 现在默认 read-only+ask，真实 `resolve/current/set` 校验和宽权限覆盖拒绝；无模型原生主 Session 的重开/同ID/角色切换/依赖恢复已测。Worker/子会话真实集成矩阵仍 IN_PROGRESS。
+- 公共 `ToolRuntime` 实例真实执行证明 guard 在 pre-listener allow 后仍拒绝；被拒绝体未运行。非 Tool Gateway 全覆盖尚未闭合。
+- Runtime/HTTP 真正消费受信身份服务；原 SQLite 扩展 schema2 保存 grant/策略版本/epoch/拒绝审计/Session绑定。无第二主库、队列或 lease。
+- 公共 `SandboxProvider` 类型明确只定义 file effects，network/process visibility 不在模式词汇内；因此 read-only 不是 OS/网络/密钥隔离。本机 bwrap 网络 namespace setup FAIL，自动执行固定关闭，独立探针不能替代业务 Worker 证据。
+- Registry fibers 可跨 isolation scope；重复注册检查必须限定 `Context.isolate` 的服务 scope，并验证活 provider。CLI0.2.1-alpha.2 / Cordis4.0.5-alpha.1 实验已通过。
+
+详见 [本批验收](acceptance/M0-trust-permissions-20261113.md)；未证实的 API/在线能力继续保留缺口。

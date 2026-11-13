@@ -272,3 +272,9 @@ Setup problems appear on the overview with a link to the fix, in the panel's lan
 | The log says the plugin is incompatible with the running dsh | Install a DeepSeek Harness version within the `engines.dsh` range |
 | The panel shows "Failed to load plugins" after a DeepSeek Harness upgrade | Restart the running instance |
 | Nothing happens after a mention | Check that the author is on the Source's allowed list, the Source is on, and processing is not paused. On GitHub, a mention added by editing an Issue's body is not received; mention the agent in a comment |
+
+## M0 安全接续
+
+管理 HTTP 现要求 Bearer 凭据及原有 loopback/same-origin 检查。以随机 `DSH_MESH_ADMIN_TOKEN`（至少32字符）在受信启动环境中注入，Runtime 即刻从自身环境删除原文，只保存摘要；管理员有效期24小时，重新注入续期/换凭据。管理页面登录在页面内存持有凭据，刷新后重新输入；CLI status 从调用者环境发送认证头。没有凭据默认拒绝。不要把凭据放在 URL、命令行历史、日志或公开 profile。
+
+默认安全边界尚未完成 OS/网络/密钥隔离及可信 Session 绑定投放，自动 Worker/后台处理固定暂停；只读 preset 不代表网络隔离。不得用环境开关启用业务执行。此状态不代表 M0/M1 已准出。

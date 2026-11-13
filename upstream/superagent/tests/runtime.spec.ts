@@ -1,3 +1,5 @@
+import { LocalSafetyGate } from '../src/extensions/mesh/safety.ts'
+import { permissionFixture } from './fixtures/host.ts'
 import { Context } from '@deepseek-ai/cordis'
 import { bindScopeParent } from '@deepseek-ai/dsh-scope'
 import { mkdtempSync, rmSync } from 'node:fs'
@@ -41,6 +43,7 @@ import { preview, readable } from '../src/app/views/text.ts'
 import { decisionList, search, threadDetail, threadList } from '../src/app/views/threads.ts'
 import { executorLoad, ticketDetail, ticketList } from '../src/app/views/tickets.ts'
 
+const MANAGEMENT_TOKEN = 'fixture-mesh-admin-credential-01234567890123456789'
 let runtime: Runtime
 const viewsOf = (value: Runtime) => ({ store: value.store, sources: value.sources, links: value.links() })
 const overviewOf = (value: Runtime) => overview(viewsOf(value), value.health, policyVersion(value.store.settings()), executorLoad(value.store, value.executor.activeCount()), value.setupProblem ?? value.feishuProblem)
@@ -55,9 +58,9 @@ let guards: Map<string, Guard>
 let restricts: Map<string, unknown[]>
 type HttpHandler = (req: unknown, res: unknown) => Promise<void>
 let http: HttpHandler
-async function api(method: string, path: string): Promise<{ status: number; body: unknown }> {
+async function api(method: string, path: string, headers: Record<string, string> = {}, body?: unknown): Promise<{ status: number; body: unknown }> {
   let status = 0, text = ''
-  const req = { method, url: `/orchestrator/api/${path}`, headers: { host: '127.0.0.1:3082', 'x-orchestrator-request': '1' } }
+  const req = { method, url: `/orchestrator/api/${path}`, headers: { host: '127.0.0.1:3082', 'x-orchestrator-request': '1', authorization: `Bearer ${MANAGEMENT_TOKEN}`, ...headers }, async *[Symbol.asyncIterator]() { if (body !== undefined) yield Buffer.from(JSON.stringify(body)) } }
   await http(req, { writeHead: (code: number) => { status = code }, end: (data: string) => { text = data } })
   return { status, body: JSON.parse(text) }
 }
@@ -142,6 +145,10 @@ async function acceptedTicket(trigger = feishu('1', '@bot 修一下回归')) {
   return { trigger, ticket, sessionId: `worker-${ticket.id}` }
 }
 beforeEach(async () => {
+  // These legacy business regressions use a fake host, not a claim of verified OS isolation.
+  vi.spyOn(LocalSafetyGate.prototype, 'executionReady').mockReturnValue(true)
+  vi.spyOn(LocalSafetyGate.prototype, 'refusal').mockReturnValue(undefined)
+  process.env.DSH_MESH_ADMIN_TOKEN = MANAGEMENT_TOKEN
   directory = mkdtempSync(join(tmpdir(), 'orchestrator-runtime-'))
   vi.spyOn(Commands.prototype, 'gh').mockImplementation(async args => args[1] === 'user' ? { login: 'agent-bot' } : args[1]?.includes('/pulls/') ? { state: 'open', user: { login: 'agent-bot' }, html_url: 'https://github.com/acme/widgets/pull/' + args[1].split('/').at(-1), head: { ref: `agent/${String(runtime.store.tickets.list()[0]?.execution?.name)}`, sha: 'head-1', repo: { full_name: 'acme/widgets' } } } : { default_branch: 'master', permissions: { push: true } })
   vi.spyOn(Commands.prototype, 'lark').mockResolvedValue({ users: [{ member_id: MEMBER, name: 'Alice' }], has_more: false })
@@ -173,6 +180,7 @@ beforeEach(async () => {
       const preset = {}
       const inherited = ['bash', 'read', 'read_image', 'skill', 'job_output', 'job_list', 'job_kill', 'grep', 'web_search',
         'ask_user_question', 'plugin_manager', 'schedule_create', 'create_goal', 'session_create', 'session_send_message', 'feishu_doc_edit']
+      const sessionGuards = new Set<Guard>()
       const sessionTools = new Map<string, RegisteredTool>()
       tools.set(sessionId, sessionTools)
       agentCtx.reflect.provide('tools', { register: (tool: RegisteredTool) => { sessionTools.set(tool.name,
@@ -186,7 +194,11 @@ beforeEach(async () => {
           if (rule.allow.some(name => !inherited.includes(name))) throw new Error('Restriction names a non-inherited tool')
           restricts.set(sessionId, [...restricts.get(sessionId) ?? [], rule]); return () => {}
         }),
-        guard: vi.fn((check: Guard) => { guards.set(sessionId, check); return () => {} }) })
+        guard: vi.fn((check: Guard) => {
+          sessionGuards.add(check)
+          guards.set(sessionId, execution => { for (const guard of sessionGuards) { const denied = guard(execution); if (denied) return denied } return undefined })
+          return () => { sessionGuards.delete(check) }
+        }) })
       agentCtx.reflect.provide('skills', { register: () => () => {} })
       agentCtx.reflect.provide('systemPrompt', { section: (spec: Section) => { sections.set(sessionId, spec); return () => {} } })
       const inbox = { nextTurn: [] as UserMessage[], nextStep: [] as UserMessage[],
@@ -210,7 +222,7 @@ beforeEach(async () => {
     inspect: vi.fn(async () => ({ events: [] })),
   }
   jobs = jobRegistry()
-  services = { tools: {}, systemPrompt: {}, skills: {}, agents, llm: { resolveCallConfig: vi.fn(async value => value) }, sessionController: controller, sessionPersistence: { flush: vi.fn(async () => {}), open: vi.fn(async () => ({ read: async () => ({ events: [] }), [Symbol.asyncDispose]: async () => {} })) }, workspaceRegistry: { create: async (cwd: string) => ({ id: cwd }) }, permissionPresets: { set: () => {} }, subprocess, webServer: { host: '127.0.0.1', port: 3082, register: (route: { handler: HttpHandler }) => { http = route.handler; return () => {} } }, jobs: jobs.service }
+  services = { tools: {}, systemPrompt: {}, skills: {}, agents, llm: { resolveCallConfig: vi.fn(async value => value) }, sessionController: controller, sessionPersistence: { flush: vi.fn(async () => {}), open: vi.fn(async () => ({ read: async () => ({ events: [] }), [Symbol.asyncDispose]: async () => {} })) }, workspaceRegistry: { create: async (cwd: string) => ({ id: cwd }) }, permissionPresets: permissionFixture(), subprocess, webServer: { host: '127.0.0.1', port: 3082, register: (route: { handler: HttpHandler }) => { http = route.handler; return () => {} } }, jobs: jobs.service }
   serviceDisposers = {}
   for (const [name, service] of Object.entries(services)) serviceDisposers[name] = ctx.reflect.provide(name, service)
   for (const cli of [AGENT(), OTHER(), BOT()]) writeFileSync(cli, '#!/bin/sh\n', { mode: 0o755 })
@@ -222,7 +234,7 @@ beforeEach(async () => {
   runtime.store.saveSettings({ ...runtime.store.settings(), policy: { ...runtime.store.settings().policy, sources: { feishu: { allowed: [{ id: MEMBER, name: 'Alice' }], syncChat: CHAT }, github: { allowed: [{ id: 'alice' }] } } }, eval: { ...runtime.store.settings().eval, mode: 'auto' }, sources: { github: { enabled: true, config: { repository: 'acme/widgets', cli: AGENT() } }, feishu: { enabled: true, config: { cli: BOT(), chats: [{ chatId: CHAT, listen: 'all' }], directMessages: true } } } })
   deliveries.mockClear()
 })
-afterEach(async () => { expect(controller.prompt).not.toHaveBeenCalled(); await runtime?.stop(); vi.restoreAllMocks(); rmSync(directory, { recursive: true, force: true }) })
+afterEach(async () => { delete process.env.DSH_MESH_ADMIN_TOKEN; expect(controller.prompt).not.toHaveBeenCalled(); await runtime?.stop(); vi.restoreAllMocks(); rmSync(directory, { recursive: true, force: true }) })
 
 it('relays an explicit member mention as a candidate and creates the ticket, acknowledgement, subscription and worker on accept', async () => {
   const { trigger, ticket, sessionId } = await acceptedTicket()
@@ -1310,7 +1322,7 @@ it('refuses a settings save with an unknown model or a Source kind that is not i
   const request = async (method: string, path: string, body?: unknown) => {
     let status = 0, text = ''
     const chunks = body === undefined ? [] : [Buffer.from(JSON.stringify(body))]
-    const req = { method, url: `/orchestrator/api/${path}`, headers: { host: '127.0.0.1:3082', 'x-orchestrator-request': '1' }, async *[Symbol.asyncIterator]() { yield* chunks } }
+    const req = { method, url: `/orchestrator/api/${path}`, headers: { host: '127.0.0.1:3082', 'x-orchestrator-request': '1', authorization: `Bearer ${MANAGEMENT_TOKEN}` }, async *[Symbol.asyncIterator]() { yield* chunks } }
     await http(req, { writeHead: (code: number) => { status = code }, end: (data: string) => { text = data } })
     return { status, body: JSON.parse(text) as Record<string, unknown> }
   }
@@ -1392,7 +1404,7 @@ it('applies a changed prompt size limit to the next save and request without a r
   const put = async (config: unknown) => {
     let status = 0, text = ''
     const chunks = [Buffer.from(JSON.stringify({ config, baseRevision: next.prompts.current().revision }))]
-    const req = { method: 'PUT', url: '/orchestrator/api/prompts', headers: { host: '127.0.0.1:3082', 'x-orchestrator-request': '1' }, async *[Symbol.asyncIterator]() { yield* chunks } }
+    const req = { method: 'PUT', url: '/orchestrator/api/prompts', headers: { host: '127.0.0.1:3082', 'x-orchestrator-request': '1', authorization: `Bearer ${MANAGEMENT_TOKEN}` }, async *[Symbol.asyncIterator]() { yield* chunks } }
     await http(req, { writeHead: (code: number) => { status = code }, end: (data: string) => { text = data } })
     return { status, body: JSON.parse(text) as Record<string, unknown> }
   }
@@ -1729,12 +1741,13 @@ it('gives a subagent of a worker only the worker\'s work tools, and none once th
   expect(guards.get('child-1')!()).toBeUndefined()
   runtime.engine.stopTicket(ticket.id)
   expect(guards.get('child-1')!()).toBe('Ticket ended; new work needs a new authorized ticket')
-  // Another Session's subagent is left as it is.
+  // Missing parent authority cannot establish an inherited grant.
   await (controller.create as (options: { sessionId: string }) => Promise<void>)({ sessionId: 'child-2' })
   const other = agents.get('child-2')! as unknown as { session: { header: { parentSession?: string } } }
   other.session.header = { parentSession: 'someone-else' }
   await (runtime as unknown as { ctx: Context }).ctx.parallel('agent/created', { agent: other } as never)
-  expect(restricts.get('child-2')).toBeUndefined()
+  expect(restricts.get('child-2')).toEqual([{ allow: [] }])
+  expect(guards.get('child-2')!()).toBe('Session ancestry is not trusted')
 })
 
 it('gives a subagent of a worker\'s subagent the same work tools and guard', async () => {
@@ -1888,4 +1901,82 @@ it('rechecks Mesh after awaiting Session preparation before starting recovery an
   expect(start).not.toHaveBeenCalled()
   expect(passes).not.toHaveBeenCalled()
   expect(resume).not.toHaveBeenCalled()
+})
+
+
+it('authenticates the actual Mesh HTTP consumer and rejects client tenant/actor/role claims', async () => {
+  const previous = process.env.DSH_MESH_ADMIN_TOKEN
+  const token = 'fixture-mesh-admin-credential-01234567890123456789'
+  process.env.DSH_MESH_ADMIN_TOKEN = token
+  try {
+    runtime = await restart(); await runtime.ready
+    expect((await api('GET', 'mesh/security', { authorization: '' })).status).toBe(401)
+    expect((await api('GET', 'mesh/security', { authorization: 'Bearer not-the-key' })).status).toBe(401)
+    for (const path of ['mesh/security?tenantId=forged', 'state?actorRef=forged', 'settings?roles=admin']) {
+      expect((await api('GET', path, { authorization: `Bearer ${token}` })).status).toBe(401)
+    }
+    expect((await api('POST', 'executor/pause', { authorization: `Bearer ${token}` }, { paused: true, actor: 'forged' })).status).toBe(401)
+    expect((await api('GET', 'state', { authorization: `Bearer ${token}`, 'x-tenant-id': 'forged' })).status).toBe(401)
+    const accepted = await api('GET', 'mesh/security', { authorization: `Bearer ${token}` })
+    expect(accepted.status).toBe(200)
+    const body = accepted.body as { tenantId: string; actorRef: string; requestId: string; policy: { tenantId: string } }
+    expect(body.tenantId).not.toBe('forged')
+    expect(body.policy.tenantId).toBe(body.tenantId)
+    expect(body.actorRef).toBe('local-admin')
+    expect(body.requestId).toMatch(/^[a-f0-9-]{36}$/)
+    expect(process.env.DSH_MESH_ADMIN_TOKEN).toBeUndefined()
+    for (const path of ['state', 'tickets/unknown', 'settings', 'unknown-route']) {
+      expect(await api('GET', path, { authorization: '' })).toEqual({ status: 401, body: { error: 'Access denied' } })
+    }
+    expect((await api('POST', 'tickets/missing/stop', { authorization: '' })).status).toBe(401)
+  } finally { if (previous === undefined) delete process.env.DSH_MESH_ADMIN_TOKEN; else process.env.DSH_MESH_ADMIN_TOKEN = previous }
+})
+
+it('keeps main, worker and child effective permissions restricted and refuses a changed main preset at the final guard', async () => {
+  const { sessionId } = await acceptedTicket()
+  const permission = services.permissionPresets as ReturnType<typeof permissionFixture>
+  expect(permission.current((agents.get(runtime.masterId) as unknown as { session: object }).session)).toBe('read-only')
+  expect(permission.current((agents.get(sessionId) as unknown as { session: object }).session)).toBe('read-only')
+  permission.set((agents.get(runtime.masterId) as unknown as { session: object }).session, 'danger-full-access')
+  expect(guards.get(runtime.masterId)!({ name: 'read', arguments: {} })).toContain('permission denied')
+  await expect(runtime.sessions.ensure(runtime.masterId, directory, 'main', 'orchestrator')).rejects.toThrow('permission override')
+})
+
+it('awaits the real startup promise before serving management data', async () => {
+  await runtime.stop()
+  const ctx = new Context()
+  for (const [name, service] of Object.entries(services)) ctx.reflect.provide(name, service)
+  const reached = deferred<void>(), release = deferred<void>()
+  const original = Setup.prototype.run
+  vi.spyOn(Setup.prototype, 'run').mockImplementation(async function(this: Setup, settings) {
+    const configured = await original.call(this, settings)
+    reached.resolve(); await release.promise
+    return configured
+  })
+  runtime = new Runtime(ctx, testMachine({ stateDir: directory }), restarts)
+  try {
+    await reached.promise
+    const result = api('GET', 'state'), settled = vi.fn()
+    void result.then(settled)
+    await Promise.resolve(); await Promise.resolve()
+    expect(settled).not.toHaveBeenCalled()
+    release.resolve(); await runtime.ready
+    expect((await result).status).toBe(200)
+  } finally { release.resolve() }
+})
+
+
+it('holds real Runtime startup and direct tool/message dispatch closed without an execution boundary', async () => {
+  vi.mocked(LocalSafetyGate.prototype.executionReady).mockReturnValue(false)
+  vi.mocked(LocalSafetyGate.prototype.refusal).mockRestore()
+  const start = vi.spyOn(Effects.prototype, 'start'), passes = vi.spyOn(Passes.prototype, 'start'), resume = vi.spyOn(DshExecutor.prototype, 'resume')
+  runtime = await restart(); await runtime.ready
+  expect(runtime.configured()).toBe(true)
+  expect(runtime.health.runtime).toMatchObject({ state: 'paused' })
+  expect(start).not.toHaveBeenCalled(); expect(passes).not.toHaveBeenCalled(); expect(resume).not.toHaveBeenCalled()
+  const sessionId = runtime.masterId
+  expect(guards.get(sessionId)!({ name: 'read', arguments: {} })).toBe('Mesh safety denied')
+  const tool = tools.get(sessionId)!.values().next().value!
+  await expect(Promise.resolve().then(() => tool.execute({}, { signal: new AbortController().signal }))).rejects.toThrow('Mesh safety denied')
+  await expect(runtime.sessions.prompt(sessionId, 'denied', 'No model request', 'steer')).rejects.toThrow('boundary is not ready')
 })

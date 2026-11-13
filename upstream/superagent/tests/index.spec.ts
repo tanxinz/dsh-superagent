@@ -6,6 +6,7 @@ import { apply } from '../src/index.ts'
 const runtimes = vi.hoisted(() => [] as { machine: Machine; restart: () => void }[])
 vi.mock('../src/app/runtime.ts', () => ({ Runtime: class {
   ready = Promise.resolve()
+  health = { runtime: { state: 'paused', detail: 'fixture execution boundary' } }
   constructor(_ctx: unknown, readonly machine: Machine, readonly restart: () => void) { runtimes.push(this) }
   configured() { return true }
   async stop() {}

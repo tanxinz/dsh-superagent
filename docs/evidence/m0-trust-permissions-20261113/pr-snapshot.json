@@ -1,0 +1,112 @@
+[
+  {
+    "number": 11,
+    "state": "open",
+    "draft": true,
+    "head": "130a766a142ff0c009c9d563e4f3c17309eb258a",
+    "branch": "feat/m0-profile-dependency-lifecycle-20261113",
+    "base": "docs/m0-boundary-evidence-20261113",
+    "base_sha": "15364bd81d04546f851b7495668b99c1cd2f8445",
+    "updated": "2026-11-12T23:22:13Z"
+  },
+  {
+    "number": 10,
+    "state": "open",
+    "draft": true,
+    "head": "15364bd81d04546f851b7495668b99c1cd2f8445",
+    "branch": "docs/m0-boundary-evidence-20261113",
+    "base": "fix/m0-service-dependency-boundaries-20261113",
+    "base_sha": "5994b6dae90da593cd44b36b5968cc75bad54842",
+    "updated": "2026-11-12T23:00:52Z"
+  },
+  {
+    "number": 9,
+    "state": "open",
+    "draft": true,
+    "head": "5994b6dae90da593cd44b36b5968cc75bad54842",
+    "branch": "fix/m0-service-dependency-boundaries-20261113",
+    "base": "docs/m0-profile-artifacts-20261113",
+    "base_sha": "7e47fe11ae9ae689724b6fdb4bda53a429db235d",
+    "updated": "2026-11-12T23:01:02Z"
+  },
+  {
+    "number": 8,
+    "state": "open",
+    "draft": true,
+    "head": "7e47fe11ae9ae689724b6fdb4bda53a429db235d",
+    "branch": "docs/m0-profile-artifacts-20261113",
+    "base": "feat/m0-cognitive-mesh-service-20261113",
+    "base_sha": "8cc9ec09ff83a85498dbc231258b1031b4237a19",
+    "updated": "2026-11-12T22:45:56Z"
+  },
+  {
+    "number": 7,
+    "state": "open",
+    "draft": true,
+    "head": "8cc9ec09ff83a85498dbc231258b1031b4237a19",
+    "branch": "feat/m0-cognitive-mesh-service-20261113",
+    "base": "feat/m0-bundle-profile-verification-20261112",
+    "base_sha": "e8fb99ffe4a94ee82777a1b5222fd60219940a1b",
+    "updated": "2026-11-12T22:46:14Z"
+  },
+  {
+    "number": 6,
+    "state": "open",
+    "draft": true,
+    "head": "e8fb99ffe4a94ee82777a1b5222fd60219940a1b",
+    "branch": "feat/m0-bundle-profile-verification-20261112",
+    "base": "fix/m0-ci-process-evidence-20261112",
+    "base_sha": "5f8aba71847651926b1432c7bd15c4294c5bb05f",
+    "updated": "2026-11-12T15:36:51Z"
+  },
+  {
+    "number": 5,
+    "state": "open",
+    "draft": true,
+    "head": "5f8aba71847651926b1432c7bd15c4294c5bb05f",
+    "branch": "fix/m0-ci-process-evidence-20261112",
+    "base": "docs/m0-ci-evidence-20261112",
+    "base_sha": "7d9f51d0d1f63c5cd2fd189b1b81bca64c437779",
+    "updated": "2026-11-12T15:30:21Z"
+  },
+  {
+    "number": 4,
+    "state": "open",
+    "draft": true,
+    "head": "7d9f51d0d1f63c5cd2fd189b1b81bca64c437779",
+    "branch": "docs/m0-ci-evidence-20261112",
+    "base": "feat/m0-ci-review-20261112",
+    "base_sha": "7ca9fcb5633100d4a35b9898e554918d06e3b178",
+    "updated": "2026-11-12T14:06:41Z"
+  },
+  {
+    "number": 3,
+    "state": "open",
+    "draft": true,
+    "head": "7ca9fcb5633100d4a35b9898e554918d06e3b178",
+    "branch": "feat/m0-ci-review-20261112",
+    "base": "fix/m0-baseline-verification-20261112",
+    "base_sha": "b86845a1020d30a2a53a5e9184bfbdf79d633ba9",
+    "updated": "2026-11-12T14:03:30Z"
+  },
+  {
+    "number": 2,
+    "state": "open",
+    "draft": true,
+    "head": "b86845a1020d30a2a53a5e9184bfbdf79d633ba9",
+    "branch": "fix/m0-baseline-verification-20261112",
+    "base": "chore/team-handoff-20261112",
+    "base_sha": "bc841de6c78d6ebcb8e0d812eb13473e09d80a68",
+    "updated": "2026-11-12T07:19:29Z"
+  },
+  {
+    "number": 1,
+    "state": "open",
+    "draft": false,
+    "head": "bc841de6c78d6ebcb8e0d812eb13473e09d80a68",
+    "branch": "chore/team-handoff-20261112",
+    "base": "main",
+    "base_sha": "eaab7119b3e5eda6f55261561ff31383c98d6340",
+    "updated": "2026-11-12T06:50:05Z"
+  }
+]

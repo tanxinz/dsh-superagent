@@ -1,3 +1,4 @@
+import { migrateMeshSecurity } from '../extensions/mesh/security-store.ts'
 /** SQLite persistence for domain aggregates, key-value state, settings history, and the channel outbox. */
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite'
 import { types } from 'node:util'
@@ -87,6 +88,7 @@ export class Store implements Repositories {
             CREATE INDEX IF NOT EXISTS effect_due ON effect(kind, due, seq);
           `)
           this.addColumns()
+          migrateMeshSecurity(this.db)
           if (migrating) migrateTo11(this)
           if (version !== SCHEMA_VERSION) this.set(KV.store.schema, SCHEMA_VERSION)
         })

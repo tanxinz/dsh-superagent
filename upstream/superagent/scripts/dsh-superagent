@@ -81,7 +81,7 @@ def processes(profile):
 def state(url):
     """Fetch health and setup status from the management API, or return None if unreachable."""
     request = urllib.request.Request(url.rstrip('/') + '/orchestrator/api/state',
-                                     headers={'x-orchestrator-request': '1'})
+                                     headers={'x-orchestrator-request': '1', 'authorization': 'Bearer ' + os.environ.get('DSH_MESH_ADMIN_TOKEN', '')})
     try:
         with urllib.request.urlopen(request, timeout=2) as response:
             value = json.load(response)

@@ -1,3 +1,4 @@
+import { LocalSafetyGate } from '../../src/extensions/mesh/safety.ts'
 /**
  * In-memory DSH host fixture (as in tests/runtime.spec.ts) running a configured Runtime with GitHub and Feishu sources,
  * allowed member Alice (`ou_alice`), listened chat `oc_team`, and `auto` eval mode. Stop it with `stop()`.
@@ -239,7 +240,7 @@ export async function startRuntime(seed?: (store: Store) => void) {
   const jobs = jobRegistry(id => agents.get(id))
   const subagents = subagentRuntime(agents)
   const services = { tools: {}, systemPrompt: {}, skills: {}, agents, llm: { resolveCallConfig: vi.fn(async (value: unknown) => value) }, sessionController: controller,
-    sessionPersistence: persistence, workspaceRegistry: { create: async (cwd: string) => ({ id: cwd }) }, permissionPresets: { set: () => {} }, subprocess, webServer,
+    sessionPersistence: persistence, workspaceRegistry: { create: async (cwd: string) => ({ id: cwd }) }, permissionPresets: permissionFixture(), subprocess, webServer,
     jobs: jobs.service, subagents: subagents.service }
   const ctx = new Context()
   for (const [name, service] of Object.entries(services)) ctx.reflect.provide(name, service)
@@ -249,6 +250,11 @@ export async function startRuntime(seed?: (store: Store) => void) {
   seeded.saveSettings(SettingsSchema.parse({ ...seeded.settings(), sources }))
   seed?.(seeded)
   seeded.close()
+  const managementToken = 'fixture-host-admin-credential-01234567890123456789'
+  process.env.DSH_MESH_ADMIN_TOKEN = managementToken
+  // The in-memory business fixture deliberately supplies an execution-capable mock.
+  vi.spyOn(LocalSafetyGate.prototype, 'executionReady').mockReturnValue(true)
+  vi.spyOn(LocalSafetyGate.prototype, 'refusal').mockReturnValue(undefined)
   const runtime = new Runtime(ctx, testMachine({ stateDir: directory }), vi.fn())
   await runtime.ready
   runtime.sources.register(feishuKind); runtime.sources.register(githubKind)
@@ -284,7 +290,7 @@ export async function startRuntime(seed?: (store: Store) => void) {
   async function api(method: string, path: string, json?: unknown) {
     let status = 0, text = ''
     const chunks = json === undefined ? [] : [Buffer.from(JSON.stringify(json))]
-    const req = { method, url: `/orchestrator/api/${path}`, headers: { host: '127.0.0.1:3082', 'x-orchestrator-request': '1' }, async *[Symbol.asyncIterator]() { yield* chunks } }
+    const req = { method, url: `/orchestrator/api/${path}`, headers: { host: '127.0.0.1:3082', 'x-orchestrator-request': '1', authorization: `Bearer ${managementToken}` }, async *[Symbol.asyncIterator]() { yield* chunks } }
     await http(req, { writeHead: (code: number) => { status = code }, end: (data: string) => { text = data } })
     return { status, body: JSON.parse(text) as Record<string, unknown> }
   }
@@ -297,3 +303,13 @@ export async function startRuntime(seed?: (store: Store) => void) {
     jobs, subagents, step, claim }
 }
 export type Host = Awaited<ReturnType<typeof startRuntime>>
+
+/** Session permission facts for a mock host; real isolation is tested separately. */
+export function permissionFixture() {
+  const values = new WeakMap<object, string>()
+  return {
+    set(session: object, name: string) { values.set(session, name) },
+    current(session: object) { return values.get(session) ?? 'read-only' },
+    resolve(name: string) { if (name !== 'read-only') throw new Error('unknown preset'); return { sandbox: 'read-only', approval: 'ask' } },
+  }
+}

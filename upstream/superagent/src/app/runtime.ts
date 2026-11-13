@@ -1,5 +1,9 @@
 /** Application composition root and lifecycle manager for dsh-superagent. */
 import { Service, type Context } from '@deepseek-ai/cordis'
+import { createHash, randomUUID, timingSafeEqual } from 'node:crypto'
+import { TrustedIdentityAuthority } from '../extensions/mesh/auth.ts'
+import { LocalSafetyGate } from '../extensions/mesh/safety.ts'
+import { MeshSecurityStore } from '../extensions/mesh/security-store.ts'
 import { CognitiveMeshService } from '../extensions/mesh/service.ts'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import type { SessionId } from '@deepseek-ai/dsh-session'
@@ -72,6 +76,7 @@ export class Runtime extends Service implements SourceHost {
   readonly engine: Engine
   readonly passes: Passes
   readonly ready: Promise<void>
+  private readonly safetyGate: LocalSafetyGate
   private readonly board = new HealthBoard()
   private readonly runtimeHealth = this.board.claim('runtime', { state: 'starting', detail: '' })
   readonly masterId: string
@@ -95,10 +100,35 @@ export class Runtime extends Service implements SourceHost {
     this.releaseLock = async () => { release() }
     let opened: Store | undefined
     try {
-      new CognitiveMeshService(ctx, { lifetime: this.lifetime })
-      this.requireMesh()
+      const meshConfig: { lifetime: AbortSignal; authority?: TrustedIdentityAuthority } = { lifetime: this.lifetime }
+      const mesh = new CognitiveMeshService(ctx, meshConfig)
+      mesh.assertReady()
       const report = (error: unknown) => { ctx.logger.warn('dsh-superagent: %s', String(error)) }
       const store = opened = this.store = new Store(join(machine.stateDir, 'orchestrator.sqlite'), report)
+      const safety = new MeshSecurityStore(store)
+      this.safetyGate = new LocalSafetyGate(safety, this.lifetime)
+      const { tenantId, expected } = store.atomic(() => {
+        const tenantId = store.get('mesh-instance-tenant') as string | undefined ?? randomUUID()
+        store.set('mesh-instance-tenant', tenantId)
+        if (!safety.policy(tenantId)) safety.setPolicy({ tenantId, safetyPolicyVersion: 'm0-1', emergencyRevocationEpoch: 0 })
+        // Consume provisioning credentials before any Session or subprocess can observe them.
+        const adminToken = process.env.DSH_MESH_ADMIN_TOKEN
+        delete process.env.DSH_MESH_ADMIN_TOKEN
+        if (adminToken !== undefined) {
+          if (adminToken.length < 32) throw new Error('Mesh management credential must contain at least 32 characters')
+          store.set('mesh-admin-token-sha256', createHash('sha256').update(adminToken).digest('hex'))
+          const grant = safety.identity(tenantId, 'local-admin')
+          safety.grant({ tenantId, actorRef: 'local-admin', roles: ['admin'], expiresAt: Date.now() + 86400000, version: (grant?.version ?? 0) + 1 })
+        }
+        const digest = store.get('mesh-admin-token-sha256')
+        if (digest !== undefined && (typeof digest !== 'string' || !/^[a-f0-9]{64}$/.test(digest))) throw new Error('Invalid persisted management credential digest')
+        const expected = typeof digest === 'string' ? Buffer.from(digest, 'hex') : undefined
+        return { tenantId, expected }
+      })
+      const authority = new TrustedIdentityAuthority(safety, credential => expected && timingSafeEqual(expected, createHash('sha256').update(credential).digest())
+        ? { tenantId, actorRef: 'local-admin' } : undefined, this.lifetime)
+      // Registration stays read-only; configure the trusted authority before any startup work.
+      meshConfig.authority = authority
       const setup = this.setup = new Setup({ context: ctx, machine, lifetime: this.lifetime, restart })
       const deployed = () => setup.configured()
         ? environmentOf({ deployment: setup.deployment, sources: this.sources, settings: store.settings() }) : undefined
@@ -108,7 +138,7 @@ export class Runtime extends Service implements SourceHost {
       store.set(KV.runtime.masterId, masterId)
       const commands = this.commands = new Commands(() => setup.deployment, setup.commandEnvironment, this.lifetime)
       const board = this.board
-      const effects = this.effects = new Effects(store, board, () => Date.now(), () => this.meshReady())
+      const effects = this.effects = new Effects(store, board, () => Date.now(), () => this.meshReady() && this.safetyGate.executionReady())
       const sources = this.sources = new SourceRegistry(() => store.settings(), board, kind => {
         // Sync source member lists once startup completes when a source plugin loads dynamically.
         if (kind.policy?.sync) void this.ready?.then(() => this.settings.syncable().includes(kind.kind) ? this.settings.sync(kind.kind) : undefined)
@@ -122,7 +152,8 @@ export class Runtime extends Service implements SourceHost {
         promptVersion: id => this.sessions.promptVersion(id), mayRead: (id, revision) => this.sessions.mayRead(id, revision),
         feishuPageSize: () => feishuSettings(sources).readPageSize, sourceLink: link }
       const sessions = this.sessions = new Sessions({ context: ctx, store, prompts, effects, health: board.claim('models'), masterId,
-        lifetime: this.lifetime,
+        lifetime: this.lifetime, executionReady: () => this.safetyGate.executionReady(),
+        toolRefusal: (agent, name) => this.safetyGate.refusal(agent.id, name, `session:${agent.id}`, 'SANDBOX'),
         closing: () => this.closing(), environment,
         tools: (agent, ticket) => ticket ? executorTools(this.toolHost, ticket) : mainTools(this.toolHost, agent) })
       const policyChanged: EngineForSettings['policyChanged'] = (from, to, effects) => { this.engine.policyChanged(from, to, effects) }
@@ -158,7 +189,7 @@ export class Runtime extends Service implements SourceHost {
       const evals = board.claim('evals', { state: 'ready', detail: 'No unavailable Eval in the last hour' })
       const evaluateDue = () => { engine.evaluateDue(); evals.set(evalsHealth(store)) }
       const passes = this.passes = new Passes({ engine: { receive: trigger => { this.requireMesh(); return engine.receive(trigger) }, evaluateDue }, effects,
-        health: this.runtimeHealth, lifetime: this.lifetime, configured: () => setup.configured() && this.meshReady(), closing: () => this.closing() })
+        health: this.runtimeHealth, lifetime: this.lifetime, configured: () => setup.configured() && this.meshReady() && this.safetyGate.executionReady(), closing: () => this.closing() })
       this.sourceDeps = { store, engine, outbox, commands, sources, get ready() { return runtime.ready },
         get deployment() { return setup.deployment }, configured: () => setup.configured(),
         get setupProblem() { return setup.problem }, get feishuProblem() { return setup.feishuProblem }, receive: trigger => passes.receive(trigger) }
@@ -210,7 +241,7 @@ export class Runtime extends Service implements SourceHost {
   }
   private closing(): boolean { return this.closingFlag || !this.meshReady() }
   /** Hold evaluation, dispatch, and outbound delivery while paused or awaiting setup; sources still record incoming triggers. */
-  private paused(): boolean { return !this.meshReady() || !this.setup.configured() || this.store.settings().paused }
+  private paused(): boolean { return !this.meshReady() || !this.safetyGate.executionReady() || !this.setup.configured() || this.store.settings().paused }
   private async initialize(): Promise<void> {
     // Register management HTTP routes before setup completes so operators can fix setup problems in the UI.
     this.disposers.push(registerHttp(this.ctx, this.httpHost()))
@@ -222,6 +253,12 @@ export class Runtime extends Service implements SourceHost {
     this.sessions.install()
     this.executor.install()
     await this.sessions.ensure(this.masterId, this.machine.stateDir, 'dsh-superagent orchestrator', 'orchestrator')
+    // Native read-only presets constrain file effects, not network, process visibility or credentials.
+    // Until a verified OS boundary and trusted bindings are wired in, never start automatic work.
+    if (!this.safetyGate.executionReady()) {
+      this.runtimeHealth.set({ state: 'paused', detail: 'Mesh execution blocked: OS/network isolation and trusted Session bindings are not validated', at: now() })
+      return
+    }
     for (const id of this.settings.syncable()) await this.settings.sync(id).catch(() => { /* sync() records its failure in health. */ })
     // If stop() was called while awaiting setup, session creation, or policy sync, do not start background loops.
     if (this.closingFlag) return
@@ -233,8 +270,8 @@ export class Runtime extends Service implements SourceHost {
   }
   private httpHost(): HttpHost {
     const runtime = this
-    const { store, sources, prompts, sessions, settings, engine, executor, health, machine, masterId, ready, sourceLinks, setup, passes } = this
-    return { store, sources, prompts, sessions, settings, engine, executor, health, machine, masterId, ready, sourceLinks,
+    const { store, sources, prompts, sessions, settings, engine, executor, health, machine, masterId, sourceLinks, setup, passes } = this
+    return { store, sources, prompts, sessions, settings, engine, executor, health, machine, masterId, get ready() { return runtime.ready }, sourceLinks,
       get deployment() { return setup.deployment },
       get setupProblem() { return setup.problem }, get feishuProblem() { return setup.feishuProblem },
       configured: () => setup.configured(), links: () => runtime.links(), ticketEnvironment: ticket => runtime.ticketEnvironment(ticket),

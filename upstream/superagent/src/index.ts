@@ -24,7 +24,7 @@ export async function apply(ctx: Context, config: DeploymentConfig): Promise<voi
   ctx.effect(() => async () => { await runtime.stop() })
   await runtime.ready
   installMeshM0(ctx)
-  ctx.logger.info(runtime.configured() ? 'dsh-superagent ready; the Superagent sidebar entry opens the management panel' : `dsh-superagent is waiting for setup: ${runtime.setupProblem?.detail ?? ''}`)
+  ctx.logger.info(runtime.configured() ? `dsh-superagent configured; runtime ${runtime.health.runtime?.state}: ${runtime.health.runtime?.detail}` : `dsh-superagent is waiting for setup: ${runtime.setupProblem?.detail ?? ''}`)
 }
 export type { Deployment, DeploymentConfig } from './deployment.ts'
 export * from './core/index.ts'

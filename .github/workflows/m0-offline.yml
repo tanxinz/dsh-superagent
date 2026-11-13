@@ -70,12 +70,14 @@ jobs:
         run: python scripts/ci_record.py --id superagent-profile-probe --cwd . --output artifacts --timeout 100 -- node scripts/m0-profile-probe.mjs "$RUNNER_TEMP/m0-profile-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js" upstream/superagent artifacts/profile-details --boot-unconfigured
       - name: Real native dependency unload and restore
         run: python scripts/ci_record.py --id superagent-dependency-profile --cwd . --output artifacts --timeout 100 -- node scripts/m0-profile-probe.mjs "$RUNNER_TEMP/m0-profile-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js" upstream/superagent artifacts/dependency-profile-details --boot-service-dependency-cycle
+      - name: Configured fixture account and real native restricted Session
+        run: python scripts/ci_record.py --id superagent-configured-profile --cwd . --output artifacts --timeout 100 -- node scripts/m0-profile-probe.mjs "$RUNNER_TEMP/m0-profile-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js" upstream/superagent artifacts/configured-profile-details --boot-configured-fixture
       - name: Verify dependency files stayed frozen
         if: always()
         run: git diff --exit-code -- upstream/superagent/package.json upstream/superagent/pnpm-lock.yaml scripts/fixtures/m0-profile-runtime/package.json scripts/fixtures/m0-profile-runtime/package-lock.json
       - name: Audit complete SuperAgent evidence
         if: always()
-        run: python scripts/evidence_audit.py artifacts --require superagent-install --require superagent-check --require profile-runtime-install --require superagent-profile-probe --require superagent-dependency-profile --output artifacts/evidence-audit.json
+        run: python scripts/evidence_audit.py artifacts --require superagent-install --require superagent-check --require profile-runtime-install --require superagent-profile-probe --require superagent-dependency-profile --require superagent-configured-profile --output artifacts/evidence-audit.json
       - name: Upload offline evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -87,6 +89,34 @@ jobs:
             artifacts/evidence-audit.json
             artifacts/profile-details/**
             artifacts/dependency-profile-details/**
+            artifacts/configured-profile-details/**
+          if-no-files-found: error
+
+  isolation-fixture:
+    needs: review
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24.22.1
+      - name: Install kernel probe runner on disposable CI host
+        run: sudo apt-get update && sudo apt-get install -y bubblewrap
+      - name: Harmless OS mount, environment and network boundary fixture
+        # The disposable host grants namespace setup to this probe only. Business Workers stay disabled.
+        run: python scripts/ci_record.py --id os-boundary-fixture --cwd . --output artifacts --timeout 30 -- sudo -n "$(command -v node)" scripts/m0-isolation-probe.mjs artifacts/os-boundary-details
+      - name: Audit isolation fixture evidence
+        if: always()
+        run: python scripts/evidence_audit.py artifacts --require os-boundary-fixture --output artifacts/evidence-audit.json
+      - name: Preserve isolation attempt including failures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: m0-isolation-fixture-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/**
           if-no-files-found: error
 
   harness:

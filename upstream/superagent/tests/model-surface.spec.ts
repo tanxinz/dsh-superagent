@@ -1,3 +1,5 @@
+import { LocalSafetyGate } from '../src/extensions/mesh/safety.ts'
+import { permissionFixture } from './fixtures/host.ts'
 /**
  * Model surface contract tests: verify registered tools, system prompts, skills, and session inputs for the
  * orchestrator and worker roles against tool schemas, environment variables, glossary rules (`docs/001`), and size budgets.
@@ -133,7 +135,7 @@ async function start() {
   const services = { tools: {}, systemPrompt: {}, skills: {}, agents, llm: { resolveCallConfig: async (value: unknown) => value },
     workspaceRegistry: { create: async (cwd: string) => ({ id: cwd }) },
     sessionController: { create, resolveAgent, selectModel: async () => {}, rename: async () => {}, inspect: async () => ({ events: [] }) },
-    sessionPersistence: { flush: async () => {}, open: async () => history }, permissionPresets: { set: () => {} }, subprocess,
+    sessionPersistence: { flush: async () => {}, open: async () => history }, permissionPresets: permissionFixture(), subprocess,
     webServer: { host: '127.0.0.1', port: 3082, register: () => () => {} } }
   for (const [name, service] of Object.entries(services)) ctx.reflect.provide(name, service)
   const seed = new Store(join(directory, 'orchestrator.sqlite'))
@@ -290,6 +292,8 @@ let host: Host
 let sessions: Awaited<ReturnType<typeof drive>>
 let surfaces: Surface[]
 beforeAll(async () => {
+  vi.spyOn(LocalSafetyGate.prototype, 'executionReady').mockReturnValue(true)
+  vi.spyOn(LocalSafetyGate.prototype, 'refusal').mockReturnValue(undefined)
   host = await start()
   sessions = await drive(host)
   surfaces = collect(host, sessions)

@@ -1,6 +1,6 @@
-// Isolated profile/configuration probe. Never supplies accounts, model keys or business input.
+// Isolated profile/configuration probe. Only supplies an explicitly labelled CLI account Fixture in configured mode; no model keys or business input.
 import { pathToFileURL, fileURLToPath } from 'node:url';
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { once } from 'node:events';
 import { closeSync, mkdirSync, mkdtempSync, openSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -11,15 +11,16 @@ import { spawn, spawnSync } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 
 const [cliArg, bundleArg, outputArg, mode] = process.argv.slice(2);
-if (!cliArg || !bundleArg || !outputArg || !['--dump-only', '--boot-unconfigured', '--boot-service-dependency-cycle'].includes(mode)) {
-  throw new Error('Usage: node scripts/m0-profile-probe.mjs <dsh/lib/bin.js> <bundle> <new-output-directory> --dump-only|--boot-unconfigured|--boot-service-dependency-cycle');
+if (!cliArg || !bundleArg || !outputArg || !['--dump-only', '--boot-unconfigured', '--boot-service-dependency-cycle', '--boot-configured-fixture'].includes(mode)) {
+  throw new Error('Usage: node scripts/m0-profile-probe.mjs <dsh/lib/bin.js> <bundle> <new-output-directory> --dump-only|--boot-unconfigured|--boot-service-dependency-cycle|--boot-configured-fixture');
 }
-const dependencyMode = mode === '--boot-service-dependency-cycle';
+const configuredMode = mode === '--boot-configured-fixture';
+const dependencyMode = mode === '--boot-service-dependency-cycle' || configuredMode;
 const cli = resolve(cliArg), bundle = resolve(bundleArg), output = resolve(outputArg);
 mkdirSync(output); // Never replace another attempt.
 const home = mkdtempSync(join(tmpdir(), 'm0-dsh-profile-'));
 const profile = join(home, 'profiles', 'm0-probe');
-const env = { PATH: process.env.PATH, DSH_HOME: home, DSH_TELEMETRY_DISABLED: '1' };
+const env = { PATH: process.env.PATH, DSH_HOME: home, DSH_TELEMETRY_DISABLED: '1', DSH_MESH_ADMIN_TOKEN: randomBytes(32).toString('hex') };
 const report = { mode, status: 'FAIL', config_tree: 'NOT_RUN', boot: 'NOT_RUN',
   business_worker: 'NOT_RUN', real_model_session: 'NOT_RUN', m0_exit: 'BLOCKED', cycles: [] };
 const save = (name, value) => writeFileSync(join(output, name), value);
@@ -53,10 +54,10 @@ async function boot(number, index) {
     while (Date.now() < deadline && child.exitCode === null && child.signalCode === null) {
       try {
         const response = await fetch(`http://127.0.0.1:${number}/orchestrator/api/state`,
-          { headers: { 'x-orchestrator-request': '1' }, signal: AbortSignal.timeout(500) });
+          { headers: { 'x-orchestrator-request': '1', authorization: `Bearer ${env.DSH_MESH_ADMIN_TOKEN}` }, signal: AbortSignal.timeout(500) });
         if (response.ok) {
           const value = await response.json();
-          if (value.health?.runtime?.state === 'paused' && value.setup?.problem?.code === 'repositoryUnset') {
+          if (value.health?.runtime?.state === 'paused' && (configuredMode ? value.setup?.accounts?.repository === 'fixture/m0' : value.setup?.problem?.code === 'repositoryUnset')) {
             if (dependencyMode) {
               const match = readFileSync(raw, 'utf8').match(/^M0_DEPENDENCY_CYCLE (.+)$/m);
               if (!match) { await delay(100); continue; }
@@ -80,9 +81,10 @@ async function boot(number, index) {
     disposed: text.split('[cognitive-mesh] m0 bridge disposed').length - 1, log_sha256: hash(file) };
   report.cycles.push(cycle);
   json(`boot-${index}.json`, cycle);
-  if (!state || state.health?.runtime?.state !== 'paused' || state.setup?.problem?.code !== 'repositoryUnset'
-      || state.load?.running !== 0 || state.load?.queued !== 0 || state.setup?.accounts !== null
-      || forced || child.exitCode !== 0 || cycle.installed !== (dependencyMode ? 2 : 1) || cycle.disposed !== (dependencyMode ? 2 : 1) || (dependencyMode && dependencyCycle?.status !== 'PASS')) throw new Error(`unconfigured profile cycle ${index} failed`);
+  const expectedBridges = configuredMode ? (index === 1 ? 3 : 2) : (dependencyMode ? 2 : 1);
+  if (!state || state.health?.runtime?.state !== 'paused' || (configuredMode ? state.setup?.accounts?.repository !== 'fixture/m0' : state.setup?.problem?.code !== 'repositoryUnset')
+      || state.load?.running !== 0 || state.load?.queued !== 0 || (!configuredMode && state.setup?.accounts !== null)
+      || forced || child.exitCode !== 0 || cycle.installed !== expectedBridges || cycle.disposed !== expectedBridges || (dependencyMode && dependencyCycle?.status !== 'PASS')) throw new Error(`unconfigured profile cycle ${index} failed`);
 }
 try {
   const version = run('cli-version', ['--version']).trim();
@@ -126,9 +128,18 @@ try {
     report.dependency_provider_entry_sha256 = hash(providerEntry);
     report.dependency_observer_sha256 = hash(fileURLToPath(new URL('./fixtures/m0-profile-runtime/mesh-dependency-observer.mjs', import.meta.url)));
     const providerModule = pathToFileURL(providerEntry).href;
+    const cordisModule = pathToFileURL(require.resolve('@deepseek-ai/cordis')).href;
     const helper = pathToFileURL(fileURLToPath(new URL('./fixtures/m0-profile-runtime/mesh-dependency-observer.mjs', import.meta.url))).href;
     writeFileSync(join(observer, 'index.js'), `export { apply } from ${JSON.stringify(helper)};\n`);
-    writeFileSync(join(observer, 'cordis.patch.yml'), '- insert:\n    - id: m0-probe-log\n      name: m0-probe-log\n      config:\n        providerModule: ' + JSON.stringify(providerModule) + '\n');
+    let fixtureConfig = '';
+    if (configuredMode) {
+      const fixtureCli = join(home, 'fixture-gh');
+      writeFileSync(fixtureCli, '#!' + process.execPath + '\nconst args=process.argv.slice(2);\nif(args.join(" ")==="api user") console.log(JSON.stringify({login:"m0-fixture",id:7}));\nelse if(args[0]==="api"&&args[1]==="repos/fixture/m0") console.log(JSON.stringify({name:"fixture/m0",push:true}));\nelse process.exit(70);\n', {mode:0o755});
+      report.configured_account = 'FIXTURE_CLI_NOT_REAL_GITHUB';
+      report.fixture_cli_sha256 = hash(fixtureCli);
+      fixtureConfig = '        fixtureCli: ' + JSON.stringify(fixtureCli) + '\n';
+    }
+    writeFileSync(join(observer, 'cordis.patch.yml'), '- insert:\n    - id: m0-probe-log\n      name: m0-probe-log\n      config:\n        providerModule: ' + JSON.stringify(providerModule) + '\n        cordisModule: ' + JSON.stringify(cordisModule) + '\n' + fixtureConfig);
   }
   const number = mode !== '--dump-only' ? await port() : 3082;
   const patch = `- id: webserver\n  config:\n    host: 127.0.0.1\n    port: ${number}\n- id: dsh-superagent\n  config:\n    stateDir: ${join(home, 'state')}\n- id: dsh-superagent-github\n  disabled: true\n`;

@@ -4,6 +4,7 @@ import { createHash, randomUUID, timingSafeEqual } from 'node:crypto'
 import { TrustedIdentityAuthority } from '../extensions/mesh/auth.ts'
 import { LocalSafetyGate } from '../extensions/mesh/safety.ts'
 import { MeshSecurityStore } from '../extensions/mesh/security-store.ts'
+import { SessionBindingAuthority } from '../extensions/mesh/session-bindings.ts'
 import { CognitiveMeshService } from '../extensions/mesh/service.ts'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import type { SessionId } from '@deepseek-ai/dsh-session'
@@ -100,7 +101,7 @@ export class Runtime extends Service implements SourceHost {
     this.releaseLock = async () => { release() }
     let opened: Store | undefined
     try {
-      const meshConfig: { lifetime: AbortSignal; authority?: TrustedIdentityAuthority } = { lifetime: this.lifetime }
+      const meshConfig: { lifetime: AbortSignal; authority?: TrustedIdentityAuthority; bindings?: SessionBindingAuthority } = { lifetime: this.lifetime }
       const mesh = new CognitiveMeshService(ctx, meshConfig)
       mesh.assertReady()
       const report = (error: unknown) => { ctx.logger.warn('dsh-superagent: %s', String(error)) }
@@ -153,9 +154,10 @@ export class Runtime extends Service implements SourceHost {
         feishuPageSize: () => feishuSettings(sources).readPageSize, sourceLink: link }
       const sessions = this.sessions = new Sessions({ context: ctx, store, prompts, effects, health: board.claim('models'), masterId,
         lifetime: this.lifetime, executionReady: () => this.safetyGate.executionReady(),
-        toolRefusal: (agent, name) => this.safetyGate.refusal(agent.id, name, `session:${agent.id}`, 'SANDBOX'),
+        toolRefusal: (agent, name) => this.safetyGate.refusal(agent.id, name, `session:${agent.id}`, 'SANDBOX', true),
         closing: () => this.closing(), environment,
         tools: (agent, ticket) => ticket ? executorTools(this.toolHost, ticket) : mainTools(this.toolHost, agent) })
+      meshConfig.bindings = new SessionBindingAuthority(authority, safety, this.safetyGate, id => sessions.safetyTarget(id))
       const policyChanged: EngineForSettings['policyChanged'] = (from, to, effects) => { this.engine.policyChanged(from, to, effects) }
       this.settings = new Settings({ store, sources, engine: { policyChanged }, health: board, context: ctx, lifetime: this.lifetime, sessions,
         sourceHost: this, setup, requestPass: () => { this.passes.request() } })

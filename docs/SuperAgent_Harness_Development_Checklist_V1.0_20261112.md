@@ -1,5 +1,7 @@
 # SuperAgent Harness 详细开发清单 V1.1（审核修订）
 
+> Mac 接续（2026-11-13）：从PR #12实际head1475ffa创建个人分支；归档其全部成功CI。新增受信根Session绑定投放/撤权/恢复及原请求上下文撤权复核；完整67文件/1263测试、类型检查/构建通过，真实无模型profile绑定重载/持久撤权通过。实际Worker隔离、子会话投放及全部Gateway仍未完成；M0-01—13 IN_PROGRESS、M0-14 BLOCKED、0/14整项，M1未准出。详见[本批验收](acceptance/M0-local-bindings-20261113.md)。
+
 编制日期：2026-11-12（北京时间）  
 依据文件：`SuperAgent_Harness_Design_Final.md`，当前读取版本 **9**，234,014 字节，18 章。  
 源文件最近修改时间：2026-11-12 08:02:20（北京时间）。  

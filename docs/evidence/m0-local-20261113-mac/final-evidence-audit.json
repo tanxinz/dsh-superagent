@@ -1,0 +1,30 @@
+{
+  "evidence_integrity": "PASS",
+  "checks": {
+    "baseline-superagent-check": "FAIL",
+    "baseline-superagent-check-ready": "FAIL",
+    "binding-full-check-first": "FAIL",
+    "binding-full-check-loopback": "PASS",
+    "binding-full-check-second": "FAIL",
+    "binding-regressions-first": "PASS",
+    "binding-typecheck-first": "PASS",
+    "checklist-final": "FAIL",
+    "initial-superagent-check": "FAIL",
+    "initial-superagent-install": "FAIL",
+    "local-codex-review": "FAIL",
+    "managed-configured-profile": "PASS",
+    "managed-http-check": "PASS",
+    "profile-runtime-install": "PASS",
+    "reviewed-codex-review": "PASS",
+    "reviewed-configured-profile": "PASS",
+    "reviewed-dependency-profile": "PASS",
+    "reviewed-full-check": "PASS",
+    "reviewed-unconfigured-profile": "PASS",
+    "root-node-regressions": "PASS",
+    "root-python-regressions": "PASS"
+  },
+  "errors": [],
+  "required_commands_pass": true,
+  "m0_exit": "BLOCKED",
+  "real_session": "NOT_RUN"
+}

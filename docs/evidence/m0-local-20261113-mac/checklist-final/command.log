@@ -1,0 +1,912 @@
+{
+  "structure": "PASS",
+  "errors": [],
+  "completion_verified": false,
+  "counts": {
+    "M0": {
+      "total": 14,
+      "done_claimed": 0
+    },
+    "M1": {
+      "total": 14,
+      "done_claimed": 0
+    },
+    "M2": {
+      "total": 28,
+      "done_claimed": 0
+    },
+    "M3": {
+      "total": 14,
+      "done_claimed": 0
+    },
+    "M4": {
+      "total": 14,
+      "done_claimed": 0
+    },
+    "M5": {
+      "total": 16,
+      "done_claimed": 0
+    }
+  },
+  "tasks": {
+    "M0-01": {
+      "title": "建立可复现版本基线",
+      "status": "IN_PROGRESS",
+      "depends_on": []
+    },
+    "M0-02": {
+      "title": "核验上游扩展点和不可绕过的启动入口",
+      "status": "IN_PROGRESS",
+      "depends_on": [
+        "M0-01"
+      ]
+    },
+    "M0-03": {
+      "title": "确定 fork 改造白名单和领域边界",
+      "status": "IN_PROGRESS",
+      "depends_on": [
+        "M0-02"
+      ]
+    },
+    "M0-04": {
+      "title": "完成 Bundle 桥接生命周期",
+      "status": "IN_PROGRESS",
+      "depends_on": [
+        "M0-03"
+      ]
+    },
+    "M0-05": {
+      "title": "注册并实际消费 CognitiveMeshService",
+      "status": "IN_PROGRESS",
+      "depends_on": [
+        "M0-04"
+      ]
+    },
+    "M0-06": {
+      "title": "建立受信命令与管理请求身份入口",
+      "status": "IN_PROGRESS",
+      "depends_on": [
+        "M0-05"
+      ]
+    },
+    "M0-07": {
+      "title": "建立 Schema 与迁移一致性机制",
+      "status": "IN_PROGRESS",
+      "depends_on": [
+        "M0-03"
+      ]
+    },
+    "M0-08": {
+      "title": "验证原生 Effects 的认领和恢复语义",
+      "status": "IN_PROGRESS",
+      "depends_on": [
+        "M0-02",
+        "M0-07"
+      ]
+    },
+    "M0-09": {
+      "title": "证明同步 Store 与持久 Effect 同事务",
+      "status": "IN_PROGRESS",
+      "depends_on": [
+        "M0-07",
+        "M0-08"
+      ]
+    },
+    "M0-10": {
+      "title": "修复 Session 权限预设回退",
+      "status": "IN_PROGRESS",
+      "depends_on": [
+        "M0-02",
+        "M0-05"
+      ]
+    },
+    "M0-11": {
+      "title": "配置并验证真正的隔离执行环境",
+      "status": "IN_PROGRESS",
+      "depends_on": [
+        "M0-10"
+      ]
+    },
+    "M0-12": {
+      "title": "建立最小权限公式和最终硬拒绝",
+      "status": "IN_PROGRESS",
+      "depends_on": [
+        "M0-06",
+        "M0-07",
+        "M0-10",
+        "M0-11"
+      ]
+    },
+    "M0-13": {
+      "title": "搭建测试、故障注入与证据骨架",
+      "status": "IN_PROGRESS",
+      "depends_on": [
+        "M0-06",
+        "M0-09",
+        "M0-12"
+      ]
+    },
+    "M0-14": {
+      "title": "执行 M0 阶段准出",
+      "status": "BLOCKED",
+      "depends_on": [
+        "M0-01",
+        "M0-02",
+        "M0-03",
+        "M0-04",
+        "M0-05",
+        "M0-06",
+        "M0-07",
+        "M0-08",
+        "M0-09",
+        "M0-10",
+        "M0-11",
+        "M0-12",
+        "M0-13"
+      ]
+    },
+    "M1-01": {
+      "title": "实现规范事件与安全接收收据",
+      "status": "TODO",
+      "depends_on": [
+        "M0-14"
+      ]
+    },
+    "M1-02": {
+      "title": "接通研发事件 Source",
+      "status": "TODO",
+      "depends_on": [
+        "M1-01"
+      ]
+    },
+    "M1-03": {
+      "title": "接通协同消息 Source",
+      "status": "TODO",
+      "depends_on": [
+        "M1-01"
+      ]
+    },
+    "M1-04": {
+      "title": "实现稳定 Trigger 身份与重投去重",
+      "status": "TODO",
+      "depends_on": [
+        "M1-02",
+        "M1-03",
+        "M0-07"
+      ]
+    },
+    "M1-05": {
+      "title": "实现 FastPath 四类准入",
+      "status": "TODO",
+      "depends_on": [
+        "M1-04"
+      ]
+    },
+    "M1-06": {
+      "title": "锁定并真实调用 Jev SDK",
+      "status": "TODO",
+      "depends_on": [
+        "M0-14"
+      ]
+    },
+    "M1-07": {
+      "title": "通过原生评估 Effects 装配复合 Assessor",
+      "status": "TODO",
+      "depends_on": [
+        "M1-05",
+        "M1-06"
+      ]
+    },
+    "M1-08": {
+      "title": "实现并测试 16 种准入映射",
+      "status": "TODO",
+      "depends_on": [
+        "M1-07"
+      ]
+    },
+    "M1-09": {
+      "title": "实现 Jev 异常与低置信度保守回退",
+      "status": "TODO",
+      "depends_on": [
+        "M1-07",
+        "M1-08"
+      ]
+    },
+    "M1-10": {
+      "title": "分离留存、工作与通知三个意向",
+      "status": "TODO",
+      "depends_on": [
+        "M1-08"
+      ]
+    },
+    "M1-11": {
+      "title": "形成原生 Ticket 与不可变 Mandate",
+      "status": "TODO",
+      "depends_on": [
+        "M1-08",
+        "M1-09",
+        "M1-10"
+      ]
+    },
+    "M1-12": {
+      "title": "实现 TicketCard 投影和整卡 Token 预算",
+      "status": "TODO",
+      "depends_on": [
+        "M1-11"
+      ]
+    },
+    "M1-13": {
+      "title": "提供事件与 Ticket 的只读血缘查询",
+      "status": "TODO",
+      "depends_on": [
+        "M1-11",
+        "M1-12"
+      ]
+    },
+    "M1-14": {
+      "title": "执行 M1 端到端验收",
+      "status": "TODO",
+      "depends_on": [
+        "M1-01",
+        "M1-02",
+        "M1-03",
+        "M1-04",
+        "M1-05",
+        "M1-06",
+        "M1-07",
+        "M1-08",
+        "M1-09",
+        "M1-10",
+        "M1-11",
+        "M1-12",
+        "M1-13"
+      ]
+    },
+    "M2-01": {
+      "title": "迁移 ActionPlan/Run/Attempt 与根预算数据",
+      "status": "TODO",
+      "depends_on": [
+        "M1-14"
+      ]
+    },
+    "M2-02": {
+      "title": "实现语义参数规范化与业务效果键",
+      "status": "TODO",
+      "depends_on": [
+        "M2-01"
+      ]
+    },
+    "M2-03": {
+      "title": "实现 BusinessIntent 受信创建与复用",
+      "status": "TODO",
+      "depends_on": [
+        "M2-02",
+        "M1-11"
+      ]
+    },
+    "M2-04": {
+      "title": "建立唯一持久 Effects 入队封装",
+      "status": "TODO",
+      "depends_on": [
+        "M2-01",
+        "M0-08"
+      ]
+    },
+    "M2-05": {
+      "title": "实现 commitPlan 同步原子命令",
+      "status": "TODO",
+      "depends_on": [
+        "M2-03",
+        "M2-04"
+      ]
+    },
+    "M2-06": {
+      "title": "实现 Action 状态迁移与报告归类",
+      "status": "TODO",
+      "depends_on": [
+        "M2-05"
+      ]
+    },
+    "M2-07": {
+      "title": "建立共享 MANDATE_ROOT 执行预算",
+      "status": "TODO",
+      "depends_on": [
+        "M2-01",
+        "M2-03"
+      ]
+    },
+    "M2-08": {
+      "title": "实现工作开始前的同步准入闸",
+      "status": "TODO",
+      "depends_on": [
+        "M2-07",
+        "M2-14",
+        "M0-02",
+        "M0-10"
+      ]
+    },
+    "M2-09": {
+      "title": "原子签发副作用 Attempt 与计次",
+      "status": "TODO",
+      "depends_on": [
+        "M2-06",
+        "M2-07",
+        "M2-08",
+        "M2-04",
+        "M2-21"
+      ]
+    },
+    "M2-10": {
+      "title": "实现一次性许可消费与撤权竞争",
+      "status": "TODO",
+      "depends_on": [
+        "M2-09",
+        "M0-12"
+      ]
+    },
+    "M2-11": {
+      "title": "实现所有启用动作的 ActionGateway",
+      "status": "TODO",
+      "depends_on": [
+        "M2-02",
+        "M2-10",
+        "M2-14",
+        "M2-21"
+      ]
+    },
+    "M2-12": {
+      "title": "实现 Tier1 隔离 Mock RPC",
+      "status": "TODO",
+      "depends_on": [
+        "M2-11"
+      ]
+    },
+    "M2-13": {
+      "title": "接通真实受限 Tier3 Worker",
+      "status": "TODO",
+      "depends_on": [
+        "M2-08",
+        "M2-11",
+        "M2-14",
+        "M0-10",
+        "M0-11"
+      ]
+    },
+    "M2-14": {
+      "title": "先建立受信 Assignment/Session 绑定基础",
+      "status": "TODO",
+      "depends_on": [
+        "M2-01",
+        "M2-06",
+        "M2-07",
+        "M0-10"
+      ]
+    },
+    "M2-15": {
+      "title": "实现无执行工具的 LazySynthesizer",
+      "status": "TODO",
+      "depends_on": [
+        "M2-14"
+      ]
+    },
+    "M2-16": {
+      "title": "实现版本化 Schema 差异提案旁路",
+      "status": "TODO",
+      "depends_on": [
+        "M2-04",
+        "M2-05"
+      ]
+    },
+    "M2-17": {
+      "title": "建立执行器之外的确定性后置验证",
+      "status": "TODO",
+      "depends_on": [
+        "M2-12",
+        "M2-13"
+      ]
+    },
+    "M2-18": {
+      "title": "接通基础 ExitReport 与 Mock Outbox",
+      "status": "TODO",
+      "depends_on": [
+        "M2-15",
+        "M2-17",
+        "M2-24",
+        "M1-10"
+      ]
+    },
+    "M2-19": {
+      "title": "实现未知远端结果对账",
+      "status": "TODO",
+      "depends_on": [
+        "M2-09",
+        "M2-10",
+        "M2-12",
+        "M2-06"
+      ]
+    },
+    "M2-20": {
+      "title": "实现启动恢复屏障和在途扫描",
+      "status": "TODO",
+      "depends_on": [
+        "M2-14",
+        "M2-19",
+        "M2-24"
+      ]
+    },
+    "M2-21": {
+      "title": "实现临时资源占用与永久冲突区分",
+      "status": "TODO",
+      "depends_on": [
+        "M2-06",
+        "M2-04",
+        "M2-07"
+      ]
+    },
+    "M2-22": {
+      "title": "实现原逻辑工作项的安全恢复入口",
+      "status": "TODO",
+      "depends_on": [
+        "M2-21",
+        "M2-19",
+        "M2-04",
+        "M2-07"
+      ]
+    },
+    "M2-23": {
+      "title": "实现旧 Plan 安全替代",
+      "status": "TODO",
+      "depends_on": [
+        "M2-05",
+        "M2-06",
+        "M2-21"
+      ]
+    },
+    "M2-24": {
+      "title": "实现全引用结清及唯一结清事件",
+      "status": "TODO",
+      "depends_on": [
+        "M2-23",
+        "M2-19"
+      ]
+    },
+    "M2-25": {
+      "title": "提供动作、业务键、绑定和对账管理接口",
+      "status": "TODO",
+      "depends_on": [
+        "M2-14",
+        "M2-16",
+        "M2-19",
+        "M2-24"
+      ]
+    },
+    "M2-26": {
+      "title": "运行多动作故障与安全回归集",
+      "status": "TODO",
+      "depends_on": [
+        "M2-18",
+        "M2-20",
+        "M2-22",
+        "M2-25"
+      ]
+    },
+    "M2-27": {
+      "title": "完成 S1 一源多动作端到端运行",
+      "status": "TODO",
+      "depends_on": [
+        "M2-26"
+      ]
+    },
+    "M2-28": {
+      "title": "执行 M2 准出并冻结本阶段契约",
+      "status": "TODO",
+      "depends_on": [
+        "M2-01",
+        "M2-02",
+        "M2-03",
+        "M2-04",
+        "M2-05",
+        "M2-06",
+        "M2-07",
+        "M2-08",
+        "M2-09",
+        "M2-10",
+        "M2-11",
+        "M2-12",
+        "M2-13",
+        "M2-14",
+        "M2-15",
+        "M2-16",
+        "M2-17",
+        "M2-18",
+        "M2-19",
+        "M2-20",
+        "M2-21",
+        "M2-22",
+        "M2-23",
+        "M2-24",
+        "M2-25",
+        "M2-26",
+        "M2-27"
+      ]
+    },
+    "M3-01": {
+      "title": "迁移关联、趋势与 Patch 证据结构",
+      "status": "TODO",
+      "depends_on": [
+        "M2-28"
+      ]
+    },
+    "M3-02": {
+      "title": "实现候选召回与证据分级",
+      "status": "TODO",
+      "depends_on": [
+        "M3-01",
+        "M1-12"
+      ]
+    },
+    "M3-03": {
+      "title": "实现关联提案版本与受信操作人",
+      "status": "TODO",
+      "depends_on": [
+        "M3-02"
+      ]
+    },
+    "M3-04": {
+      "title": "实现 Engine 受控 Subscription 提交",
+      "status": "TODO",
+      "depends_on": [
+        "M3-03"
+      ]
+    },
+    "M3-05": {
+      "title": "保留原生 Input 与上下文关联区别",
+      "status": "TODO",
+      "depends_on": [
+        "M3-04"
+      ]
+    },
+    "M3-06": {
+      "title": "实现近七天证据召回",
+      "status": "TODO",
+      "depends_on": [
+        "M3-01",
+        "M1-13"
+      ]
+    },
+    "M3-07": {
+      "title": "实现趋势 Finding 与持久旁路",
+      "status": "TODO",
+      "depends_on": [
+        "M3-06",
+        "M2-04"
+      ]
+    },
+    "M3-08": {
+      "title": "实现受授权范围约束的 Patch 创建",
+      "status": "TODO",
+      "depends_on": [
+        "M3-07",
+        "M2-14"
+      ]
+    },
+    "M3-09": {
+      "title": "接通真实 Patch 持久递送",
+      "status": "TODO",
+      "depends_on": [
+        "M3-08",
+        "M0-02"
+      ]
+    },
+    "M3-10": {
+      "title": "接收可信模型请求包含证据",
+      "status": "TODO",
+      "depends_on": [
+        "M3-09"
+      ]
+    },
+    "M3-11": {
+      "title": "实现迟到及多请求证据汇总",
+      "status": "TODO",
+      "depends_on": [
+        "M3-10",
+        "M3-01"
+      ]
+    },
+    "M3-12": {
+      "title": "实现 Patch 重启与 Session 结束处理",
+      "status": "TODO",
+      "depends_on": [
+        "M3-11"
+      ]
+    },
+    "M3-13": {
+      "title": "运行 S2-A/S2-B 并扩展只读时间线",
+      "status": "TODO",
+      "depends_on": [
+        "M3-05",
+        "M3-12"
+      ]
+    },
+    "M3-14": {
+      "title": "执行 M3 阶段准出",
+      "status": "TODO",
+      "depends_on": [
+        "M3-01",
+        "M3-02",
+        "M3-03",
+        "M3-04",
+        "M3-05",
+        "M3-06",
+        "M3-07",
+        "M3-08",
+        "M3-09",
+        "M3-10",
+        "M3-11",
+        "M3-12",
+        "M3-13"
+      ]
+    },
+    "M4-01": {
+      "title": "完善 GateAudit 与治理数据迁移",
+      "status": "TODO",
+      "depends_on": [
+        "M3-14"
+      ]
+    },
+    "M4-02": {
+      "title": "叠加 Jev 风险辅助而不改变硬拒绝",
+      "status": "TODO",
+      "depends_on": [
+        "M4-01",
+        "M0-12"
+      ]
+    },
+    "M4-03": {
+      "title": "补齐启用角色与非 Tool 路径的拒绝覆盖",
+      "status": "TODO",
+      "depends_on": [
+        "M4-02",
+        "M2-11"
+      ]
+    },
+    "M4-04": {
+      "title": "实现普通策略更新与紧急撤权两条路径",
+      "status": "TODO",
+      "depends_on": [
+        "M4-03",
+        "M2-10"
+      ]
+    },
+    "M4-05": {
+      "title": "采集最近五步与稳定观察窗口",
+      "status": "TODO",
+      "depends_on": [
+        "M4-01",
+        "M2-14"
+      ]
+    },
+    "M4-06": {
+      "title": "实现 Watchdog 判别与 UNKNOWN 回退",
+      "status": "TODO",
+      "depends_on": [
+        "M4-05"
+      ]
+    },
+    "M4-07": {
+      "title": "实施最多一次受控提示",
+      "status": "TODO",
+      "depends_on": [
+        "M4-06",
+        "M3-12"
+      ]
+    },
+    "M4-08": {
+      "title": "实现三类 Exit 准出与结清检查",
+      "status": "TODO",
+      "depends_on": [
+        "M4-01",
+        "M2-17",
+        "M2-24"
+      ]
+    },
+    "M4-09": {
+      "title": "实现逐来源、逐阶段通知意向聚合",
+      "status": "TODO",
+      "depends_on": [
+        "M4-08",
+        "M1-10"
+      ]
+    },
+    "M4-10": {
+      "title": "实现人工待办持久闭环",
+      "status": "TODO",
+      "depends_on": [
+        "M4-09"
+      ]
+    },
+    "M4-11": {
+      "title": "实现发送前校验、回执分层和人工对账",
+      "status": "TODO",
+      "depends_on": [
+        "M4-09",
+        "M4-10",
+        "M2-18"
+      ]
+    },
+    "M4-12": {
+      "title": "提供治理运维查询与指标",
+      "status": "TODO",
+      "depends_on": [
+        "M4-04",
+        "M4-07",
+        "M4-11"
+      ]
+    },
+    "M4-13": {
+      "title": "完成 S3 安全阻断与监护端到端",
+      "status": "TODO",
+      "depends_on": [
+        "M4-12"
+      ]
+    },
+    "M4-14": {
+      "title": "执行 M4 阶段准出",
+      "status": "TODO",
+      "depends_on": [
+        "M4-01",
+        "M4-02",
+        "M4-03",
+        "M4-04",
+        "M4-05",
+        "M4-06",
+        "M4-07",
+        "M4-08",
+        "M4-09",
+        "M4-10",
+        "M4-11",
+        "M4-12",
+        "M4-13"
+      ]
+    },
+    "M5-01": {
+      "title": "迁移遥测、SOP 和 Team 持久结构",
+      "status": "TODO",
+      "depends_on": [
+        "M4-14"
+      ]
+    },
+    "M5-02": {
+      "title": "实现 telemetry-watch Fixture Source",
+      "status": "TODO",
+      "depends_on": [
+        "M5-01",
+        "M1-01"
+      ]
+    },
+    "M5-03": {
+      "title": "实现可信 OPEN/CLOSE 与故障重开",
+      "status": "TODO",
+      "depends_on": [
+        "M5-02"
+      ]
+    },
+    "M5-04": {
+      "title": "实现可信来源 epoch 切换与恢复",
+      "status": "TODO",
+      "depends_on": [
+        "M5-03"
+      ]
+    },
+    "M5-05": {
+      "title": "实现固定窗口与重复告警恢复演练",
+      "status": "TODO",
+      "depends_on": [
+        "M5-04",
+        "M2-03"
+      ]
+    },
+    "M5-06": {
+      "title": "定义固定三节点 SOP 契约",
+      "status": "TODO",
+      "depends_on": [
+        "M5-01",
+        "M2-11"
+      ]
+    },
+    "M5-07": {
+      "title": "按原生 Effects 推进 SOP Step",
+      "status": "TODO",
+      "depends_on": [
+        "M5-06",
+        "M2-04"
+      ]
+    },
+    "M5-08": {
+      "title": "实现 SOP 失败版的受控新版本重跑",
+      "status": "TODO",
+      "depends_on": [
+        "M5-07",
+        "M2-22"
+      ]
+    },
+    "M5-09": {
+      "title": "创建两个真实独立受限 Team Session",
+      "status": "TODO",
+      "depends_on": [
+        "M5-01",
+        "M2-13",
+        "M2-14",
+        "M4-04"
+      ]
+    },
+    "M5-10": {
+      "title": "实现真实工件交接与独立 Verifier",
+      "status": "TODO",
+      "depends_on": [
+        "M5-09",
+        "M2-17"
+      ]
+    },
+    "M5-11": {
+      "title": "实现 Team 早期失败、恢复和取消",
+      "status": "TODO",
+      "depends_on": [
+        "M5-10",
+        "M2-19"
+      ]
+    },
+    "M5-12": {
+      "title": "补齐管理接口一致性与权限回归",
+      "status": "TODO",
+      "depends_on": [
+        "M5-05",
+        "M5-08",
+        "M5-11",
+        "M4-12"
+      ]
+    },
+    "M5-13": {
+      "title": "实现真实运行轨迹投影",
+      "status": "TODO",
+      "depends_on": [
+        "M5-12"
+      ]
+    },
+    "M5-14": {
+      "title": "改造 HTML 蓝图为真实轨迹展示",
+      "status": "TODO",
+      "depends_on": [
+        "M5-13"
+      ]
+    },
+    "M5-15": {
+      "title": "执行 17 模块与三场景联合验收",
+      "status": "TODO",
+      "depends_on": [
+        "M5-14"
+      ]
+    },
+    "M5-16": {
+      "title": "交付可重现学习原型与阶段结论",
+      "status": "TODO",
+      "depends_on": [
+        "M5-01",
+        "M5-02",
+        "M5-03",
+        "M5-04",
+        "M5-05",
+        "M5-06",
+        "M5-07",
+        "M5-08",
+        "M5-09",
+        "M5-10",
+        "M5-11",
+        "M5-12",
+        "M5-13",
+        "M5-14",
+        "M5-15"
+      ]
+    }
+  }
+}

@@ -1,7 +1,7 @@
 /** Minimal persistent M0 safety facts on the existing Store connection. */
 import type { DatabaseSync } from 'node:sqlite'
 import type { Store } from '../../app/store.ts'
-import type { SafetyBinding } from './safety.ts'
+import { validBinding, type SafetyBinding } from './safety.ts'
 
 export interface IdentityGrant { tenantId: string; actorRef: string; roles: readonly string[]; expiresAt: number; version: number }
 export interface SafetyPolicy { tenantId: string; safetyPolicyVersion: string; emergencyRevocationEpoch: number }
@@ -50,8 +50,10 @@ export function verifyMeshSchema(db: DatabaseSync): void {
 /** Trusted application-side persistence; never exported through CognitiveMeshService. */
 export class MeshSecurityStore {
   constructor(private readonly store: Pick<Store, 'db' | 'atomic'>) {}
+  atomic<T>(work: () => T): T { return this.store.atomic(work) }
   /** Called only by trusted bootstrap code; conflicting Session reuse never silently widens its binding. */
   bind(binding: SafetyBinding): void {
+    if (!validBinding(binding) || binding.revoked) throw new Error('Invalid Session safety binding')
     this.store.atomic(() => {
       const current = this.binding(binding.sessionId)
       if (current) {
@@ -65,8 +67,17 @@ export class MeshSecurityStore {
     const row = this.store.db.prepare('SELECT tenant_id,binding FROM mesh_session_security WHERE session_id=?').get(sessionId)
     if (!row) return undefined
     const value = JSON.parse(String(row.binding)) as SafetyBinding
-    if (value.sessionId !== sessionId || value.tenantId !== row.tenant_id) throw new Error('Corrupt Session safety binding')
+    if (!validBinding(value) || value.sessionId !== sessionId || value.tenantId !== row.tenant_id) throw new Error('Corrupt Session safety binding')
     return value
+  }
+  /** A tombstone survives reload and prevents the same Session ID from being reissued. */
+  revokeBinding(tenantId: string, sessionId: string): void {
+    this.store.atomic(() => {
+      const current = this.binding(sessionId)
+      if (!current || current.tenantId !== tenantId) throw new Error('Session binding unavailable')
+      this.store.db.prepare('UPDATE mesh_session_security SET binding=? WHERE session_id=? AND tenant_id=?')
+        .run(JSON.stringify({ ...current, revoked: true }), sessionId, tenantId)
+    })
   }
   grant(grant: IdentityGrant): void {
     if (!grant.tenantId || !grant.actorRef || !Number.isSafeInteger(grant.expiresAt) || !Number.isSafeInteger(grant.version) || grant.version < 1

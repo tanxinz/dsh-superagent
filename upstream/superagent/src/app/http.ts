@@ -248,17 +248,27 @@ export function registerHttp(ctx: Context, runtime: HttpHost): () => void {
         const hasClaims = IDENTITY_CLAIMS.some(key => url.searchParams.has(key))
           || ['x-tenant-id', 'x-actor-ref', 'x-roles', 'x-request-id'].some(key => req.headers[key] !== undefined)
         // Authenticate before parsing IDs, bodies or route names. Body/query claims confer no authority.
-        mesh.securityStatus(credential ?? '', hasClaims)
+        const authorization = mesh.authorizeRequest(credential ?? '', hasClaims)
         await runtime.ready
-        const trusted = mesh.securityStatus(credential ?? '', hasClaims)
+        const trusted = authorization.check(hasClaims)
         if (url.pathname === '/orchestrator/api/mesh/security' && req.method === 'GET') {
           json(res, 200, trusted)
+          return
+        }
+        const bindingRoute = /^\/orchestrator\/api\/mesh\/sessions\/([^/]+)\/(issue|restore|revoke)$/.exec(url.pathname)
+        if (bindingRoute && req.method === 'POST') {
+          // No caller-selected scope, role, identity or expiry; the Runtime owns all binding inputs.
+          const body = await readBody(req, 1024)
+          authorization.check(hasClaims || bodyClaims(body))
+          if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).length) throw new RouteError(400, 'Expected an empty object')
+          const result = authorization.sessionBinding(decoded(bindingRoute[1]!), bindingRoute[2] as 'issue' | 'restore' | 'revoke')
+          json(res, 200, result)
           return
         }
         const route = match(table, req.method ?? 'GET', url.pathname.slice('/orchestrator/api/'.length).split('/'))
         if (!route) throw new RouteError(404, 'Unknown operation')
         const query = Object.fromEntries(url.searchParams)
-        json(res, 200, await route.run({ params: route.params as never, query, body: async maxBytes => { const value = await readBody(req, maxBytes); mesh.securityStatus(credential ?? '', hasClaims || bodyClaims(value)); return value } }))
+        json(res, 200, await route.run({ params: route.params as never, query, body: async maxBytes => { const value = await readBody(req, maxBytes); authorization.check(hasClaims || bodyClaims(value)); return value } }))
       } catch (error) { json(res, ...failure(error)) }
     } })]
   return () => { for (const dispose of disposers) dispose() }

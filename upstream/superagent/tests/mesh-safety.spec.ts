@@ -31,6 +31,14 @@ it('requires every allow and removes every deny, separately for tool, resource a
   }
   expect(gate.executionReady()).toBe(false)
 })
+it('persists isolation denials even for valid bindings, and failed audit still cannot enter a tool body', () => {
+  facts.bind(binding())
+  expect(gate.refusal('root', 'probe', 'fixture', 'SANDBOX', true)).toBe('Mesh safety denied')
+  expect(facts.auditCount('a')).toBe(1)
+  expect(store.db.prepare('SELECT reason_code FROM mesh_gate_audit').get()?.reason_code).toBe('ISOLATION_UNAVAILABLE')
+  store.db.exec('DROP TABLE mesh_gate_audit')
+  expect(gate.refusal('root', 'probe', 'fixture', 'SANDBOX', true)).toBe('Mesh safety denied')
+})
 it('persists exact bindings and refuses conflicting Session reuse, expiry, tenant mismatch and parent denial', () => {
   const parent = binding('parent'), child = { ...binding('child'), parentSessionId: 'parent' }
   facts.bind({ ...parent, current: { ...permissions(), tools: { allow: ['probe'], deny: ['probe'] } } })

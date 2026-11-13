@@ -1,5 +1,7 @@
 # M0 兼容矩阵
 
+> Mac 接续（2026-11-13）：从PR #12实际head1475ffa创建个人分支；归档其全部成功CI。新增受信根Session绑定投放/撤权/恢复及原请求上下文撤权复核；完整67文件/1263测试、类型检查/构建通过，真实无模型profile绑定重载/持久撤权通过。实际Worker隔离、子会话投放及全部Gateway仍未完成；M0-01—13 IN_PROGRESS、M0-14 BLOCKED、0/14整项，M1未准出。详见[本批验收](acceptance/M0-local-bindings-20261113.md)。
+
 记录日期：2026-11-12（北京时间）。本次运行 Node 24.22.1，Linux x64。
 
 首表保留首次本地批次结果；CI 当前结果以文末及 [接手复审记录](acceptance/M0-ci-process-review-20261112.md) 为准，不将历史 IPC 失败视为当前 CI 构建状态。

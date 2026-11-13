@@ -1,0 +1,25 @@
+{
+  "schema_version": 2,
+  "check_id": "root-node-regressions",
+  "mode": "OFFLINE_BUILD_OR_TEST",
+  "started_at": "2026-11-13T04:53:33.073656+00:00",
+  "finished_at": "2026-11-13T04:53:33.154160+00:00",
+  "duration_seconds": 0.08,
+  "command": [
+    "node",
+    "--test",
+    "scripts/m0-preflight.test.mjs"
+  ],
+  "source_commit": "1475ffa241f89ff806c9d5e01684ffa50bd0e246",
+  "exit_code": 0,
+  "timed_out": false,
+  "launch_error": null,
+  "interrupted_signal": null,
+  "status": "PASS",
+  "log": "command.log",
+  "log_sha256": "1a39689e4d77c757561b9daeb7e8b82575b00b020664f2fb03c3b71022637b97",
+  "lockfile_sha256": null,
+  "online_sdk": "NOT_RUN",
+  "real_session": "NOT_RUN",
+  "m0_exit": "BLOCKED"
+}

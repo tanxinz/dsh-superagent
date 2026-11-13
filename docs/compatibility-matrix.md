@@ -55,3 +55,5 @@ CI 使用 Ubuntu 24.04 / Node 24.22.1，保留原生 addon 步骤，没有替换
 该 npm fixture 独立保存 package-lock.json，不修改产品 pnpm-lock.yaml 或 Harness gitlink。发布产物与 d743267 源码的逐字节对应未验证。日志、命令及版本见 [Bridge 验收记录](acceptance/M0-bundle-profile-20261112.md)。
 
 PR #5 的复测 run 43241222611 也已完成两版原始全量及证据完整性审核，测试/跳过/预期失败计数与第三轮相同。该运行不包含后续 Bridge 源码；完整 ZIP 在 evidence/m0-ci/run-43241222611/，不挪作 Bridge 新 CI 通过证据。
+
+2026-11-13 接续：PR #11 run43328280921 的两版 Harness 原始完整构建/全量均PASS；SuperAgent 的新依赖 probe FAIL（不同 isolation scope 被全局计数误判），本分支已修复。匹配发布 CLI0.2.1-alpha.2 的真实配置夹具 profile/无模型 Session 受限与恢复通过；不是外部账户或真实模型验收，组合仍不提升整项 VERIFIED。新源码CI须独立核验。见 acceptance/M0-trust-permissions-20261113.md。

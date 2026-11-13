@@ -1,0 +1,544 @@
+[
+  {
+    "path": "docs/evidence/m0-trust-permissions-20261113/local/acceptance-configured/result.json",
+    "check_id": "acceptance-configured",
+    "command": [
+      "node",
+      "scripts/m0-profile-probe.mjs",
+      "/workspace/scratch/80dba5cfa241/profile-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js",
+      "upstream/superagent",
+      "docs/evidence/m0-trust-permissions-20261113/acceptance-configured",
+      "--boot-configured-fixture"
+    ],
+    "cwd": null,
+    "source_commit": "130a766a142ff0c009c9d563e4f3c17309eb258a",
+    "status": "PASS",
+    "exit_code": 0,
+    "log_sha256": "a34cafd7caf9311cb33f9b75aa06820ffe0b83a6ca7405be975b2ef6cb635a42"
+  },
+  {
+    "path": "docs/evidence/m0-trust-permissions-20261113/local/acceptance-dependency/result.json",
+    "check_id": "acceptance-dependency",
+    "command": [
+      "node",
+      "scripts/m0-profile-probe.mjs",
+      "/workspace/scratch/80dba5cfa241/profile-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js",
+      "upstream/superagent",
+      "docs/evidence/m0-trust-permissions-20261113/acceptance-dependency",
+      "--boot-service-dependency-cycle"
+    ],
+    "cwd": null,
+    "source_commit": "130a766a142ff0c009c9d563e4f3c17309eb258a",
+    "status": "PASS",
+    "exit_code": 0,
+    "log_sha256": "e70abb984d0277af9145d71c9a28649c373a63bb5ebf2fac0d0e1f8d684723e6"
+  },
+  {
+    "path": "docs/evidence/m0-trust-permissions-20261113/local/acceptance-original/result.json",
+    "check_id": "acceptance-original",
+    "command": [
+      "node",
+      "scripts/m0-profile-probe.mjs",
+      "/workspace/scratch/80dba5cfa241/profile-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js",
+      "upstream/superagent",
+      "docs/evidence/m0-trust-permissions-20261113/acceptance-original",
+      "--boot-unconfigured"
+    ],
+    "cwd": null,
+    "source_commit": "130a766a142ff0c009c9d563e4f3c17309eb258a",
+    "status": "PASS",
+    "exit_code": 0,
+    "log_sha256": "1250fd25395c700eb711e6d3f5987e0a89914753eb1cf6004c6591d7db3cf6b2"
+  },
+  {
+    "path": "docs/evidence/m0-trust-permissions-20261113/local/complete-check/result.json",
+    "check_id": "complete-check",
+    "command": [
+      "npm",
+      "exec",
+      "--yes",
+      "--package=pnpm@11.7.0",
+      "--",
+      "pnpm",
+      "check"
+    ],
+    "cwd": null,
+    "source_commit": "130a766a142ff0c009c9d563e4f3c17309eb258a",
+    "status": "PASS",
+    "exit_code": 0,
+    "log_sha256": "fcba0ea144c5ada1520935117d263a1211cf7bdfa5555f9b7e6055f22f2c125a"
+  },
+  {
+    "path": "docs/evidence/m0-trust-permissions-20261113/local/configured-profile-review/result.json",
+    "check_id": "configured-profile-review",
+    "command": [
+      "node",
+      "scripts/m0-profile-probe.mjs",
+      "/workspace/scratch/80dba5cfa241/profile-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js",
+      "upstream/superagent",
+      "docs/evidence/m0-trust-permissions-20261113/configured-profile-review",
+      "--boot-configured-fixture"
+    ],
+    "cwd": null,
+    "source_commit": "130a766a142ff0c009c9d563e4f3c17309eb258a",
+    "status": "PASS",
+    "exit_code": 0,
+    "log_sha256": "76be667b10e60fc6a701e43997e425ccfc443da7dc7d8daeb38da3be4d9cb756"
+  },
+  {
+    "path": "docs/evidence/m0-trust-permissions-20261113/local/current-preflight-regression/result.json",
+    "check_id": "current-preflight-regression",
+    "command": [
+      "node",
+      "--test",
+      "scripts/m0-preflight.test.mjs"
+    ],
+    "cwd": null,
+    "source_commit": "130a766a142ff0c009c9d563e4f3c17309eb258a",
+    "status": "PASS",
+    "exit_code": 0,
+    "log_sha256": "697025c143efe05c2e77f0e031b3b6de2c88edb21920ef7ade9bc4f2df72a5c4"
+  },
+  {
+    "path": "docs/evidence/m0-trust-permissions-20261113/local/current-recorder-regression/result.json",
+    "check_id": "current-recorder-regression",
+    "command": [
+      "python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "scripts",
+      "-p",
+      "test_*.py",
+      "-v"
+    ],
+    "cwd": null,
+    "source_commit": "130a766a142ff0c009c9d563e4f3c17309eb258a",
+    "status": "PASS",
+    "exit_code": 0,
+    "log_sha256": "0586f4089a5aa5ef73ec72014f15666d87b8575614c7bf1f2aae34fcc1d55fd4"
+  },
+  {
+    "path": "docs/evidence/m0-trust-permissions-20261113/local/final-claims-configured/result.json",
+    "check_id": "final-claims-configured",
+    "command": [
+      "node",
+      "scripts/m0-profile-probe.mjs",
+      "/workspace/scratch/80dba5cfa241/profile-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js",
+      "upstream/superagent",
+      "docs/evidence/m0-trust-permissions-20261113/final-claims-configured",
+      "--boot-configured-fixture"
+    ],
+    "cwd": null,
+    "source_commit": "130a766a142ff0c009c9d563e4f3c17309eb258a",
+    "status": "PASS",
+    "exit_code": 0,
+    "log_sha256": "71dd8d9b6e979164e98e2dfb437551162c99b81d5d39436e25e916e16de93b81"
+  },
+  {
+    "path": "docs/evidence/m0-trust-permissions-20261113/local/final-claims-dependency/result.json",
+    "check_id": "final-claims-dependency",
+    "command": [
+      "node",
+      "scripts/m0-profile-probe.mjs",
+      "/workspace/scratch/80dba5cfa241/profile-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js",
+      "upstream/superagent",
+      "docs/evidence/m0-trust-permissions-20261113/final-claims-dependency",
+      "--boot-service-dependency-cycle"
+    ],
+    "cwd": null,
+    "source_commit": "130a766a142ff0c009c9d563e4f3c17309eb258a",
+    "status": "PASS",
+    "exit_code": 0,
+    "log_sha256": "71799fa4fc8a94248b7ef9c835cf7ceba8322bc04ee895c7187d4244df2d5d51"
+  },
+  {
+    "path": "docs/evidence/m0-trust-permissions-20261113/local/final-claims-original/result.json",
+    "check_id": "final-claims-original",
+    "command": [
+      "node",
+      "scripts/m0-profile-probe.mjs",
+      "/workspace/scratch/80dba5cfa241/profile-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js",
+      "upstream/superagent",
+      "docs/evidence/m0-trust-permissions-20261113/final-claims-original",
+      "--boot-unconfigured"
+    ],
+    "cwd": null,
+    "source_commit": "130a766a142ff0c009c9d563e4f3c17309eb258a",
+    "status": "PASS",
+    "exit_code": 0,
+    "log_sha256": "e8e8c8066e4ff932ae3b391f7ff3fcee5d9d2b066fd24762e4f80554ba0f7367"
+  },
+  {
+    "path": "docs/evidence/m0-trust-permissions-20261113/local/final-offline-check/result.json",
+    "check_id": "final-offline-check",
+    "command": [
+      "npm",
+      "exec",
+      "--yes",
+      "--package=pnpm@11.7.0",
+      "--",
+      "pnpm",
+      "check"
+    ],
+    "cwd": null,
+    "source_commit": "130a766a142ff0c009c9d563e4f3c17309eb258a",
+    "status": "PASS",
+    "exit_code": 0,
+    "log_sha256": "a928eed123ecf081cfa23f73138a9e7b2229339b926c936573eac45dc856b4f9"
+  },
+  {
+    "path": "docs/evidence/m0-trust-permissions-20261113/local/final-profile-configured/result.json",
+    "check_id": "final-profile-configured",
+    "command": [
+      "node",
+      "scripts/m0-profile-probe.mjs",
+      "/workspace/scratch/80dba5cfa241/profile-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js",
+      "upstream/superagent",
+      "docs/evidence/m0-trust-permissions-20261113/final-profile-configured",
+      "--boot-configured-fixture"
+    ],
+    "cwd": null,
+    "source_commit": "130a766a142ff0c009c9d563e4f3c17309eb258a",
+    "status": "FAIL",
+    "exit_code": 1,
+    "log_sha256": "0342bd99b4fb4c3c1f491bce696baf34b600dae4d6b0f2c7857c49851775a2ca"
+  },
+  {
+    "path": "docs/evidence/m0-trust-permissions-20261113/local/final-profile-dependency/result.json",
+    "check_id": "final-profile-dependency",
+    "command": [
+      "node",
+      "scripts/m0-profile-probe.mjs",
+      "/workspace/scratch/80dba5cfa241/profile-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js",
+      "upstream/superagent",
+      "docs/evidence/m0-trust-permissions-20261113/final-profile-dependency",
+      "--boot-service-dependency-cycle"
+    ],
+    "cwd": null,
+    "source_commit": "130a766a142ff0c009c9d563e4f3c17309eb258a",
+    "status": "PASS",
+    "exit_code": 0,
+    "log_sha256": "dca5bd01d8f476dfb1ffac79ccdfd722b738abe51045ac30dd7879e7b3af271b"
+  },
+  {
+    "path": "docs/evidence/m0-trust-permissions-20261113/local/final-profile-original/result.json",
+    "check_id": "final-profile-original",
+    "command": [
+      "node",
+      "scripts/m0-profile-probe.mjs",
+      "/workspace/scratch/80dba5cfa241/profile-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js",
+      "upstream/superagent",
+      "docs/evidence/m0-trust-permissions-20261113/final-profile-original",
+      "--boot-unconfigured"
+    ],
+    "cwd": null,
+    "source_commit": "130a766a142ff0c009c9d563e4f3c17309eb258a",
+    "status": "PASS",
+    "exit_code": 0,
+    "log_sha256": "8cc7f06ecb8ee7ad714f4a9b2de87dc228a3b5db10e23fc6b1b6c485c65befdb"
+  },
+  {
+    "path": "docs/evidence/m0-trust-permissions-20261113/local/frozen-install/result.json",
+    "check_id": "frozen-install",
+    "command": [
+      "npm",
+      "exec",
+      "--yes",
+      "--package=pnpm@11.7.0",
+      "--",
+      "pnpm",
+      "install",
+      "--frozen-lockfile"
+    ],
+    "cwd": null,
+    "source_commit": "130a766a142ff0c009c9d563e4f3c17309eb258a",
+    "status": "PASS",
+    "exit_code": 0,
+    "log_sha256": "9b13c5f5f39bd3c226eb08ddcebe1eea6e65a89f3c4951df69e5ab3f1f420a1d"
+  },
+  {
+    "path": "docs/evidence/m0-trust-permissions-20261113/local/handoff-checklist-audit/result.json",
+    "check_id": "handoff-checklist-audit",
+    "command": [
+      "python",
+      "scripts/checklist_audit.py"
+    ],
+    "cwd": null,
+    "source_commit": "130a766a142ff0c009c9d563e4f3c17309eb258a",
+    "status": "PASS",
+    "exit_code": 0,
+    "log_sha256": "63d2f91550bf5e06119b890c8ca871ee246547125ec737db3dd11796d74cbbf8"
+  },
+  {
+    "path": "docs/evidence/m0-trust-permissions-20261113/local/identity-claims-full-check/result.json",
+    "check_id": "identity-claims-full-check",
+    "command": [
+      "npm",
+      "exec",
+      "--yes",
+      "--package=pnpm@11.7.0",
+      "--",
+      "pnpm",
+      "check"
+    ],
+    "cwd": null,
+    "source_commit": "130a766a142ff0c009c9d563e4f3c17309eb258a",
+    "status": "PASS",
+    "exit_code": 0,
+    "log_sha256": "bdcabc89c77c1df98122552a754728ad2e07c316d9a46e2ebc402325ab73cf73"
+  },
+  {
+    "path": "docs/evidence/m0-trust-permissions-20261113/local/management-auth-check/result.json",
+    "check_id": "management-auth-check",
+    "command": [
+      "npm",
+      "exec",
+      "--yes",
+      "--package=pnpm@11.7.0",
+      "--",
+      "pnpm",
+      "check"
+    ],
+    "cwd": null,
+    "source_commit": "130a766a142ff0c009c9d563e4f3c17309eb258a",
+    "status": "FAIL",
+    "exit_code": 1,
+    "log_sha256": "00b4321afee4a258347c184ac9131d2a948d96bcde66275273d19e35597efa43"
+  },
+  {
+    "path": "docs/evidence/m0-trust-permissions-20261113/local/native-scope-profile/result.json",
+    "check_id": "native-scope-profile",
+    "command": [
+      "node",
+      "scripts/m0-profile-probe.mjs",
+      "/workspace/scratch/80dba5cfa241/profile-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js",
+      "upstream/superagent",
+      "docs/evidence/m0-trust-permissions-20261113/scope-profile",
+      "--boot-service-dependency-cycle"
+    ],
+    "cwd": null,
+    "source_commit": "130a766a142ff0c009c9d563e4f3c17309eb258a",
+    "status": "PASS",
+    "exit_code": 0,
+    "log_sha256": "db2c59d8b5abf0dd490a153d2679e8ba7a86fa59f48d4c120d8b4aead6b5ea59"
+  },
+  {
+    "path": "docs/evidence/m0-trust-permissions-20261113/local/os-boundary-probe/result.json",
+    "check_id": "os-boundary-probe",
+    "command": [
+      "node",
+      "scripts/m0-isolation-probe.mjs",
+      "docs/evidence/m0-trust-permissions-20261113/os-boundary"
+    ],
+    "cwd": null,
+    "source_commit": "130a766a142ff0c009c9d563e4f3c17309eb258a",
+    "status": "FAIL",
+    "exit_code": 1,
+    "log_sha256": "67fa48af2adbda2427f0b8d1a1a464183b3270cfe61939be66949bb8f1b53a71"
+  },
+  {
+    "path": "docs/evidence/m0-trust-permissions-20261113/local/profile-runtime-install/result.json",
+    "check_id": "profile-runtime-install",
+    "command": [
+      "npm",
+      "ci",
+      "--ignore-scripts",
+      "--no-audit",
+      "--no-fund"
+    ],
+    "cwd": null,
+    "source_commit": null,
+    "status": "PASS",
+    "exit_code": 0,
+    "log_sha256": "4f38618763dcb0574540d126e2d81f250bb7532a95c02fc33f896b19a7772f01"
+  },
+  {
+    "path": "docs/evidence/m0-trust-permissions-20261113/local/restricted-check/result.json",
+    "check_id": "restricted-check",
+    "command": [
+      "npm",
+      "exec",
+      "--yes",
+      "--package=pnpm@11.7.0",
+      "--",
+      "pnpm",
+      "check"
+    ],
+    "cwd": null,
+    "source_commit": "130a766a142ff0c009c9d563e4f3c17309eb258a",
+    "status": "PASS",
+    "exit_code": 0,
+    "log_sha256": "8deafdfc1b5a935b049c59ab88037252670f5ba7730150848d8b8ccceff32f53"
+  },
+  {
+    "path": "docs/evidence/m0-trust-permissions-20261113/local/resumed-full-check/result.json",
+    "check_id": "resumed-full-check",
+    "command": [
+      "npm",
+      "exec",
+      "--yes",
+      "--package=pnpm@11.7.0",
+      "--",
+      "pnpm",
+      "check"
+    ],
+    "cwd": null,
+    "source_commit": "130a766a142ff0c009c9d563e4f3c17309eb258a",
+    "status": "FAIL",
+    "exit_code": 1,
+    "log_sha256": "cf3e6779da0add6fd8193058cbedf389da59965195b67e77bea75b29b821f38f"
+  },
+  {
+    "path": "docs/evidence/m0-trust-permissions-20261113/local/resumed-sql-review/result.json",
+    "check_id": "resumed-sql-review",
+    "command": [
+      "npm",
+      "exec",
+      "--yes",
+      "--package=pnpm@11.7.0",
+      "--",
+      "pnpm",
+      "check"
+    ],
+    "cwd": null,
+    "source_commit": "130a766a142ff0c009c9d563e4f3c17309eb258a",
+    "status": "PASS",
+    "exit_code": 0,
+    "log_sha256": "4f84dec1fa6727a4991df4deb5a6b25c1599dac7e871bb4786c0a09bed356cd0"
+  },
+  {
+    "path": "docs/evidence/m0-trust-permissions-20261113/local/safety-gate-check/result.json",
+    "check_id": "safety-gate-check",
+    "command": [
+      "npm",
+      "exec",
+      "--yes",
+      "--package=pnpm@11.7.0",
+      "--",
+      "pnpm",
+      "check"
+    ],
+    "cwd": null,
+    "source_commit": "130a766a142ff0c009c9d563e4f3c17309eb258a",
+    "status": "FAIL",
+    "exit_code": 2,
+    "log_sha256": "0e37150f88b40dabde94c7e35bf61aa29dc0931cebc2437556d154208f7de054"
+  },
+  {
+    "path": "docs/evidence/m0-trust-permissions-20261113/local/safety-gate-review-check/result.json",
+    "check_id": "safety-gate-review-check",
+    "command": [
+      "npm",
+      "exec",
+      "--yes",
+      "--package=pnpm@11.7.0",
+      "--",
+      "pnpm",
+      "check"
+    ],
+    "cwd": null,
+    "source_commit": "130a766a142ff0c009c9d563e4f3c17309eb258a",
+    "status": "FAIL",
+    "exit_code": 1,
+    "log_sha256": "e488152d8b70184b66a63f4824a7b10dc37d1c1d63bffe6b0a23ef79f03c19e1"
+  },
+  {
+    "path": "docs/evidence/m0-trust-permissions-20261113/local/security-final-review/result.json",
+    "check_id": "security-final-review",
+    "command": [
+      "npm",
+      "exec",
+      "--yes",
+      "--package=pnpm@11.7.0",
+      "--",
+      "pnpm",
+      "check"
+    ],
+    "cwd": null,
+    "source_commit": "130a766a142ff0c009c9d563e4f3c17309eb258a",
+    "status": "FAIL",
+    "exit_code": 1,
+    "log_sha256": "0209cd204f0ac5a0f31a19a68a4f539cbfcf72931544e5e9209b3aef37b62087"
+  },
+  {
+    "path": "docs/evidence/m0-trust-permissions-20261113/local/security-foundation-check/result.json",
+    "check_id": "security-foundation-check",
+    "command": [
+      "npm",
+      "exec",
+      "--yes",
+      "--package=pnpm@11.7.0",
+      "--",
+      "pnpm",
+      "check"
+    ],
+    "cwd": null,
+    "source_commit": "130a766a142ff0c009c9d563e4f3c17309eb258a",
+    "status": "PASS",
+    "exit_code": 0,
+    "log_sha256": "71860b6ece3170123c31679f1e5b858019e4bb9cf6a67b1ee3bbeaf7cd40d7af"
+  },
+  {
+    "path": "docs/evidence/m0-trust-permissions-20261113/local/security-foundation-typecheck/result.json",
+    "check_id": "security-foundation-typecheck",
+    "command": [
+      "npm",
+      "exec",
+      "--yes",
+      "--package=pnpm@11.7.0",
+      "--",
+      "pnpm",
+      "typecheck"
+    ],
+    "cwd": null,
+    "source_commit": "130a766a142ff0c009c9d563e4f3c17309eb258a",
+    "status": "PASS",
+    "exit_code": 0,
+    "log_sha256": "30c39c57b085f1fbc4729beaa343bc32af9b9e802fa10db57de9a3c482d6cea6"
+  },
+  {
+    "path": "docs/evidence/m0-trust-permissions-20261113/local/security-gate-typecheck/result.json",
+    "check_id": "security-gate-typecheck",
+    "command": [
+      "npm",
+      "exec",
+      "--yes",
+      "--package=pnpm@11.7.0",
+      "--",
+      "pnpm",
+      "typecheck"
+    ],
+    "cwd": null,
+    "source_commit": "130a766a142ff0c009c9d563e4f3c17309eb258a",
+    "status": "PASS",
+    "exit_code": 0,
+    "log_sha256": "30c39c57b085f1fbc4729beaa343bc32af9b9e802fa10db57de9a3c482d6cea6"
+  },
+  {
+    "path": "docs/evidence/m0-trust-permissions-20261113/local/security-integration-check/result.json",
+    "check_id": "security-integration-check",
+    "command": [
+      "npm",
+      "exec",
+      "--yes",
+      "--package=pnpm@11.7.0",
+      "--",
+      "pnpm",
+      "check"
+    ],
+    "cwd": null,
+    "source_commit": "130a766a142ff0c009c9d563e4f3c17309eb258a",
+    "status": "PASS",
+    "exit_code": 0,
+    "log_sha256": "cd9c3a14099a2d98726f98c6b61765748c5030a23ee3ce36c25a1a10e3cfe1ea"
+  },
+  {
+    "path": "docs/evidence/m0-trust-permissions-20261113/local/current-full-check/command.raw",
+    "status": "UNKNOWN",
+    "exit_code": null,
+    "reason": "execution session lost; original raw file retained",
+    "sha256": "7125f194612fcff2f454c05d848e7cb71facc1967b4d5017e25b34fdee3ba74f"
+  }
+]

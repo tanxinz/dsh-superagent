@@ -1,0 +1,306 @@
+[
+  {
+    "artifact_id": 13992838794,
+    "zip_sha256": "71f0e4d48037bf740b1d63ba3d17e41310353229ec9c5839df5751316d9cad9a",
+    "checks": [
+      {
+        "check_id": "checklist-audit",
+        "command": [
+          "python",
+          "scripts/checklist_audit.py"
+        ],
+        "source_commit": "78c660a46066b149a3cde1dc4ea31af68fc60a0c",
+        "status": "PASS",
+        "exit_code": 0,
+        "log_sha256": "0ae3c1f85535def1d26d6b56c1001e979d8a2a93845d5f3154cd0813fda50778"
+      },
+      {
+        "check_id": "preflight-tests",
+        "command": [
+          "node",
+          "--test",
+          "scripts/m0-preflight.test.mjs"
+        ],
+        "source_commit": "78c660a46066b149a3cde1dc4ea31af68fc60a0c",
+        "status": "PASS",
+        "exit_code": 0,
+        "log_sha256": "fddac12f4923994397c3c61d995a5fd2cb3dd4bf590df1fbc8a98e75ee44efcb"
+      },
+      {
+        "check_id": "recorder-tests",
+        "command": [
+          "python",
+          "-m",
+          "unittest",
+          "discover",
+          "-s",
+          "scripts",
+          "-p",
+          "test_*.py",
+          "-v"
+        ],
+        "source_commit": "78c660a46066b149a3cde1dc4ea31af68fc60a0c",
+        "status": "PASS",
+        "exit_code": 0,
+        "log_sha256": "76d29d90cad73496d9351260cbed4e9784be92c9a4d874fef2ceb2f30a5b0ec6"
+      }
+    ],
+    "publication": "ORIGINAL_LOCAL_ONLY; existing GitHub Actions artifact; not republished in this commit"
+  },
+  {
+    "artifact_id": 13994339709,
+    "zip_sha256": "14609becc7ef80736a2216c52f0d8b72a04086003da3eb466d47b36f02aa2620",
+    "checks": [
+      {
+        "check_id": "harness-build",
+        "command": [
+          "npm",
+          "exec",
+          "--yes",
+          "--package=pnpm@11.28.5",
+          "--",
+          "pnpm",
+          "build"
+        ],
+        "source_commit": "d743267388641bc76f17c45ce8b4c231aed1d32c",
+        "status": "PASS",
+        "exit_code": 0,
+        "log_sha256": "74d50f4f7c2ebc8cba6cb4b27c3b84a7ded8d939a3b198a65a55198cef52921c"
+      },
+      {
+        "check_id": "harness-install",
+        "command": [
+          "npm",
+          "exec",
+          "--yes",
+          "--package=pnpm@11.28.5",
+          "--",
+          "pnpm",
+          "install",
+          "--frozen-lockfile"
+        ],
+        "source_commit": "d743267388641bc76f17c45ce8b4c231aed1d32c",
+        "status": "PASS",
+        "exit_code": 0,
+        "log_sha256": "de117dc3bb14a729140ddb87078c8fe0c3fe56a69e8540f62d431e8c391ae2c4"
+      },
+      {
+        "check_id": "harness-sandbox-setup",
+        "command": [
+          "bash",
+          "scripts/prepare-ci-bubblewrap.sh"
+        ],
+        "source_commit": "d743267388641bc76f17c45ce8b4c231aed1d32c",
+        "status": "PASS",
+        "exit_code": 0,
+        "log_sha256": "2f0951225ced6480ecd9d554ac2645dd402690619a0cef7b2d6e0a5c12b6211f"
+      },
+      {
+        "check_id": "harness-test",
+        "command": [
+          "npm",
+          "exec",
+          "--yes",
+          "--package=pnpm@11.28.5",
+          "--",
+          "pnpm",
+          "test"
+        ],
+        "source_commit": "d743267388641bc76f17c45ce8b4c231aed1d32c",
+        "status": "PASS",
+        "exit_code": 0,
+        "log_sha256": "e964659fa242c40c79238036155e6e0b31c1ac713ba12d3df016cc9a1303b00f"
+      },
+      {
+        "check_id": "harness-workflow-regression",
+        "command": [
+          "npm",
+          "exec",
+          "--yes",
+          "--package=pnpm@11.28.5",
+          "--",
+          "pnpm",
+          "exec",
+          "vitest",
+          "run",
+          "packages/workflow/workflow-ptc/tests/workflow-ptc.spec.ts"
+        ],
+        "source_commit": "d743267388641bc76f17c45ce8b4c231aed1d32c",
+        "status": "PASS",
+        "exit_code": 0,
+        "log_sha256": "292eb49c81e10b765a435f00f4b4a2c55a730a38f8dd7e50c6f1fc83d50b3f53"
+      }
+    ],
+    "publication": "ORIGINAL_LOCAL_ONLY; existing GitHub Actions artifact; not republished in this commit"
+  },
+  {
+    "artifact_id": 13994645209,
+    "zip_sha256": "d42290dbf00a1b868a945d8c00fee3fb7e8f1305d2bcc3f2802894e8ee2fa007",
+    "checks": [
+      {
+        "check_id": "profile-runtime-install",
+        "command": [
+          "npm",
+          "ci",
+          "--ignore-scripts",
+          "--no-audit",
+          "--no-fund"
+        ],
+        "source_commit": null,
+        "status": "PASS",
+        "exit_code": 0,
+        "log_sha256": "1a6f90547a29916f8a954a97f4a13729da8ac97911c8d75aa4d0d26ec732c215"
+      },
+      {
+        "check_id": "superagent-check",
+        "command": [
+          "npm",
+          "exec",
+          "--yes",
+          "--package=pnpm@11.7.0",
+          "--",
+          "pnpm",
+          "check"
+        ],
+        "source_commit": "78c660a46066b149a3cde1dc4ea31af68fc60a0c",
+        "status": "PASS",
+        "exit_code": 0,
+        "log_sha256": "820b6ee526ac6792b10dedd280683055e4adc8295408cc84e806735b7588f693"
+      },
+      {
+        "check_id": "superagent-dependency-profile",
+        "command": [
+          "node",
+          "scripts/m0-profile-probe.mjs",
+          "/home/runner/work/_temp/m0-profile-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js",
+          "upstream/superagent",
+          "artifacts/dependency-profile-details",
+          "--boot-service-dependency-cycle"
+        ],
+        "source_commit": "78c660a46066b149a3cde1dc4ea31af68fc60a0c",
+        "status": "FAIL",
+        "exit_code": 1,
+        "log_sha256": "cc11fba0c37d68c935edd938648832afc90d7bd2fe8f6e00a34899580f8c519e"
+      },
+      {
+        "check_id": "superagent-install",
+        "command": [
+          "npm",
+          "exec",
+          "--yes",
+          "--package=pnpm@11.7.0",
+          "--",
+          "pnpm",
+          "install",
+          "--frozen-lockfile"
+        ],
+        "source_commit": "78c660a46066b149a3cde1dc4ea31af68fc60a0c",
+        "status": "PASS",
+        "exit_code": 0,
+        "log_sha256": "f3590b71127ffd751c9d316c7633fbadae7b61690a85d7f1a76d0ba50dabe06a"
+      },
+      {
+        "check_id": "superagent-profile-probe",
+        "command": [
+          "node",
+          "scripts/m0-profile-probe.mjs",
+          "/home/runner/work/_temp/m0-profile-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js",
+          "upstream/superagent",
+          "artifacts/profile-details",
+          "--boot-unconfigured"
+        ],
+        "source_commit": "78c660a46066b149a3cde1dc4ea31af68fc60a0c",
+        "status": "PASS",
+        "exit_code": 0,
+        "log_sha256": "946523ef4cb75cf86c0e233027ab51d752f127b52f6b6df69b0cee3be46535ec"
+      }
+    ],
+    "publication": "ORIGINAL_LOCAL_ONLY; existing GitHub Actions artifact; not republished in this commit"
+  },
+  {
+    "artifact_id": 13996027565,
+    "zip_sha256": "a67af333759edbb0c33b1ba290c87194fcd4636c14e47395a289b1600e8bff77",
+    "checks": [
+      {
+        "check_id": "harness-build",
+        "command": [
+          "npm",
+          "exec",
+          "--yes",
+          "--package=pnpm@11.28.5",
+          "--",
+          "pnpm",
+          "build"
+        ],
+        "source_commit": "e8f7b93a344964de3dca1ace9e72b6e4d6de87cb",
+        "status": "PASS",
+        "exit_code": 0,
+        "log_sha256": "8e71c1e8a765883a13b58de838ef0342810567d495663e63322f602002fd9689"
+      },
+      {
+        "check_id": "harness-install",
+        "command": [
+          "npm",
+          "exec",
+          "--yes",
+          "--package=pnpm@11.28.5",
+          "--",
+          "pnpm",
+          "install",
+          "--frozen-lockfile"
+        ],
+        "source_commit": "e8f7b93a344964de3dca1ace9e72b6e4d6de87cb",
+        "status": "PASS",
+        "exit_code": 0,
+        "log_sha256": "3bdd7a8bef6762a2739f5ec45333eb843b435770bdabf12c4633e1743763047e"
+      },
+      {
+        "check_id": "harness-sandbox-setup",
+        "command": [
+          "bash",
+          "scripts/prepare-ci-bubblewrap.sh"
+        ],
+        "source_commit": "e8f7b93a344964de3dca1ace9e72b6e4d6de87cb",
+        "status": "PASS",
+        "exit_code": 0,
+        "log_sha256": "2f0951225ced6480ecd9d554ac2645dd402690619a0cef7b2d6e0a5c12b6211f"
+      },
+      {
+        "check_id": "harness-test",
+        "command": [
+          "npm",
+          "exec",
+          "--yes",
+          "--package=pnpm@11.28.5",
+          "--",
+          "pnpm",
+          "test"
+        ],
+        "source_commit": "e8f7b93a344964de3dca1ace9e72b6e4d6de87cb",
+        "status": "PASS",
+        "exit_code": 0,
+        "log_sha256": "40113f9b356b83fc6310d836450535cb2bfb2f10e8c0c4780d27ec3d97dec2ed"
+      },
+      {
+        "check_id": "harness-workflow-regression",
+        "command": [
+          "npm",
+          "exec",
+          "--yes",
+          "--package=pnpm@11.28.5",
+          "--",
+          "pnpm",
+          "exec",
+          "vitest",
+          "run",
+          "packages/workflow/workflow-ptc/tests/workflow-ptc.spec.ts"
+        ],
+        "source_commit": "e8f7b93a344964de3dca1ace9e72b6e4d6de87cb",
+        "status": "PASS",
+        "exit_code": 0,
+        "log_sha256": "2a4eb1c767eed00812cd77096f12944fc03c0b1da64eaf5f224844bcdb674425"
+      }
+    ],
+    "publication": "ORIGINAL_LOCAL_ONLY; existing GitHub Actions artifact; not republished in this commit"
+  }
+]

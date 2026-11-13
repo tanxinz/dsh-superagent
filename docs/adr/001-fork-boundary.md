@@ -25,3 +25,9 @@ SuperAgent 原先以 gitlink 引用只读上游；本批将固定版本快照导
 白名单增量：Runtime 原生组合根注册/消费 CognitiveMeshService；index inject 与 contracts 共用依赖常量；Effects 仅新增默认 true 的可选派发谓词和一处派发前检查，Runtime 用于依赖失效时保留原生队列。没有第二队列或持久租约。回归覆盖原生全套 62 文件/1229 测试、真实 Cordis 消费/卸载及 Runtime 缺失依赖和恢复；真实已配置 profile 的依赖切换仍待实证。安全权限与身份改造没有据此关闭。
 
 M0-05 依赖边界复审追加：Effects 对每个 kind/每个工作项再次检查停止及依赖状态，防止同轮前序回调撤销后继续派发。原反例两项已复现 FAIL，修复后完整 1233 项通过；Runtime 增加两项异步边界回归且无需修改其源码。仍为原单 Engine/Effects/SQLite。
+
+## 2026-11-13 白名单增量
+
+允许修改原 Runtime 组合根与 HTTP 就绪 getter/管理认证、原 Sessions 的受限 preset/最终 guard/父链拒绝、原 Store 同步迁移、原管理客户端/CLI 的认证接线；实现模块集中 mesh/auth、security-store、restricted-session、safety。原生数据连接/Engine/Effects 保持单一。只新增已被拒绝/恢复实际使用的最小安全事实，不预建业务表。Runtime 在 OS/网络/绑定路径未验证前保持自动执行关闭，没有生产绕过开关。旧原生业务测试明确 mock 该执行边界，只证明业务回归。完整65文件1252测试与三个原生 profile 模式通过，不宣称业务 Worker 隔离通过。
+
+此增量取代本文早期“未改 Session 权限”的历史描述；最终白名单冻结仍待 M0-14。详见 acceptance/M0-trust-permissions-20261113.md。

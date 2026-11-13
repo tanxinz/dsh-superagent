@@ -1,4 +1,6 @@
-/** Loopback-only management HTTP routes with same-origin enforcement for the web panel. */
+/** Authenticated, loopback-only management routes with same-origin enforcement. */
+import { MeshAccessDenied } from '../extensions/mesh/auth.ts'
+import type {} from '../extensions/mesh/service.ts'
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-host-webserver'
 import type { IncomingMessage, ServerResponse } from 'node:http'
@@ -83,6 +85,7 @@ function failure(error: unknown): [number, Record<string, unknown>] {
     const issues = error.issues.map(issue => ({ path: issue.path.join('.'), message: issue.message }))
     return [400, { error: `Invalid settings: ${issues.map(issue => issue.path).join(', ')}`, issues }]
   }
+  if (error instanceof MeshAccessDenied) return [401, { error: 'Access denied' }]
   if (error instanceof SetupError) return [400, { error: error.message, setup: error.problem }]
   if (error instanceof RouteError) return [error.status, { error: error.message }]
   if (error instanceof UserError) return [error.missing ? 404 : 400, { error: error.message, code: error.code, values: error.values }]
@@ -227,6 +230,9 @@ function match(table: Routes, method: string, segments: string[]) {
   }
   return undefined
 }
+const IDENTITY_CLAIMS = ['tenantId', 'tenant_id', 'actorRef', 'actor_ref', 'actor', 'roles', 'requestId', 'request_id']
+const bodyClaims = (value: unknown): boolean => value !== null && typeof value === 'object' && IDENTITY_CLAIMS.some(key => Object.hasOwn(value, key))
+
 export function registerHttp(ctx: Context, runtime: HttpHost): () => void {
   if (ctx.webServer.host !== '127.0.0.1') throw new Error('Orchestrator management requires a loopback Web server')
   const table = routes(runtime)
@@ -236,11 +242,23 @@ export function registerHttp(ctx: Context, runtime: HttpHost): () => void {
       if (!url.pathname.startsWith('/orchestrator/api/')) { res.writeHead(404); res.end(); return }
       if (!sameOrigin(req, ctx.webServer.port)) { json(res, 403, { error: 'Same-origin management request required' }); return }
       try {
+        const credential = typeof req.headers.authorization === 'string' ? req.headers.authorization.match(/^Bearer ([^\s]+)$/)?.[1] : undefined
+        const mesh = ctx.get('cognitiveMesh')
+        if (!mesh) throw new MeshAccessDenied()
+        const hasClaims = IDENTITY_CLAIMS.some(key => url.searchParams.has(key))
+          || ['x-tenant-id', 'x-actor-ref', 'x-roles', 'x-request-id'].some(key => req.headers[key] !== undefined)
+        // Authenticate before parsing IDs, bodies or route names. Body/query claims confer no authority.
+        mesh.securityStatus(credential ?? '', hasClaims)
         await runtime.ready
+        const trusted = mesh.securityStatus(credential ?? '', hasClaims)
+        if (url.pathname === '/orchestrator/api/mesh/security' && req.method === 'GET') {
+          json(res, 200, trusted)
+          return
+        }
         const route = match(table, req.method ?? 'GET', url.pathname.slice('/orchestrator/api/'.length).split('/'))
         if (!route) throw new RouteError(404, 'Unknown operation')
         const query = Object.fromEntries(url.searchParams)
-        json(res, 200, await route.run({ params: route.params as never, query, body: maxBytes => readBody(req, maxBytes) }))
+        json(res, 200, await route.run({ params: route.params as never, query, body: async maxBytes => { const value = await readBody(req, maxBytes); mesh.securityStatus(credential ?? '', hasClaims || bodyClaims(value)); return value } }))
       } catch (error) { json(res, ...failure(error)) }
     } })]
   return () => { for (const dispose of disposers) dispose() }

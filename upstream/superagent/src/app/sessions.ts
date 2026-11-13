@@ -1,4 +1,5 @@
 /** Lifecycle, prompt/tool/skill decoration, message delivery, and budget retry tracking for orchestrator and worker DSH sessions. */
+import { RestrictedSessions } from '../extensions/mesh/restricted-session.ts'
 import type { Context } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import type { MessageId } from '@deepseek-ai/dsh-llm'
@@ -31,6 +32,8 @@ export interface SessionsHost {
   readonly health: HealthEntry
   readonly masterId: string
   readonly lifetime: AbortSignal
+  executionReady(): boolean
+  toolRefusal(agent: Agent, name: string): string | undefined
   closing(): boolean
   /** Execution environment variables for `ticket`, rendered into its worker's system prompt. */
   environment(ticket: Ticket): Variable[]
@@ -91,6 +94,7 @@ function noWait({ name, arguments: input }: { name: string; arguments: unknown }
  * Feeds session events into `RetryHealth` to report model budget waits on the `models` `HealthEntry`, and durably records which prompt revisions each session has worked under in `Store` (`KV.sessions.prompts`) to authorize prompt version reads.
  */
 export class Sessions {
+  private readonly permissions: RestrictedSessions
   private readonly agentDelivery: AgentDelivery
   /** Decorated agents mapped to their registered disposers and skill scope until the agent is disposed or `Sessions.dispose()` runs. */
   private readonly bindings = new Map<Agent, SessionBinding>()
@@ -99,6 +103,7 @@ export class Sessions {
   /** Registers ordered `relay` and `notice` effect handlers that deliver to the main Session. */
   constructor(private readonly host: SessionsHost) {
     this.ctx = host.context
+    this.permissions = new RestrictedSessions(host.context, host.lifetime)
     this.agentDelivery = new AgentDelivery(host.context)
     // Deliver relays and notices to the main Session in the order they were queued.
     host.effects.handle('relay', ({ text }, requestId) => this.prompt(host.masterId, requestId, text, 'steer'), { ordered: true })
@@ -134,7 +139,7 @@ export class Sessions {
       if (status === 'idle' && !this.host.closing()) { this.retryHealth.clear(agent.id); this.updateModelHealth() }
     })
   }
-  /** Resolves or creates session `id` in workspace `cwd`, initializes its role model, decorates it with prompts/skills/tools, sets `danger-full-access` permissions, and renames it to `title`. */
+  /** Resolves or creates session `id` in workspace `cwd`, initializes its role model, decorates it with prompts/skills/tools, verifies restricted read-only permissions, and renames it to `title`. */
   async ensure(id: string, cwd: string, title: string, role: 'orchestrator' | 'worker'): Promise<Agent> {
     const ctx = this.ctx
     let result = await ctx.sessionController.resolveAgent(id as SessionId)
@@ -146,10 +151,11 @@ export class Sessions {
       result = await ctx.sessionController.resolveAgent(id as SessionId)
     }
     if ('error' in result) throw result.error
+    this.permissions.apply(result.agent)
     const settings = this.host.store.settings()
     await initializeRoleModel(ctx, result.agent, role === 'orchestrator' ? settings.eval.model : settings.executor.model)
     await this.decorate(result.agent)
-    ctx.permissionPresets.set(result.agent.session, 'danger-full-access')
+    this.permissions.assert(result.agent)
     await ctx.sessionController.rename({ sessionId: id as SessionId, title })
     return result.agent
   }
@@ -161,6 +167,7 @@ export class Sessions {
   /** Deliver a message once per request id: to the next turn, the current one, or `inject`ed with its label without waking the agent. */
   async prompt(sessionId: string, requestId: string, text: string, mode: 'queue' | 'steer' | { inject: string }, authorize?: () => void,
     accepted?: () => void): Promise<void> {
+    if (!this.host.executionReady()) throw new Error('Mesh execution boundary is not ready')
     const result = await this.ctx.sessionController.resolveAgent(sessionId as SessionId)
     if ('error' in result) throw result.error
     await this.agentDelivery.send(result.agent, key(requestId), text, mode, this.host.lifetime, authorize, accepted)
@@ -211,7 +218,12 @@ export class Sessions {
           const image = value && typeof value === 'object' && 'image' in value ? (value as { image: never }).image : undefined
           return image ? [text, { type: 'image' as const, attachment: image }] : [text]
         } },
-        execute: (args, execution) => execute(schema.parse(args), execution.signal) }))
+        execute: (args, execution) => {
+          // Also covers a direct caller of a registered tool definition, outside native ToolRuntime dispatch.
+          const refusal = this.permissions.refusal(agent) ?? this.host.toolRefusal(agent, name)
+          if (refusal) throw new Error(refusal)
+          return execute(schema.parse(args), execution.signal)
+        } }))
     }
   }
   /** Returns `sessionId`'s active model-budget retry state (`{ model_retry }`) for status listings, or `{}` when not waiting on one. */
@@ -230,12 +242,19 @@ export class Sessions {
     return ticketId === undefined ? undefined : this.host.store.tickets.get(ticketId)
   }
   private async decorate(agent: Agent): Promise<void> {
-    if (this.bindings.has(agent)) return
+    if (this.bindings.has(agent)) { this.permissions.assert(agent); return }
     const host = this.host
     const master = agent.id === host.masterId
     const ticket = master ? undefined : this.ticketOf(agent)
     if (!master && !ticket) { this.limitSubagent(agent); return }
-    const binding: SessionBinding = { disposers: [] }
+    this.permissions.apply(agent)
+    const binding: SessionBinding = { disposers: [
+      agent.ctx.tools.guard(execution => this.permissions.refusal(agent) ?? host.toolRefusal(agent, execution?.name ?? 'UNKNOWN')),
+      agent.ctx.on('agent/request', async (request, next) => {
+        if (!host.executionReady()) throw new Error('Mesh execution boundary is not ready')
+        return next()
+      }),
+    ] }
     this.bindings.set(agent, binding)
     this.retryHealth.restore(agent.id, agent.session.snapshotEvents())
     if (agent.status === 'idle') this.retryHealth.clear(agent.id)
@@ -287,10 +306,16 @@ export class Sessions {
    * misses preset tools; the agent's own view also includes local tools such as subagent, which restrict refuses to name.
    */
   private workOnly(agent: Agent, ticketId: string): (() => void)[] {
+    this.permissions.apply(agent)
     const store = this.host.store
     const parent = scopeParentOf(agent)
     const allow = WORK_TOOLS.filter(name => agent.ctx.tools.get(name, parent))
-    return [agent.ctx.tools.restrict({ allow }), agent.ctx.tools.guard(() => {
+    return [agent.ctx.on('agent/request', async (_request, next) => {
+      if (!this.host.executionReady()) throw new Error('Mesh execution boundary is not ready')
+      return next()
+    }), agent.ctx.tools.restrict({ allow }), agent.ctx.tools.guard(execution => {
+      const denied = this.permissions.refusal(agent) ?? this.host.toolRefusal(agent, execution?.name ?? 'UNKNOWN')
+      if (denied) return denied
       const current = store.tickets.get(ticketId)
       return !current || !liveTicket(current) ? 'Ticket ended; new work needs a new authorized ticket' : undefined
     })]
@@ -302,13 +327,28 @@ export class Sessions {
    */
   private limitSubagent(agent: Agent): void {
     let parent = agent.session.header.parentSession
-    // Up the subagents' parents to the worker, which are loaded while their subagents run.
-    for (let depth = 0; parent !== undefined && ticketOfSession(parent) === undefined && depth < 8; depth++) {
-      parent = this.ctx.agents.get(parent)?.session.header.parentSession
+    if (parent === undefined) return
+    const seen = new Set<string>([agent.id])
+    while (parent !== undefined && !seen.has(parent) && seen.size < 32) {
+      seen.add(parent)
+      const ticketId = ticketOfSession(parent)
+      if (ticketId !== undefined && this.host.store.tickets.get(ticketId)) {
+        this.bindings.set(agent, { disposers: this.workOnly(agent, ticketId), subagent: true }); return
+      }
+      if (parent === this.host.masterId) {
+        this.permissions.apply(agent)
+        this.bindings.set(agent, { disposers: [agent.ctx.on('agent/request', async () => { throw new Error('Main Session child execution is not authorized') }),
+          agent.ctx.tools.restrict({ allow: [] }), agent.ctx.tools.guard(execution => this.permissions.refusal(agent) ?? this.host.toolRefusal(agent, execution?.name ?? 'UNKNOWN'))], subagent: true })
+        return
+      }
+      const ancestor = this.ctx.agents.get(parent)
+      if (!ancestor) break
+      parent = ancestor.session.header.parentSession
     }
-    const ticketId = parent === undefined ? undefined : ticketOfSession(parent)
-    if (ticketId === undefined || !this.host.store.tickets.get(ticketId)) return
-    this.bindings.set(agent, { disposers: this.workOnly(agent, ticketId), subagent: true })
+    // Unknown, cyclic or over-depth ancestry cannot establish inherited authority.
+    this.permissions.apply(agent)
+    this.bindings.set(agent, { disposers: [agent.ctx.on('agent/request', async () => { throw new Error('Session ancestry is not trusted') }),
+      agent.ctx.tools.restrict({ allow: [] }), agent.ctx.tools.guard(() => 'Session ancestry is not trusted')], subagent: true })
   }
   /** Register the skills of a prompt version in the agent's skill scope, in place of an earlier version's. */
   private bindSkills(binding: SessionBinding, version: PromptVersion): void {

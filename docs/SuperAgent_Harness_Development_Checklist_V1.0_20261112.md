@@ -1288,3 +1288,13 @@ R24-A/R24-B 是原 R24 的测试子例，不新增业务状态，也不改变 R0
 
 **验收口径**：用例必须绑定 SHA、实际配置、真实/Mock 来源、命令、退出码、原始日志及 SHA-256。通过文档静态检查不等于运行时实现；未符合现有阶段条件的原任务保持 IN_PROGRESS/BLOCKED。若未来确定某一新功能必须提前到 M0，应另行评估关键路径和阶段依赖，而不是在本节偷偷更改原 100 项。
 
+### 14.4 V1.2 第二轮复审新增负例（补充 V12，不新建任务 ID）
+
+- [ ] **V12-01A / V12-03A**：真实 rc.3 Search Provider 默认 `sendOriginalQuestion=true` 会额外发送原始 `ori_question`；企业受控配置显式设 `false` 后，HTTP 夹具断言没有该字段。参数或凭据切换后重新验证 endpoint、数据级别、计费身份及实际请求体。
+- [ ] **V12-03B**：分别检查 Harness 模型 `web_search/web_fetch` 的 ToolGuard、插件直调 `ctx.web.search/fetch` 的受信 EvidenceGateway、DeepSeek 模型服务端联网路由；任一路越过批准域均拒绝。ToolGuard 结果不作为另两路径的安全证据。
+- [ ] **V12-05A**：本地 HTTP `ctx.web.fetch()` 返回 `statusCode=404/500` 时不得视为正常网页证据；远端 DeepSeek Fetch 的 Provider 错误、无最终 URL 与未知 `WebError.code` 均分别保守分类。
+- [ ] **V12-02A**：内网/环回/云元数据和 DNS 重绑定、重定向负例须在实际网络出口被阻断；远端 Fetch 不虚构重定向最终 IP 证明。
+- [ ] **V12-08A**：Browser MCP 进程保持原启动工作目录及独立浏览器状态；后续 Session 目录切换不构成隔离，断线或动作已发后仅记录可核查未知结果。
+- [ ] **V12-09A**：故障注入验证 Schedule Session inbox 持久写入成功但 receipt 记录失败，重复投递以稳定周期键被 Engine 去重；不能证明键稳定时禁止可写执行。
+
+以上均为 `NOT_RUN`，不得因静态审查完成更改原清单任务状态。

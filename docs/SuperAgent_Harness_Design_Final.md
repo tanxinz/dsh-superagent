@@ -78,6 +78,14 @@
 
 资料：[DeepSeek Search / Fetch](https://api-docs.deepseek.com/guides/search/)、[Web Tools](https://api-docs.deepseek.com/guides/web_tools/)、[Harness Web API Provider](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.2-rc.3/packages/web/web-deepseek-api/README.md)、[Browser Use](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.2-rc.3/docs/subsystems/browser-use.md)、[AgentTeam](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.2-rc.3/packages/team/agent-team/README.md)。
 
+### 2.1.2 第二轮复审：Web 的三条执行路径与默认隐性数据外送
+
+1. **Harness 模型 Web 工具**：通过 `web_search/web_fetch` 进入 ToolRuntime，可使用 `ctx.tools.guard()` 作为最终工具拒绝；模型工具仍需要网络目的地限制。
+2. **业务代码直接调用 `ctx.web.search()/fetch()`**：直接 Service 调用不得假设自动经过 ToolRuntime/ToolGuard。必须由现有 Runtime 中的受信 `EvidenceGateway` 逻辑在实际发出前检查租户、actor、来源请求、数据等级、目标、最终 provider/endpoint、credentialRef、预算与实时撤权 epoch；此 Gateway 不是新 HTTP 客户端、Engine、队列或数据库。配置变化导致授权快照与实际派发不一致时拒绝。
+3. **DeepSeek 服务端 `deepseek_web_search/deepseek_read_url`**：执行发生在模型服务端，不经本地 ToolRuntime；只能按显式模型路由允许低敏研究，不能视为已经完成本地逐工具审批。
+
+**新增 P0 风险**：rc.3 `@deepseek-ai/dsh-web-deepseek-api` 的 `sendOriginalQuestion` **默认 `true`**，会把最近人工提问前 128 字符作为 `ori_question` 发往 Search API；仅脱敏 `query` 仍会泄露原问题。企业受控路线必须显式设置 `sendOriginalQuestion: false`，并以 HTTP 夹具检查真实请求体缺失 `ori_question`。`searchBilling/fetchBilling: auto` 会随会话模型路由、账号/API Key 解析，必须按最终实际 provider、endpoint、凭据/计费来源复核授权。
+
 ### 2.2 SuperAgent：业务领域核心与扩展位置
 
 | 组件 / 公开文件 | 保留的职责 | 需要补足的能力 |
@@ -379,10 +387,12 @@ function commitPlanSync(input: VerifiedPlanInput): CommitPlanResult {
 
 | 输入 | 输出 | 不变量 |
 | --- | --- | --- |
-| 已验证的 `TrustedRequestContext`、工具名/选中 provider、批准的查询或 URL、数据等级 | `evidenceRef`、`captureStatus`、`sourceUri`、`retrievedAt`、`capturedContentHash`、`artifactRef`（可空）、实际 `model/tool/usage` 引用 | 先授权/校验目的地再网络调用；项目只存必要脱敏快照和来源，不建第二数据真相库 |
+| 来自受信 HTTP/Service 入口的 `TrustedRequestContext`（§14.4）及只读外送许可、实际 provider/endpoint、批准查询或 URL、数据等级 | `evidenceRef`、`captureStatus`、`sourceUri`、`retrievedAt`、`capturedContentHash`、`artifactRef`（可空）、实际 `model/tool/usage` 引用 | 先授权/校验目的地再网络调用；项目只存必要脱敏快照和来源，不建第二数据真相库 |
 | 原生搜索结果 / 网页 Markdown / OCR 提取 / API 错误 | `SOURCE_METADATA_ONLY / NORMALIZED_TEXT / VERIFIED_ORIGINAL` 等可复核级别及失败原因 | 搜索摘要≠抓取原文；Markdown 哈希≠原始 HTML 字节哈希；不将模型生成回答标为外部原文 |
 
 权限检查由受信业务边界和工具/网络限制共同执行；`EvidenceCapture` 不可自带直连隐藏后门或伪造 `TrustedCommandContext`。在 M0 仅完成静态契约和离线 Fixture，正式接入以该阶段上游公共接口、费用和审计证据实测为前提。禁止在 `Store.atomic()` 回调内执行 Web / 模型 / OCR 网络请求。
+
+**只读与写入身份不能混用（V1.2 复审）**：`TrustedRequestContext` 在 §14.4 定义为只读请求的受信身份契约；§5.1 的 `TrustedCommandContext` 是 Engine 写入命令的独立受信输入。二者都须服务端验证并绑定同一真实租户/actor，不能从 LLM/HTTP Body 自报构造。`TrustedRequestContext` **不足以写入** ActionRun；`EvidenceCapture` 直调 `ctx.web` 必须经显式 `EvidenceGateway` 校验而不是假设 ToolGuard 自动覆盖。
 
 ### 5.2 Cordis 服务与扩展领域桥接
 
@@ -1255,7 +1265,7 @@ prototype:
 
 这些 API 可通过 Harness 内的服务插件/管理路由暴露；不是替代 `Engine` 的独立业务后端。接口名称属于项目标准，具体 HTTP 绑定在实现阶段由管理插件确定。
 
-**所有接口的共同强制输入（不是客户端字段）**：HTTP/Service 入口必须认证生成只读 `TrustedRequestContext={tenantId, actorRef, requestId, roles/scopes}`，下表每行的“受信 ctx”均指**服务端注入**，不得读取客户端 Body/Query/Path 自报的 `tenantId` 作为权限身份。每次查询、关联聚合、写入及资源反查必须以 `tenant_id=ctx.tenantId` 过滤并校验相同租户及授权作用域；跨租户对象返回不泄露存在性的拒绝/NotFound，管理员也须显式授权，不使用无租户过滤的全局查询。M0 实施通用鉴权与拒绝缺失 ctx 的测试；M1–M5 每新增 API 均自动继承此规则。
+**所有接口的共同强制输入（不是客户端字段）**：HTTP/Service 入口必须认证生成只读 `TrustedRequestContext={tenantId, actorRef, requestId, roles/scopes}`，下表每行的“受信 ctx”均指**服务端注入**，不得读取客户端 Body/Query/Path 自报的 `tenantId` 作为权限身份。每次查询、关联聚合及资源反查必须以 `tenant_id=ctx.tenantId` 过滤并校验授权作用域；**任何领域写入还必须由受信适配层生成 §5.1 的 `TrustedCommandContext`，并由 Engine 重新验证，不能仅凭只读 `TrustedRequestContext` 写入**；跨租户对象返回不泄露存在性的拒绝/NotFound，管理员也须显式授权，不使用无租户过滤的全局查询。M0 实施通用鉴权与拒绝缺失 ctx 的测试；M1–M5 每新增 API 均自动继承此规则。
 
 | 接口 | 输入 | 输出 | 权限/一致性要求 |
 |---|---|---|---|

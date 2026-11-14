@@ -38,3 +38,12 @@ PR #14 只改 Markdown，但原 `.github/workflows/m0-offline.yml` 对所有 `pu
 ## 与其他成员的文件分工
 
 仅认领 `.github/workflows/m0-offline.yml`、`.github/workflows/docs-review.yml` 及本设计说明；不碰 PR #13 app/infra/SourceHost、PR #14 的 V1.2 详细设计或 PR #18 的 LiveShare 测试补丁/独立工作流。先经独立审阅再决定合并，M0 与 V12 门禁各自保留。
+
+## 第四轮实测与文档审核质量修复（2026-11-14）
+
+- 针对 [临时 Markdown-only PR #20](https://github.com/tanxinz/dsh-superagent/pull/20)，GitHub Actions 只调度了 [docs-review Run #43551618865](https://github.com/tanxinz/dsh-superagent/actions/runs/43551618865)，实际执行结果 **SUCCESS**；相同分支查询无自动 M0 工作流。此验证使用 PR #19 的分支为目标；不会自动覆盖其它受保护分支的必选检查策略。
+- 针对 PR #19 自身的 YAML + Markdown 混合修改，文档审查及完整 M0 均已真实触发，但 Harness 两版原生 full job 的最终结论必须以对应 run 的完整日志为准。不能仅据本节宣称 M0 通过。
+- 增加 `scripts/docs_review_check.py`：以准确 PR base SHA 和 GitHub checkout 全历史获取实际变更的 Markdown，离线检查本地相对链接、未闭合代码围栏和 Git 冲突标记；新增 `scripts/test_docs_review_check.py` 单元回归，所有输出进入 `ci_record.py` 证据审计。
+- 静态文档检查是语法与引用完整性检查，**不替代设计、授权、安全和变更内容的独立 Reviewer**。本次同样没有把旧 Harness baseline FAIL 改写为 PASS。
+
+已完成的真实纯文档触发验收与尚未验证的 Branch Protection/Required Checks 必须独立标注；PR #19 合并前由仓库管理员核对 required-check 约束，确保不会因路径跳过而产生不可解的 Expected 检查。合并与功能准入的其他约束仍保持原样。

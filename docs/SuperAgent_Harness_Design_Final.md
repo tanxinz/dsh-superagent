@@ -483,7 +483,7 @@ export function installMeshM0(ctx: Context): void {
 | `mesh_plan_action_ref` | `tenant_id, plan_id, action_id, ref_kind` (`CREATED/REUSED`) | `(tenant_id,plan_id,action_id)`；引用已完成动作不重新执行 |
 | `mesh_action_attempt` | `tenant_id, action_id, attempt_no, execution_attempt_id, assignment_id, budget_id, budget_charge_ref, effect_key, effect_payload_fingerprint, remote_request_ref, remote_operation_ref, remote_idempotency_key, call_started_at, ended_at, result_ref, error_class, reconcile_status, last_reconcile_evidence_ref, permit_state, permit_token_digest, permit_issued_at, permit_expires_at, permit_consumed_at, permit_safety_epoch_seen, permit_version, gateway_verdict_ref` | `(tenant_id,action_id,attempt_no)` 及 `(tenant_id,execution_attempt_id)` 唯一；`assignment_id` 可空；外部请求标识与不确定结果证据保留，缺失远端回执不得伪造 |
 | `mesh_execution_budget` | `tenant_id, budget_id, owner_kind, owner_id, mandate_ref, root_budget_id, parent_budget_id, first_started_at, start_admission_ref, deadline_at, max_attempts_total, attempts_used, budget_version` | `(tenant_id,owner_kind,owner_id)` 唯一；M2 根预算固定为同 Ticket/Mandate 的 `MANDATE_ROOT`，所有 ActionRun/Assignment/Session/Team 共享根截止时间和总尝试次数；可选受信子预算只能收紧 |
-| `mesh_context_patch` | `tenant_id, patch_id, ticket_id, session_id, patch_version, payload_hash, status, enqueued_at, injected_at, model_request_ref, evidence_status, consumed_observed_at, model_request_occurred_at, expires_at` | `(tenant_id,ticket_id,session_id,patch_version)`；`EXPIRED` 不复活，迟到可信模型请求只补 `evidence_status=HISTORICALLY_CONSUMED` 与时间证据 |
+| `mesh_context_patch` | `tenant_id, patch_id, ticket_id, ticket_version, session_id, binding_version, mandate_ref, patch_version, payload_ref, payload_bytes, payload_format, payload_hash, evidence_refs, status, enqueued_at, injected_at, model_request_ref, evidence_status, consumed_observed_at, model_request_occurred_at, expires_at` | `(tenant_id,ticket_id,session_id,patch_version)`；`payload_bytes` 与创建/队列事实同 SQLite 事务落地，`payload_ref` 指向受限不可变内容；`EXPIRED` 不复活 |
 | `mesh_context_patch_evidence` | `tenant_id, evidence_id, patch_id, model_request_ref, request_occurred_at, observed_at, session_id, source_event_ref, evidence_fingerprint, verdict` | `UNIQUE(tenant_id,patch_id,evidence_fingerprint)`；核验通过的请求引用另设条件唯一索引；不可变证据明细是权威来源，Patch 主表仅为兼容投影；M3 |
 | `mesh_ontology_proposal` | `tenant_id, proposal_id, domain, schema_version, proposal_fingerprint, candidate_diff, evidence_refs, review_status` | `(tenant_id,domain,schema_version,proposal_fingerprint)`；OntologySideRouter |
 | `mesh_trend_finding` | `tenant_id, finding_id, cluster_key, observation_window_id, evidence_fingerprint, event_ids, hypothesis, confidence, decision` | `(tenant_id,finding_id)`；另有 `(tenant_id,cluster_key,observation_window_id,evidence_fingerprint)` 唯一，保留窗口新证据 |
@@ -503,6 +503,8 @@ export function installMeshM0(ctx: Context): void {
 **业务幂等身份**：`businessIntentId` 由 Engine 在验证受信业务请求或已绑定的 `IncidentEpisode` 后确定性创建/复用，MainRouter 只能建议动作而不能自行签发新意图；在重新评估、告警修订、重新规划时复用；`businessEffectKey = SHA256(UTF8(JCS(["v1",tenantId,businessIntentId,actionKind,canonicalTarget,normalizedArgsHash])))`，**不得包含 `planVersion`、`attemptNo`、随机 Action ID**。只有独立且获授权的新业务意图才可以创建新的 `businessIntentId`。不同计划重复请求相同 `businessEffectKey` 时，只引用已有 ActionRun 或已确认结果，绝不再创建执行项；`mesh_plan_action_ref` 记录复用关系，原 ActionRun 仍只属于其原始 primary plan。
 
 **规范化哈希版本**：`JCS` 表示 RFC 8785 规范 JSON 序列化，采用 UTF-8 字节、无歧义 JSON 数组与固定字段顺序；`v1` 是本项目业务键规范版本，不能与业务 Plan 版本混用。所有字符串需先按 actionKind 的受信规则进行身份/目标规范化；任何算法升级必须有兼容迁移与旧键复用策略，不能重新执行已存在的业务效果。
+
+**ContextPatch 不可变载荷与恢复来源（M3）**：`payload_bytes` 是在同一 SQLite Store 中保存的、受大小限制且经过脱敏的规范 UTF-8/JSON 字节（`payload_format` 指定编码/规范化版本）；`payload_ref` 是同租户、同 `patch_id` 的受限行内载荷引用，不是 Session/模型自由提交的外部 URL。由受信 Engine 在事务外准备原始内容，然后在一个 `Store.atomic()` 中保存 `ticket_version/mandate_ref/binding_version/evidence_refs`、原始 `payload_bytes`、`SHA256(payload_bytes)` 和唯一持久投递 Effect；任一环节失败整体回滚。**仅保存哈希、无法取回原始内容，不满足 M3 可靠恢复要求**。恢复时从该行获取精确字节并重新计算哈希；不得让模型重新生成替代内容，不得接受客户端自报的 payload 引用。内容丢失、哈希不匹配、租户/授权/会话版本不合法时返回 `PATCH_PAYLOAD_UNAVAILABLE` 或 `PATCH_PAYLOAD_MISMATCH`，拒绝投递并保留审计。敏感载荷需实施最小访问、大小上限、保留期、删除后引用可验证性和日志脱敏。原表增字段，不新增并行业务队列或第二事实库。
 
 **ContextPatch 双轴证据枚举**：`status` 是唯一投递生命周期，`evidence_status` 为单独只读证据投影，取 `NO_REQUEST_EVIDENCE / ACTIVE_REQUEST_VERIFIED / HISTORICALLY_CONSUMED / INVALID_EVIDENCE`；初始 `NO_REQUEST_EVIDENCE`，正常在有效期内合法 `CONSUMED` 对应 `ACTIVE_REQUEST_VERIFIED`，`EXPIRED` 后才发现原有效期内模型请求只能为 `HISTORICALLY_CONSUMED`，不可转回 `CONSUMED`。不可信证据可记 `INVALID_EVIDENCE`，不得覆盖已经核实的有效证据。补录须由受信 Adapter 追加不可变请求证据引用并以版本/CAS 更新投影，防止乱序重复回执改变历史事实。
 
@@ -569,7 +571,7 @@ WHERE active = 1;
 | 聚合 | 合法状态与关键迁移 | 不变量 |
 |---|---|---|
 | `ActionPlan` | **命令暂态**：`PROPOSED → VALIDATED`（仅 `commitPlan` 内存）；**持久态**：`COMMITTED → DISPATCHED → FINISHED / FAILED`；`COMMITTED/DISPATCHED → SUPERSEDED`；无动作合法 No-op 时可 `COMMITTED → FINISHED` | 正常 `FINISHED` 必须检查该 Plan 的**全部** `mesh_plan_action_ref(CREATED/REUSED)`，非仅已派发子集；`PENDING/CLAIMED/RUNNING/PAUSED/RETRY_WAIT/RECOVERING/UNKNOWN_RECONCILE/AWAITING_APPROVAL` 任一存在均不能结清；`SUPERSEDED` 仅停止旧 Plan 的新派发，保留 `settlement_state=OPEN` 直到全部引用动作终态，随后独立记录 `SETTLED/outcome`；不得伪称所有外部效果停止。原子取消必须证明未执行且无其他有效引用，健康 `RUNNING` 不被强行转恢复 |
-| `ActionRun` | `PENDING → CLAIMED / PAUSED / AWAITING_APPROVAL / BLOCKED / CANCELLED`；`CLAIMED → RUNNING / PENDING / PAUSED / BLOCKED / CANCELLED`（离开 CLAIMED 前须确认尚未产生副作用，否则先转 `UNKNOWN_RECONCILE`）；`RUNNING → SUCCEEDED / RETRY_WAIT / PAUSED / RECOVERING / UNKNOWN_RECONCILE / FAILED / BLOCKED`（转 PAUSED 必须证实尚无外部副作用）；`RETRY_WAIT → CLAIMED / PAUSED / BLOCKED / FAILED`；`PAUSED → PENDING / BLOCKED / CANCELLED`；`AWAITING_APPROVAL → PENDING / BLOCKED / CANCELLED`；`RECOVERING → RUNNING / PAUSED / UNKNOWN_RECONCILE / FAILED / BLOCKED`；`UNKNOWN_RECONCILE → SUCCEEDED / FAILED / BLOCKED / PENDING / PAUSED`（恢复排队仅在受信对账证明远端未执行后） | `PAUSED` 用于临时资源占用或可恢复授权等待，`RETRY_WAIT` 用于有界重试，均不是终态；`SUCCEEDED/FAILED/BLOCKED/CANCELLED` 是**不可被普通重放恢复的终态**。终态后的真实新业务请求必须重新授权、分配新的 BusinessIntent 并关联旧失败/取消事实，禁止为重试伪造新身份。`RESOURCE_BUSY` 对应 `PAUSED`、`TRANSIENT_EXECUTION_FAILURE` 对应 `RETRY_WAIT`；`BLOCKED_CONFLICT` 仅用于确定不可解决的冲突 |
+| `ActionRun` | `PENDING → CLAIMED / PAUSED / AWAITING_APPROVAL / BLOCKED / CANCELLED`；`CLAIMED → RUNNING / PENDING / PAUSED / UNKNOWN_RECONCILE / BLOCKED / CANCELLED`（仅受信证据无法排除外部副作用时才允许 `CLAIMED → UNKNOWN_RECONCILE`；确认未调用外部资源才可退回 PENDING/PAUSED）；`RUNNING → SUCCEEDED / RETRY_WAIT / PAUSED / RECOVERING / UNKNOWN_RECONCILE / FAILED / BLOCKED`（转 PAUSED 必须证实尚无外部副作用）；`RETRY_WAIT → CLAIMED / PAUSED / BLOCKED / FAILED`；`PAUSED → PENDING / BLOCKED / CANCELLED`；`AWAITING_APPROVAL → PENDING / BLOCKED / CANCELLED`；`RECOVERING → RUNNING / PAUSED / UNKNOWN_RECONCILE / FAILED / BLOCKED`；`UNKNOWN_RECONCILE → SUCCEEDED / FAILED / BLOCKED / PENDING / PAUSED`（恢复排队仅在受信对账证明远端未执行后） | `PAUSED` 用于临时资源占用或可恢复授权等待，`RETRY_WAIT` 用于有界重试，均不是终态；`SUCCEEDED/FAILED/BLOCKED/CANCELLED` 是**不可被普通重放恢复的终态**。终态后的真实新业务请求必须重新授权、分配新的 BusinessIntent 并关联旧失败/取消事实，禁止为重试伪造新身份。`RESOURCE_BUSY` 对应 `PAUSED`、`TRANSIENT_EXECUTION_FAILURE` 对应 `RETRY_WAIT`；`CLAIMED → UNKNOWN_RECONCILE` 必须有外发可能性/崩溃窗口的受信证据、保存原 Effect 与 Attempt 关联并拒绝盲重试；`BLOCKED_CONFLICT` 仅用于确定不可解决的冲突 |
 | `TicketAssociationProposal` | `PROPOSED → CONFIRMED / REJECTED / AMBIGUOUS`；终态不原地重开；新受信证据产生新 `proposal_version` 和 `evidence_fingerprint` | 同证据指纹重复请求只复用原记录，不得靠新版本重复授权；`CONFIRMED` 需 Engine 重验身份、唯一候选、Policy、Mandate 和预期 Ticket 版本，`AMBIGUOUS` 不授权 Subscription |
 | `ContextPatch` | `CREATED → QUEUED / REJECTED / EXPIRED`；`QUEUED → INJECTED / REJECTED / EXPIRED`；`INJECTED → CONSUMED / DELIVERED_UNVERIFIED / EXPIRED`；`DELIVERED_UNVERIFIED → CONSUMED / EXPIRED`；`EXPIRED` 为投递生命周期终态 | `INJECTED` 不等于模型消费。若 `EXPIRED` 后才收到受信模型请求证据，**状态仍为 `EXPIRED`**，仅追加/核准独立的 `evidence_status=HISTORICALLY_CONSUMED`、`model_request_ref`、`model_request_occurred_at` 与 `consumed_observed_at`；请求必须发生在原 Session 有效授权且 Patch 未过期的时间内，否则记 `INVALID_EVIDENCE`，不得追认授权、重新注入或宣称当前会话仍在处理 |
 | `ExitReport` | `PREPARED → SUPPRESSED`（静默保留、不排 Outbox，但必须处理的人类待办不消失）；`PREPARED → OUTBOX_PENDING → SENDING`；`SENDING → CHANNEL_ACCEPTED / SENT_UNCONFIRMED / FAILED`；`SENT_UNCONFIRMED → RECONCILING / CHANNEL_ACCEPTED / DELIVERY_CONFIRMED`；`RECONCILING → CHANNEL_ACCEPTED / DELIVERY_CONFIRMED / FAILED / MANUAL_REVIEW`；`CHANNEL_ACCEPTED → DELIVERY_CONFIRMED`（须有终端回执）；`MANUAL_REVIEW → RECONCILING / FAILED`（仅受信人工处置，不盲重发） | `SUPPRESSED` 是静默报告终态；无终端回执时 `CHANNEL_ACCEPTED` 为稳定可接受状态，不假装送达；进入人工处理要保留原因与证据 |
@@ -643,7 +645,7 @@ interface TicketAssociationProposal {
 
 ### 6.6 扩展状态转换的持久化语义
 
-`ActionPlan` 在 `commitPlan()` 命令内先经过**暂态** `PROPOSED → VALIDATED` 校验，校验通过才在一次事务中首次以 `COMMITTED` 落库；`ActionRun` 一旦 `SUCCEEDED`，后续计划只能引用该成功结果，不能重新执行。收到超时、连接断开或未知远端回执时置为 `UNKNOWN_RECONCILE`，禁止直接判失败或盲重试。已证明确实未发生副作用且仍获授权，**仅非终态** `UNKNOWN_RECONCILE/PAUSED` 才可经受信 CAS 转回 `PENDING`；普通重试使用 `RETRY_WAIT` 和同一业务幂等键。`FAILED/BLOCKED/CANCELLED` 终态不得因旧事件重投、同一意图重规划或换 Assignment 而复活。可恢复的资源占用必须预先归类 `PAUSED`，瞬时失败归类 `RETRY_WAIT`；真正终态后的独立新请求应重新验证授权、外部状态与需求真实性，签发新 BusinessIntent，并在审计中关联旧 ActionRun，禁止仅为重试而换 ID。
+`ActionPlan` 在 `commitPlan()` 命令内先经过**暂态** `PROPOSED → VALIDATED` 校验，校验通过才在一次事务中首次以 `COMMITTED` 落库；`ActionRun` 一旦 `SUCCEEDED`，后续计划只能引用该成功结果，不能重新执行。收到超时、连接断开或未知远端回执时置为 `UNKNOWN_RECONCILE`，禁止直接判失败或盲重试。已证明确实未发生副作用且仍获授权，**仅非终态** `UNKNOWN_RECONCILE/PAUSED` 才可经受信 CAS 转回 `PENDING`；普通重试使用 `RETRY_WAIT` 和同一业务幂等键。`FAILED/BLOCKED/CANCELLED` 终态不得因旧事件重投、同一意图重规划或换 Assignment 而复活。**CLAIMED 的外发不确定窗口**：执行器应先持久提交合法 `RUNNING`/Attempt 再外发；若恢复时权威状态仍为 `CLAIMED`，而已知远端可能执行且无法证明绝未外发，只允许经 §6.4 所列的受信 CAS 转为 `UNKNOWN_RECONCILE`，保存原业务键、Effect/Attempt 和远端请求引用，不得直接转 PENDING/PAUSED/FAILED 或重发。能证明未外发时方可按表中合法路径退回队列。可恢复的资源占用必须预先归类 `PAUSED`，瞬时失败归类 `RETRY_WAIT`；真正终态后的独立新请求应重新验证授权、外部状态与需求真实性，签发新 BusinessIntent，并在审计中关联旧 ActionRun，禁止仅为重试而换 ID。
 
 `ContextPatch` 仅在一次**可归因的模型请求实际包含 Patch**时标记 `CONSUMED`；`agent.inject()` 返回、`agent/inbox/inserted` 或 `agent/inbox/claimed` 均不单独满足条件。若锁版 Harness 无法提供可靠请求证据，保持 `DELIVERED_UNVERIFIED` 直到过期。**未过期时**迟到的可靠证据可以 `DELIVERED_UNVERIFIED → CONSUMED`；**已经 `EXPIRED`** 则不发生状态逆转，只以受信补录写入 `evidence_status=HISTORICALLY_CONSUMED` 及原请求时间、观察时间和模型请求引用，须核对原有效授权窗口，且 UI 分开展示“投递已结束/历史确曾进入模型请求”。无法确定请求发生时间或无法验证身份、会话、租户、授权的证据不能补录为消费。
 
@@ -867,11 +869,13 @@ DeepSeek 2026-11-13 已提供 Messages / Responses / Chat Completions 的模型�
 从跨来源、跨天的可靠证据召回候选（默认近 7 天，可配置），按实体、症状、版本及时间共现形成 Cluster。Jev `Score` 仅提供疑似同因线索，不代表已验证根因；输出 `TrendFinding` 与 `RECORD / CONTEXT_PATCH / CREATE_SYSTEMIC_TICKET` 建议，后一项需重新走 Engine 授权链。
 
 **ContextPatch 持久递送协议**：
-1. 事务内生成 `mesh_context_patch(CREATED)`，附 `evidenceRefs, patchVersion, payloadHash, ticketVersion, sessionId`；以受信 Session 绑定和 Mandate 限定上下文，不能把提示词当作新指令授权。
+1. 在事务外形成规范、脱敏的精确 Patch 字节；**同一 SQLite 事务**生成 `mesh_context_patch(CREATED)`，保存 `payload_bytes/payload_ref/payload_hash/payload_format`、`evidence_refs/ticket_version/mandate_ref/binding_version/session_id` 并登记稳定唯一投递 Effect。`payload_hash=SHA256(payload_bytes)`；不能只保存哈希、在恢复时调用模型重写原内容，也不能把提示词当作新指令授权。
 2. Effects 将其置 `QUEUED` 并调用 Harness `agent.inject()` 或受控 AgentDelivery，返回成功时记 `INJECTED`，**仅代表已提交注入请求**。不假设空闲 Agent 自动唤醒，不以此认定模型已经看到内容。
 3. `agent/inbox/inserted` 只能证实入 Inbox；`agent/inbox/claimed` 只能证实被消费流水线领取，二者均不足以证明输入确实进入模型。只有实际构造并发送的模型请求有可归因的 `patchId/modelRequestRef`、且锁定 Harness 确实提供该证据时，才允许记 `CONSUMED`（定义为**模型请求包含补丁**，不宣称模型已理解、采纳或完成动作）。
 4. 仅有注入/领取证据时记 `DELIVERED_UNVERIFIED`；到期前收到可信请求证据时才允许 `DELIVERED_UNVERIFIED → CONSUMED`，生命周期结束则 `EXPIRED`。**`EXPIRED` 后迟到的可信消费证据只更新独立证据字段，不恢复 `CONSUMED` 或再次注入**；证据必须含可核实的原请求发生时间、patchId、受信 Session/租户/授权版本，且原请求在有效期内。若无请求证据则如实保留未证实状态。G0 若无法暴露可靠模型请求关联，不得把该状态写成 `CONSUMED`。
-5. 重复 `tenantId + ticketId + sessionId + patchVersion` 或同证据哈希不重复投递；崩溃恢复核对 Session、版本和模型请求记录。Session 已结束、取消、强制撤权或过期时，不重新唤醒无权 Worker：**尚未投递**（`CREATED/QUEUED`）的 Patch 可转 `REJECTED` 或 `EXPIRED`，**已经注入**（`INJECTED/DELIVERED_UNVERIFIED`）的依状态机转 `EXPIRED` 或在有效期内用可信请求证据转 `CONSUMED`；过期后补录历史证据不改变终态，不能抹掉曾经注入的事实。线索可作为后续合法 Ticket Input 留存。
+5. 重复 `tenantId + ticketId + sessionId + patchVersion` 或同证据哈希不重复投递；崩溃恢复先从同库取得**原始不可变载荷**，复验 `payload_hash`、原 Ticket 版本、Mandate、Session 绑定、撤权与过期状态，再查可信 Inbox/模型请求证据。`CREATED/QUEUED` 只有能证明未投递或存在可验证 Inbox 幂等映射时，才按原 Patch ID/Effect Key 重投原字节；`INJECTED/DELIVERED_UNVERIFIED` 已可能被模型看到，无法证明去重/对账时不得盲目重复注入，保持不确定态供人工处置。Session 已结束、取消、强制撤权或过期时，不重新唤醒无权 Worker：**尚未投递**（`CREATED/QUEUED`）的 Patch 可转 `REJECTED` 或 `EXPIRED`，**已经注入**（`INJECTED/DELIVERED_UNVERIFIED`）的依状态机转 `EXPIRED` 或在有效期内用可信请求证据转 `CONSUMED`；过期后补录历史证据不改变终态，不能抹掉曾经注入的事实。线索可作为后续合法 Ticket Input 留存。
+
+**M3 崩溃与未知回执验证**：在数据库提交前、提交后 Inbox 接收前、Inbox 已接受但回执丢失三处注入故障，证明精确载荷可重取、哈希不变、Session/权限不越界、重复事件不创建第二条未经授权的输入。不能证明 Inbox 幂等与原请求身份关联时，保守留在未知投递态，不得自动二次注入。
 
 **双路隔离**：已合法订阅 Thread 的主路 Input/Subscription 和旁路发现的 ContextPatch 是不同语义来源，但对相同证据的副作用不得放大；统一 `businessEffectKey` 保证两路消息不会再次执行已完成动作。
 
@@ -1119,6 +1123,8 @@ SuperAgent Outbox 仍是唯一渠道消息发起者。`DELIVERABLE_VERIFIED` 在
 **Attempt/一次性许可/预算/远端对账的原 Effect 绑定**：每次外部写之前，用 §6.2 的 `execution_attempt_id` 授权令牌在同步 Engine 事务中完成根预算计次、Attempt 行和不可变 Effect 指纹登记；Effect 领取不等于已计一次有副作用尝试。`remote_request_ref` 在外发前由本地受信生成，`remote_operation_ref` 可为空，`remote_idempotency_key=businessEffectKey` 不随 Attempt/Plan 变化。结果未知时以远端流水/幂等查询和原始证据对账；没有可靠查询或外部幂等保证，不新增同业务键的 RPC，也不能把 `UNKNOWN_RECONCILE` 当成 `FAILED`。M0/M2 先验锁版 Handler 可否安全以**原逻辑 Effect Key**协调恢复；不支持则保留人工对账/单进程 Mock，不能另造任务队列。
 
 **令牌状态与原生 Effects 的界线**：许可状态只存于 `mesh_action_attempt`，不替代原生 Effects claim/lease。`ISSUED` 是有时限、一次性的执行资格，并非已完成外部写；`CONSUMED` 是本地最终 Gateway 已放行且可能开始发送，**也不是远端成功证据**。`REVOKED/EXPIRED/ABORTED` 的未消费许可不得重新消费；已 `CONSUMED` 且进程在网络调用窗口崩溃只能保持未决并对账。Gateway 必须与 Engine 撤权 epoch 的持久化 CAS 串行判定；跨数据库/远端系统并不存在恰好一次跨域提交，真实远端写的撤权截止点需要远端共同执行检查，否则仅承诺最末端本地拦截。
+
+**原生 Effects 的真实能力与实施前置**：已核对锁版 SuperAgent `src/app/effects.ts`：`EffectPayloads` 的原生 kind 联合不包含计划中的 `action/side-route/context-patch/watchdog/sop-step/team`，任何启用必须经最小类型扩展和 Handler 注册，并通过完整编译与失败回归。`Effects.enqueue()` 对相同 `(kind,key)` 的待处理工作项采用 `ON CONFLICT DO UPDATE`，会覆盖载荷并递增 `generation`；必须在**同一 Store 事务**由唯一受信封装计算不可变载荷哈希，重复且同哈希只引用原工作项，不同哈希拒绝并写 `EFFECT_PAYLOAD_CONFLICT`，不可直接调用裸 enqueue 造成隐性覆盖。原生 `tasks` 集合提供**进程内**正在运行项去重，但当前 Effect 表没有可直接证明跨进程互斥的持久 `lease/claim_token/owner`；单进程崩溃重启可再次派发旧 Effect，必须以持久 Attempt + 远端幂等/对账防重，在 M2 故障注入证明前只允许隔离单进程 Mock，不宣称多 Worker 并发安全或可写自动恢复已实现。
 
 **认领字段来源**：`ActionRun.CLAIMED` 不代表 ActionRun 自带租约。`claimed_by/lease_until/claim_token`（名称以锁版源码实际暴露为准）属于原生 Effects 处理器或其受控 Adapter 的工作项状态；业务层通过 `action:${actionId}` 的真实 Effect 键追溯认领和重试。M0 必须实证此能力，M2 必须在进程退出、超时和重复入队时证明认领不造成并发重复执行；否则仅允许单进程 Mock，并将可靠租约能力标记未实现，**不要在 `mesh_action_run` 再造一套独立调度器**。
 
@@ -1518,6 +1524,8 @@ interface DemoRunTrace {
 | R24 | M3 | 同一 ContextPatch 先后包含在两个不同可信模型请求中，第二条迟到于 `EXPIRED`；另有重放、错误 Session、缺失发生时间的证明 | `mesh_context_patch_evidence` 留存各合法请求的独立不可变事实；重复去重、无效拒绝；主表取确定性代表性请求，状态不逆转、不丢历史、不重复投递 |
 | R25 | M5 | `sourceEpoch=A, seq=99` 后上游序号归零进入未验证 epoch，旧事件重放；再提供受信 `sourceEpoch=B` 和跨 epoch CLOSE→OPEN 因果证据 | 未验证时 `ORDER_UNVERIFIED`、不自动重开也不签发新意图；有效 epoch 隔离重用的 nativeEventId/窗口；只有经证实跨 epoch 因果后合法生成新 episode；旧 epoch 延迟事件不覆盖新水位线 |
 
+**本轮补充子场景，原 R01—R25 编号不变**：`R18-A`（M2）模拟持久 `CLAIMED` 后可能调用远端、尚未持久 `RUNNING` 即强杀或超时，必须合法进入 `UNKNOWN_RECONCILE`、保存原业务键/Attempt/远端查询引用且零盲重发；仅受信证明从未外发时才允许退回合法的 `PENDING/PAUSED`。`R24-C`（M3）模拟补丁载荷与 Effect 原子提交前后崩溃、Inbox 已接受但回执丢失；恢复使用原始持久字节并核验哈希，缺失、篡改、跨 Session、过期或撤权必须 fail-closed，不具备可靠 Inbox 去重时禁止盲重投。两者分别归属 R18/R24，不新增顶层测试编号。
+
 **实现边界**：R01–R25 是设计要求，不代表源码已通过。M2 的自动重启/延迟调度能力须先用锁版原生 Effects 的 lease/CAS/重调度接口实测；缺失时只验收状态正确、原工作项不可重复及人工恢复入口，不能写作“自动恢复通过”。
 
 ### 16.5 学习版与完整工程验收的界限
@@ -1540,6 +1548,18 @@ M0—M5 不要求大规模吞吐、复杂审批、生产渠道送达、正式环
 | V12-08 | Browser Session 重载丢失状态、提交后断线、撤权竞态只产生可核查未知结果，不盲目重放 |
 | V12-09 | Schedule 投递回执与 Engine 业务完成分离；同周期重复触发不产生重复副作用 |
 | V12-10 | 模型/查询/网页/OCR 用量预算、异常退避、取消与日志脱敏生效，且不把测试 Mock 冒称真实在线服务 |
+
+**V1.2 新增关键子例与功能准入验证（正式定义，当前均 `NOT_RUN`）**：以下是 §16.7 所引用子例的正式验收契约。每次测试须提供准确 upstream/project SHA、执行模式、配置摘要、命令及退出码、原始脱敏日志、HTTP/网络/存储证据和负例结论。静态通过不代表功能验收。
+
+| 子例 ID | 必须验证的正/负行为 | 最低证据要求 | 结果 |
+| --- | --- | --- | --- |
+| `V12-01B` | 准入后切换 Provider/endpoint/凭据；最终派发不得越过已批准出站与身份边界 | 真实代理/网络请求记录、provider/endpoint/凭据引用与阻断证据 | `NOT_RUN` |
+| `V12-03C` | 模型 Web 工具、`ctx.web` 直调、DeepSeek 服务端联网分别拒绝越权；HTTP 绕过亦受限 | 三条真实路径分别记录请求数、敏感数据外送与失败关闭 | `NOT_RUN` |
+| `V12-08B` | Playwright Browser 隔离挂载/凭据/出网，断线和撤权后不重写未知远端事实 | 容器/进程/网络负例、Session 与远端对账凭证 | `NOT_RUN` |
+| `V12-08C` | Stagehand 独立模型 Provider/Key、页面外送内容与取消后在途调用受控 | 脱敏模型请求、模型端点、实际出站、独立凭据与取消证据 | `NOT_RUN` |
+| `V12-09B` | 自动周期与人工 `runNow` 身份分离；同一个已持久 `manualExecutionRequestId` 重试不重复写 | Engine/Effects/Inbox/receipt 关联、唯一业务效果计数 | `NOT_RUN` |
+| `V12-10B` | Stagehand 独立调用量、Token/费用、墙钟预算、取消后请求均受审计/阻断 | 独立费用与调用记录、越预算和取消的负向用例 | `NOT_RUN` |
+| `V12-GATE` | 可选能力与 M/G 项目阶段分离；代码、Provider 配置、执行模式和出站策略改变则旧许可失效 | `capabilityId + executionMode + upstreamCommit + providerConfigDigest + egressPolicyVersion + requiredCaseRefs + reviewedEvidenceRefs` 不可变引用及降级证据 | `NOT_RUN` |
 
 ### 16.7 两级准出：项目阶段与可选功能的独立启用许可（V1.2 第三轮复审）
 
@@ -1741,6 +1761,14 @@ M0—M5 不要求大规模吞吐、复杂审批、生产渠道送达、正式环
 - 该分流在 **PR #19 合并前不自动回溯改变 PR #14 历史红色 CI**。GitHub Rulesets/Branch Protection 中的 Required Checks 若要求在 docs-only PR 上报告未触发的 Harness Job，可能出现 `Expected/Pending`；必须由仓库所有者核对并保证代码 PR 原有状态门禁有效。
 - 合并依赖顺序保持 [PR #18](https://github.com/tanxinz/dsh-superagent/pull/18) → [PR #19](https://github.com/tanxinz/dsh-superagent/pull/19) → [PR #14](https://github.com/tanxinz/dsh-superagent/pull/14)。PR #19 当前验证分支包含与 #18 同一字节补丁以便组合测试；**#18 先合入目标分支后**须重新比较 #19 的新增差异及测试状态，不得作为重复改动再次引入。最终合并后的目标分支并不自动等于 `main`。
 - GitHub 合并与应用运行态验收必须分别记录：此段只明确当前工程证据和审核职责；**M0-14 仍为 `BLOCKED`、M0 整体验收 0/14、M1 不允许运行集成，§16.7 的新 V12 动态用例仍 `NOT_RUN`**，可选 Web/Stagehand/Schedule 等能力未经许可保持 `DISABLED/FIXTURE_ONLY`。
+
+### 17.13 静态复核修复与正式文档状态说明（2026-11-14）
+
+本节补充 §17.12 的**历史快照**，不重写其当时的 CI 状态，也不替代任何原始日志或 ZIP。2026-11-14 核验：PR [#18](https://github.com/tanxinz/dsh-superagent/pull/18) 已合并，默认 M0 [Run #43551553456](https://github.com/tanxinz/dsh-superagent/actions/runs/43551553456) 的 patched baseline 与未修改 matching candidate **各自全量 SUCCESS**；[PR #14](https://github.com/tanxinz/dsh-superagent/pull/14) 已合并到 `feat/m0-local-20261113-mac`，主设计正文又单独发布到 `main`；PR [#19](https://github.com/tanxinz/dsh-superagent/pull/19) 在本次查询时仍为 Open，文档分流未进入 `main`，其 [Run #43551881352](https://github.com/tanxinz/dsh-superagent/actions/runs/43551881352) 的 patched baseline 仍未完成。上述变化只证明特定提交/测试矩阵，不代表未补丁原 baseline 历史 FAIL 被修复为 PASS。
+
+`main` 目前是**设计发布分支**，不能推定其中有可运行的 M0 源码、CI 工作流或 `CONTRIBUTING.md` 责任制文件；运行态源码和受控验收资料仍以 [M0 开发分支](https://github.com/tanxinz/dsh-superagent/tree/feat/m0-local-20261113-mac) 固定提交为准。正式 [V1.2 开发清单](SuperAgent_Harness_Development_Checklist_V1.0_20261112.md) 和本文 §16.6 共同定义新子例，其 `NOT_RUN` 不能推断为缺失功能已通过。相关 [兼容矩阵](compatibility-matrix.md)、[上游能力核验](upstream-capabilities.md) 和 [静态审核记录](reviews/V1.2-DeepSeek-Harness-Static-Review-20261114.md) 只作为标注分支/SHA 的历史技术证据。
+
+本次修复范围：§6.4 将可能已外发的 `CLAIMED → UNKNOWN_RECONCILE` 纳入合法状态机并严格限证；§6.2/§9.4 在同库同事务保留 ContextPatch 精确不可变载荷且恢复时再次核验；§13.2 明确原生 Effects 的 kind、覆盖及无持久租约约束；§16.4.1 增加 R18-A/R24-C；§16.6 补齐 V12 子例。**均为 `DESIGN_CORRECTED / CODE_UNTESTED`**。M0-01—13 保持 IN_PROGRESS、M0-14 BLOCKED、0/14 完成、M1 未准出；真实网络/Stagehand/调度能力在其启用门禁通过前仍 DISABLED/FIXTURE_ONLY。
 
 ## 18. 设计依据和技术参考
 

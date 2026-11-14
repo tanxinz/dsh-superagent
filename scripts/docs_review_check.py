@@ -41,6 +41,11 @@ def inspect_document(root: Path, relative: Path) -> list[str]:
             raw = found.group(1).strip()
             # Markdown link titles: (path "label").
             value = raw[1:].split(">", 1)[0] if raw.startswith("<") else raw.split(" ", 1)[0]
+            # The imported upstream communication prompt uses this literal
+            # destination as an example, not a repository file reference.
+            # Keep the exception exact and scoped to upstream prompt templates.
+            if relative.parts[:3] == ("upstream", "superagent", "prompts") and raw == "<actual link>":
+                continue
             if not value or value.startswith("#"):
                 continue
             parsed = urlsplit(value)

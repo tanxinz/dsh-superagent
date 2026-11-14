@@ -42,6 +42,24 @@ class DocsReviewCheckTests(unittest.TestCase):
         rel = self.write('# New\n[escape](../../../private.md)\n')
         self.assertTrue(any("unresolved local link" in x for x in inspect_document(self.root, rel)))
 
+    def test_upstream_prompt_example_link_placeholder(self):
+        prompt = self.root / "upstream" / "superagent" / "prompts" / "team" / "communication.md"
+        prompt.parent.mkdir(parents=True)
+        prompt.write_text("Ready: [PR #123](<actual link>)\nGood: [PR #123](<actual link>)\n", encoding="utf-8")
+        self.assertEqual(inspect_document(self.root, prompt.relative_to(self.root)), [])
+
+    def test_placeholder_exception_does_not_hide_invalid_links(self):
+        # The same symbolic example is invalid in an ordinary documentation file.
+        doc = self.write("[bad](<actual link>)\n")
+        self.assertTrue(any("unresolved local link" in e for e in inspect_document(self.root, doc)))
+        # Ordinary broken paths inside prompt templates must still be checked.
+        prompt = self.root / "upstream" / "superagent" / "prompts" / "team" / "communication.md"
+        prompt.parent.mkdir(parents=True)
+        prompt.write_text("[example](<actual link>)\n[broken](missing.md)\n", encoding="utf-8")
+        errors = inspect_document(self.root, prompt.relative_to(self.root))
+        self.assertEqual(len(errors), 1)
+        self.assertIn("missing.md", errors[0])
+
 
 if __name__ == "__main__":
     unittest.main()

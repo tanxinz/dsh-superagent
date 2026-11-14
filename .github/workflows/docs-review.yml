@@ -1,0 +1,50 @@
+name: Documentation review (not M0 full CI)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '**/*.md'
+  workflow_dispatch:
+
+env:
+  DSH_TELEMETRY_DISABLED: '1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: documentation-review-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docs-review:
+    name: Documentation static checks (NOT Harness full test)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24.22.1
+      - name: Preflight regression
+        run: python scripts/ci_record.py --id docs-preflight-tests --cwd . --output artifacts/docs-review -- node --test scripts/m0-preflight.test.mjs
+      - name: Evidence recorder regression
+        run: python scripts/ci_record.py --id docs-recorder-tests --cwd . --output artifacts/docs-review -- python -m unittest discover -s scripts -p 'test_*.py' -v
+      - name: Checklist structure and prerequisites
+        run: python scripts/ci_record.py --id docs-checklist-audit --cwd . --output artifacts/docs-review -- python scripts/checklist_audit.py
+      - name: Audit actual document review checks
+        if: always()
+        run: python scripts/evidence_audit.py artifacts/docs-review --require docs-preflight-tests --require docs-recorder-tests --require docs-checklist-audit --output artifacts/docs-review/evidence-audit.json
+      - name: Preserve static review evidence, including failures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: documentation-review-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artifacts/docs-review/**/command.log
+            artifacts/docs-review/**/result.json
+            artifacts/docs-review/evidence-audit.json
+          if-no-files-found: error

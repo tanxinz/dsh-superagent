@@ -68,3 +68,20 @@ contracts.ts 的 11 项依赖与 Bundle inject 共享。此处只验证服务可
 - Registry fibers 可跨 isolation scope；重复注册检查必须限定 `Context.isolate` 的服务 scope，并验证活 provider。CLI0.2.1-alpha.2 / Cordis4.0.5-alpha.1 实验已通过。
 
 详见 [本批验收](acceptance/M0-trust-permissions-20261113.md)；未证实的 API/在线能力继续保留缺口。
+
+## 2026-11-14 V1.2 公开上游功能核验（静态；不覆盖 M0 实测）
+
+> 本节锁定公开 `dsh-v0.2.2-rc.3` 进行源码/文档核验。**不是**当前产品 `DSH 0.2.1-alpha.2` 与新版本的真实组合证明，仍不修改 Harness gitlink。2026-11-13 M0 权限、Service/主 Session 证据保持原判定；Worker/子 Session/全部 Gateway/网络密钥隔离未完成。
+
+| 能力 | rc.3 已公开事实 | 易误判之处 | SuperAgent 适配职责 |
+| --- | --- | --- | --- |
+| Search / Fetch | `@deepseek-ai/dsh-web-deepseek-api` 注册 `deepseek-search-api`、`deepseek-fetch-api`，经 `ctx.web` 提供 Web 能力；`dsh-tool-web` 暴露模型工具 | 默认 `searchProvider=deepseek-search-api`，但 `fetchProvider=http`；默认 HTTP Fetch 不阻断 loopback/私网/云元数据；Messages 搜索另属独立提供方 | 先检查选中 provider、费用与出站网络，再做薄层 EvidenceCapture；不重复实现 Search/Fetch 网络栈 |
+| 服务端深度搜索 | `deepseek_web_search / deepseek_read_url` 在 DeepSeek 服务端执行 | 无法假定逐工具经过 Harness `ToolGuard`，模型/服务器搜索结果不构成原件或业务授权 | 拆成显式允许研究路由与受控本地审计路由；敏感内容禁止外送 |
+| AgentTeam | 原生具名多级 SubAgent，按根 Session 保存 Team mode、任务板及 CAS；Root/descendants 共享 checkout | 默认 Team mode off；`writeScopes` 仅警告写入冲突；不能跨进程协调，失联任务不自动解除占有 | 只做业务 TeamRun/Assignment/Mandate 与证据映射；Verifier 只读隔离 |
+| Browser Use | `ctx.browserUse.register(name)` 管理唯一提供方；实验性 Playwright MCP、CDP、Stagehand | 没有统一 `ctx.browserUse.click()`；浏览器状态不是 Session 重启持久事实，取消不能撤回已执行动作 | 工具级授权、网络隔离、操作证据、UNKNOWN_RECONCILE；不自建 Browser Agent Loop |
+| Schedule | Host 持久 Schedule 触发向 Session inbox 发送 follow-up | Receipt 只证明入箱，不证明模型/业务成功；不提供业务级 exactly-once 效果保证 | 由 Engine/Effects 继续校验稳定业务键、授权和恢复 |
+| 通用 ToolGuard | `ctx.tools.guard()` 能最终拒绝 Harness 本地工具 | 并不涵盖模型服务端工具、旁路直接 API 或 OS/network；工具预设不是系统级隔离 | 将非 Tool Gateway、受限容器/网络、凭据和撤权作为独立验收 |
+
+**V1.2 必须新验证**：provider 选择与查询次数、敏感出站/SSRF、证据可信级别与哈希、Team CAS/持久不确定/Verifier 隔离、浏览器真实负向动作与未知结果、Schedule 重复触发/Engine 去重、API 错误分类与预算。参见 [详细设计 §16.6](SuperAgent_Harness_Design_Final.md) 的 V12-01—V12-10；所有用例均保持 `NOT_RUN`。
+
+公开依据：[Web](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.2-rc.3/docs/subsystems/web.md)、[DeepSeek Web API Provider](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.2-rc.3/packages/web/web-deepseek-api/README.md)、[AgentTeam](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.2-rc.3/packages/team/agent-team/README.md)、[Browser Use](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.2-rc.3/docs/subsystems/browser-use.md)、[Schedule](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.2-rc.3/docs/subsystems/schedule.md)。

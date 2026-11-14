@@ -1,0 +1,79 @@
+name: M0 pinned Harness baseline with isolated LiveShare fixture patch
+
+on:
+  push:
+    branches:
+      - fix/m0-harness-liveshare-horizon-fixture-20261114
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fixture-patched-baseline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      DSH_COVERAGE_TEST_TIMEOUT_MS: '90000'
+      EXPECTED_HARNESS_SHA: e8f7b93a344964de3dca1ace9e72b6e4d6de87cb
+    steps:
+      - name: Check out SuperAgent evidence and patch branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Check out original pinned Harness baseline in isolation
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: deepseek-ai/deepseek-harness
+          ref: e8f7b93a344964de3dca1ace9e72b6e4d6de87cb
+          path: harness-under-test
+          persist-credentials: false
+      - name: Configure pinned Node and pnpm
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24.22.1
+      - name: Verify exact upstream SHA, patch scope, and immutable dependency files
+        shell: bash
+        run: |
+          test "$(git -C harness-under-test rev-parse HEAD)" = "$EXPECTED_HARNESS_SHA"
+          node -e "const p=require('./harness-under-test/package.json');if(p.packageManager!=='pnpm@11.28.5')process.exit(1)"
+          git -C harness-under-test apply --check "$GITHUB_WORKSPACE/patches/harness-baseline-liveshare-horizon-relative-dates.patch"
+          git -C harness-under-test apply "$GITHUB_WORKSPACE/patches/harness-baseline-liveshare-horizon-relative-dates.patch"
+          test "$(git -C harness-under-test diff --name-only | wc -l | tr -d ' ')" = 1
+          test "$(git -C harness-under-test diff --name-only)" = "packages/experimental/liveshare/tests/owner-credential-horizon.host.spec.ts"
+          git -C harness-under-test diff --exit-code -- package.json pnpm-lock.yaml
+          sha256sum patches/harness-baseline-liveshare-horizon-relative-dates.patch
+          git -C harness-under-test diff --check
+      - name: Frozen install
+        run: python scripts/ci_record.py --id fixture-patched-install --cwd harness-under-test --output artifacts/fixture-patched --timeout 1200 -- npm exec --yes --package=pnpm@11.28.5 -- pnpm install --frozen-lockfile
+      - name: Prepare official sandbox
+        run: python scripts/ci_record.py --id fixture-patched-sandbox --cwd harness-under-test --output artifacts/fixture-patched --timeout 180 -- bash scripts/prepare-ci-bubblewrap.sh
+      - name: Original build on patched fixture tree
+        run: python scripts/ci_record.py --id fixture-patched-build --cwd harness-under-test --output artifacts/fixture-patched --timeout 1200 -- npm exec --yes --package=pnpm@11.28.5 -- pnpm build
+      - name: Targeted LiveShare suite, fixture-patched
+        run: python scripts/ci_record.py --id fixture-patched-targeted-test --cwd harness-under-test --output artifacts/fixture-patched --timeout 360 -- npm exec --yes --package=pnpm@11.28.5 -- pnpm exec vitest run packages/experimental/liveshare/tests/owner-credential-horizon.host.spec.ts
+      - name: Complete patched full Harness test command (NOT original unmodified baseline)
+        run: python scripts/ci_record.py --id fixture-patched-full-test --cwd harness-under-test --output artifacts/fixture-patched --timeout 2400 -- npm exec --yes --package=pnpm@11.28.5 -- pnpm test
+      - name: Check no other source/dependency was patched
+        if: always()
+        shell: bash
+        run: |
+          test "$(git -C harness-under-test rev-parse HEAD)" = "$EXPECTED_HARNESS_SHA"
+          git -C harness-under-test diff --exit-code -- package.json pnpm-lock.yaml
+          test "$(git -C harness-under-test diff --name-only)" = "packages/experimental/liveshare/tests/owner-credential-horizon.host.spec.ts"
+      - name: Audit evidence preserving failures
+        if: always()
+        shell: bash
+        run: |
+          python scripts/evidence_audit.py artifacts/fixture-patched --source "$EXPECTED_HARNESS_SHA" --require fixture-patched-install --require fixture-patched-sandbox --require fixture-patched-build --require fixture-patched-targeted-test --require fixture-patched-full-test --output artifacts/fixture-patched/evidence-audit.json
+      - name: Upload all patched baseline evidence even if tests fail
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: m0-harness-baseline-fixture-patched-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artifacts/fixture-patched/**/command.log
+            artifacts/fixture-patched/**/result.json
+            artifacts/fixture-patched/evidence-audit.json
+            patches/harness-baseline-liveshare-horizon-relative-dates.patch
+          if-no-files-found: error

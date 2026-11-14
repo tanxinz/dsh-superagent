@@ -1,0 +1,3 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+Already up to date
+Done in 388ms using pnpm v11.7.0

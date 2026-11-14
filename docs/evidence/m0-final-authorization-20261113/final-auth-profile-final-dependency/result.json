@@ -1,0 +1,28 @@
+{
+  "schema_version": 2,
+  "check_id": "final-auth-profile-final-dependency",
+  "mode": "OFFLINE_BUILD_OR_TEST",
+  "started_at": "2026-11-13T08:47:30.091596+00:00",
+  "finished_at": "2026-11-13T08:47:31.802672+00:00",
+  "duration_seconds": 1.711,
+  "command": [
+    "node",
+    "scripts/m0-profile-probe.mjs",
+    "/private/tmp/m0-local-profile-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js",
+    "upstream/superagent",
+    "docs/evidence/m0-final-authorization-20261113/profile-final-dependency",
+    "--boot-service-dependency-cycle"
+  ],
+  "source_commit": "e1bd28add66e95784feaa2b66fa81ddd75a5184a",
+  "exit_code": 0,
+  "timed_out": false,
+  "launch_error": null,
+  "interrupted_signal": null,
+  "status": "PASS",
+  "log": "command.log",
+  "log_sha256": "935ccebd7d177400067a3ee42389fc0bad5dcdd3d8ed33907479cac5f1d3f2dd",
+  "lockfile_sha256": null,
+  "online_sdk": "NOT_RUN",
+  "real_session": "NOT_RUN",
+  "m0_exit": "BLOCKED"
+}

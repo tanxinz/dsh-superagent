@@ -1,0 +1,80 @@
+{
+  "run_id": 43249058103,
+  "head_sha": "e8fb99ffe4a94ee82777a1b5222fd60219940a1b",
+  "artifacts": [
+    {
+      "id": 13961038945,
+      "name": "m0-harness-baseline-43249058103-1",
+      "size_in_bytes": 165979,
+      "archive_download_url": "https://api.github.com/repos/tanxinz/dsh-superagent/actions/artifacts/13961038945/zip",
+      "expired": false,
+      "created_at": "2026-11-12T16:15:17Z",
+      "expires_at": "2027-02-10T15:33:23Z",
+      "updated_at": "2026-11-12T16:15:17Z",
+      "digest": "sha256:f0969f722aaba0ce83953f53fb25d46f3b71326155bba1b406008e8296a5710f",
+      "workflow_run": {
+        "id": 43249058103,
+        "repository_id": 1454829976,
+        "head_repository_id": 1454829976,
+        "head_branch": "feat/m0-bundle-profile-verification-20261112",
+        "head_sha": "e8fb99ffe4a94ee82777a1b5222fd60219940a1b"
+      }
+    },
+    {
+      "id": 13959358650,
+      "name": "m0-harness-matching-release-candidate-43249058103-1",
+      "size_in_bytes": 160472,
+      "archive_download_url": "https://api.github.com/repos/tanxinz/dsh-superagent/actions/artifacts/13959358650/zip",
+      "expired": false,
+      "created_at": "2026-11-12T15:58:43Z",
+      "expires_at": "2027-02-10T15:33:23Z",
+      "updated_at": "2026-11-12T15:58:43Z",
+      "digest": "sha256:8d490c664d997d31e97f1ca80ed481dd5e976df9936ff2df0514fa3ba0711e57",
+      "workflow_run": {
+        "id": 43249058103,
+        "repository_id": 1454829976,
+        "head_repository_id": 1454829976,
+        "head_branch": "feat/m0-bundle-profile-verification-20261112",
+        "head_sha": "e8fb99ffe4a94ee82777a1b5222fd60219940a1b"
+      }
+    },
+    {
+      "id": 13958282782,
+      "name": "m0-review-43249058103-1",
+      "size_in_bytes": 7494,
+      "archive_download_url": "https://api.github.com/repos/tanxinz/dsh-superagent/actions/artifacts/13958282782/zip",
+      "expired": false,
+      "created_at": "2026-11-12T15:33:36Z",
+      "expires_at": "2027-02-10T15:33:23Z",
+      "updated_at": "2026-11-12T15:33:36Z",
+      "digest": "sha256:07c2382f8132da8fe3173e77421ca64ffde51b1dcd1e24729146373f4aa59772",
+      "workflow_run": {
+        "id": 43249058103,
+        "repository_id": 1454829976,
+        "head_repository_id": 1454829976,
+        "head_branch": "feat/m0-bundle-profile-verification-20261112",
+        "head_sha": "e8fb99ffe4a94ee82777a1b5222fd60219940a1b"
+      }
+    },
+    {
+      "id": 13957892664,
+      "name": "m0-superagent-43249058103-1",
+      "size_in_bytes": 30028,
+      "archive_download_url": "https://api.github.com/repos/tanxinz/dsh-superagent/actions/artifacts/13957892664/zip",
+      "expired": false,
+      "created_at": "2026-11-12T15:34:57Z",
+      "expires_at": "2027-02-10T15:33:23Z",
+      "updated_at": "2026-11-12T15:34:57Z",
+      "digest": "sha256:7cfdbbdbbf2b48d571a8ee9c2ca4e4717496c6e1fb5103673d944b3b33bec0b4",
+      "workflow_run": {
+        "id": 43249058103,
+        "repository_id": 1454829976,
+        "head_repository_id": 1454829976,
+        "head_branch": "feat/m0-bundle-profile-verification-20261112",
+        "head_sha": "e8fb99ffe4a94ee82777a1b5222fd60219940a1b"
+      }
+    }
+  ],
+  "zip_and_all_result_log_hashes_verified": true,
+  "publication_note": "User explicitly approved public upload of complete profile artifacts on 2026-11-13 (Asia/Shanghai). All four original ZIPs archived unchanged; all ZIP digests and full command log hashes verified."
+}

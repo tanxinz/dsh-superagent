@@ -1,0 +1,596 @@
+diff --git a/upstream/superagent/docs/007-architecture.md b/upstream/superagent/docs/007-architecture.md
+index aef87a6..325370f 100644
+--- a/upstream/superagent/docs/007-architecture.md
++++ b/upstream/superagent/docs/007-architecture.md
+@@ -429,6 +429,7 @@ Some generic modules still refer directly to GitHub or Feishu:
+ | `tests/mesh-safety.spec.ts` | Allow/deny intersections, durable Session bindings, direct gateway refusal and real native ToolRuntime final-guard negatives. |
+ | `tests/session-bindings.spec.ts` | Trusted issuance, expiry and parent narrowing, cross-tenant collisions, durable revocation/reopen, corruption and fail-closed audit. |
+ | `tests/management-security.spec.ts` | Native Mesh service plus original Store/HTTP authorization: server-selected binding inputs and original-context revocation across startup/body awaits. |
++| `tests/management-final-auth.spec.ts` | Original HTTP/Store/Mesh authority across late model/account checks, Source policy/label persistence, retained command dispatch, response disclosure and deferred restart; CLI/agent dependencies are explicit fixtures. |
+ | `tests/restricted-session.spec.ts` | Effective read-only permissions, unsafe labels, overrides and owner disposal |
+ | `tests/mesh-service.spec.ts` | Native Cordis service registration, real injected consumption, dependency loss/restoration and retained-handle refusal |
+ | `tests/mesh-bridge.spec.ts` | 真实 Cordis fiber 的单次安装、重复调用、重启、独立生命周期及销毁后拒绝；不等同真实 DSH profile 启动 |
+diff --git a/upstream/superagent/src/app/http.ts b/upstream/superagent/src/app/http.ts
+index cc9af81..3ff9382 100644
+--- a/upstream/superagent/src/app/http.ts
++++ b/upstream/superagent/src/app/http.ts
+@@ -52,7 +52,7 @@ export interface HttpHost {
+   configured(): boolean
+   links(): LinkTarget
+   ticketEnvironment(ticket: Ticket): Variable[]
+-  checkSetup(): void
++  checkSetup(authorize?: () => void): void
+   requestPass(): void
+   models(): Promise<ModelCatalog>
+ }
+@@ -136,6 +136,7 @@ export type PromptsView = ReturnType<typeof promptsView>
+ 
+ interface Input<K extends keyof Api> {
+   params: RouteParams<K>; query: Record<string, string>; body: (maxBytes?: number) => Promise<unknown>
++  authorize(): void
+ }
+ type Routes = { [K in keyof Api]: (input: Input<K>) => ApiResponse<K> | Promise<ApiResponse<K>> }
+ const offset = z.coerce.number().int().nonnegative().catch(0)
+@@ -162,7 +163,7 @@ function routes(runtime: HttpHost): Routes {
+     'GET search': ({ query }) => search(views(runtime), query.q ?? '', runtime.sourceLinks),
+     'GET sources': () => sourcesStatus(views(runtime), runtime.health, setupState(runtime)),
+     'GET settings': () => settingsView(store, runtime.sources, runtime.health, setupState(runtime), runtime.machine.stateDir),
+-    'POST sources/:id/labels': ({ params }) => runtime.settings.refreshLabels(params.id),
++    'POST sources/:id/labels': ({ params, authorize }) => runtime.settings.refreshLabels(params.id, authorize),
+     'GET threads': ({ query }) => {
+       const { filter, offset, limit } = ThreadsQuery.parse(query)
+       return threadList(views(runtime), filter, offset, limit)
+@@ -195,22 +196,22 @@ function routes(runtime: HttpHost): Routes {
+     'GET tickets/:id': ({ params }) => ticketPage(runtime, params.id),
+     'POST tickets/:id/retry': ({ params }) => { const id = ticket(params.id); runtime.engine.retryTicket(id); return { retried: true } },
+     'POST tickets/:id/stop': ({ params }) => { const id = ticket(params.id); runtime.engine.stopTicket(id); return { stopped: true } },
+-    'POST executor/pause': async ({ body }) => runtime.settings.pause(z.object({ paused: z.boolean() }).parse(await body()).paused, 'panel'),
+-    'PUT settings/:block': async ({ params, body }) => {
++    'POST executor/pause': async ({ body, authorize }) => runtime.settings.pause(z.object({ paused: z.boolean() }).parse(await body()).paused, 'panel', authorize),
++    'PUT settings/:block': async ({ params, body, authorize }) => {
+       const block = SettingsBlockSchema.parse(params.block)
+       const known = !block.startsWith('source:') || runtime.sources.instances().some(instance => `source:${instance.id}` === block)
+       if (!known) throw new RouteError(404, 'Source not found')
+       const request = SaveRequest.parse(await body())
+-      return runtime.settings.save(block, request.value, request.revision, 'panel')
++      return runtime.settings.save(block, request.value, request.revision, 'panel', authorize)
+     },
+     'GET policy/history': () => policyHistory(store, runtime.sources, policyVersion(store.settings())),
+-    'POST policy-sync/:id': async ({ params }) => ({ policy: await runtime.settings.sync(params.id) }),
+-    'POST setup/check': () => { runtime.checkSetup(); return { restarting: true } },
++    'POST policy-sync/:id': async ({ params, authorize }) => ({ policy: await runtime.settings.sync(params.id, authorize) }),
++    'POST setup/check': ({ authorize }) => { runtime.checkSetup(authorize); return { restarting: true } },
+     'GET models': () => runtime.models(),
+     'GET prompts': ({ query }) => { const { revision, offset } = PromptsQuery.parse(query); return promptsView(runtime, revision, offset) },
+     'PUT prompts': async input => {
+       const request = z.object({ config: z.unknown(), baseRevision: z.number().int().nonnegative() }).parse(await promptBody(input))
+-      return savePrompts(runtime, request.config, request.baseRevision, 'panel')
++      return savePrompts(runtime, request.config, request.baseRevision, 'panel', input.authorize)
+     },
+     'POST prompts/preview': async input => runtime.prompts.preview(await promptBody(input)),
+   }
+@@ -241,6 +242,7 @@ export function registerHttp(ctx: Context, runtime: HttpHost): () => void {
+       const url = new URL(req.url ?? '/', 'http://localhost')
+       if (!url.pathname.startsWith('/orchestrator/api/')) { res.writeHead(404); res.end(); return }
+       if (!sameOrigin(req, ctx.webServer.port)) { json(res, 403, { error: 'Same-origin management request required' }); return }
++      let recheck: (() => void) | undefined
+       try {
+         const credential = typeof req.headers.authorization === 'string' ? req.headers.authorization.match(/^Bearer ([^\s]+)$/)?.[1] : undefined
+         const mesh = ctx.get('cognitiveMesh')
+@@ -249,6 +251,7 @@ export function registerHttp(ctx: Context, runtime: HttpHost): () => void {
+           || ['x-tenant-id', 'x-actor-ref', 'x-roles', 'x-request-id'].some(key => req.headers[key] !== undefined)
+         // Authenticate before parsing IDs, bodies or route names. Body/query claims confer no authority.
+         const authorization = mesh.authorizeRequest(credential ?? '', hasClaims)
++        recheck = () => { authorization.check(hasClaims) }
+         await runtime.ready
+         const trusted = authorization.check(hasClaims)
+         if (url.pathname === '/orchestrator/api/mesh/security' && req.method === 'GET') {
+@@ -268,8 +271,16 @@ export function registerHttp(ctx: Context, runtime: HttpHost): () => void {
+         const route = match(table, req.method ?? 'GET', url.pathname.slice('/orchestrator/api/'.length).split('/'))
+         if (!route) throw new RouteError(404, 'Unknown operation')
+         const query = Object.fromEntries(url.searchParams)
+-        json(res, 200, await route.run({ params: route.params as never, query, body: async maxBytes => { const value = await readBody(req, maxBytes); authorization.check(hasClaims || bodyClaims(value)); return value } }))
+-      } catch (error) { json(res, ...failure(error)) }
++        recheck()
++        const result = await route.run({ params: route.params as never, query, authorize: recheck,
++          body: async maxBytes => { const value = await readBody(req, maxBytes); authorization.check(hasClaims || bodyClaims(value)); return value } })
++        recheck() // Also protects async reads and error responses from disclosing results to a revoked request.
++        json(res, 200, result)
++      } catch (error) {
++        let reported = error
++        try { recheck?.() } catch (denied) { reported = denied }
++        json(res, ...failure(reported))
++      }
+     } })]
+   return () => { for (const dispose of disposers) dispose() }
+ }
+diff --git a/upstream/superagent/src/app/prompts.ts b/upstream/superagent/src/app/prompts.ts
+index 51fde05..bc38502 100644
+--- a/upstream/superagent/src/app/prompts.ts
++++ b/upstream/superagent/src/app/prompts.ts
+@@ -237,11 +237,15 @@ export class Prompts {
+ }
+ /** Save a new prompt revision and notify the main Session when the change originated outside its own tool call. */
+ export async function savePrompts(host: { store: Pick<Store, 'atomic'>; prompts: Pick<Prompts, 'save'>; sessions: Pick<Sessions, 'notify' | 'delivery'> },
+-  config: unknown, baseRevision: number, origin: SettingsOrigin) {
++  config: unknown, baseRevision: number, origin: SettingsOrigin, authorize?: () => void) {
++  authorize?.()
+   const version = host.store.atomic(() => {
++    authorize?.()
+     const saved = host.prompts.save(config, baseRevision, origin)
+     if (origin !== 'tool') host.sessions.notify(...promptsNotice(saved.revision))
+     return saved
+   })
+-  return { revision: version.revision, effect: 'next-request' as const, context_delivery: await host.sessions.delivery('prompts') }
++  const context_delivery = await host.sessions.delivery('prompts')
++  authorize?.()
++  return { revision: version.revision, effect: 'next-request' as const, context_delivery }
+ }
+diff --git a/upstream/superagent/src/app/runtime.ts b/upstream/superagent/src/app/runtime.ts
+index bcd5cda..eb7e3b7 100644
+--- a/upstream/superagent/src/app/runtime.ts
++++ b/upstream/superagent/src/app/runtime.ts
+@@ -210,7 +210,7 @@ export class Runtime extends Service implements SourceHost {
+   get health(): Readonly<Record<string, Health>> { return this.board.all }
+   /** Aborted when dsh-superagent stops or loses its state directory lock, cancelling running reads and subprocesses. */
+   get lifetime(): AbortSignal { return this.stopped.signal }
+-  context(kind: { kind: string; health: readonly string[] }): SourceContext { return sourceContextOf(this.sourceDeps, kind) }
++  context(kind: { kind: string; health: readonly string[] }, authorize?: () => void): SourceContext { return sourceContextOf(this.sourceDeps, kind, authorize) }
+   /** Resolved deployment; throws while waiting for setup (`!configured()`). */
+   get deployment(): Deployment { return this.setup.deployment }
+   configured(): boolean { return this.setup.configured() }
+@@ -227,7 +227,7 @@ export class Runtime extends Service implements SourceHost {
+     const { setup: { deployment }, sources } = this
+     return ticketEnvironment({ deployment, sources, settings: this.store.settings(), ticket, ...trigger ? { trigger } : {} })
+   }
+-  checkSetup(): void { this.setup.check() }
++  checkSetup(authorize?: () => void): void { this.setup.check(authorize) }
+   receive(trigger: Trigger): ReceiveResult { this.requireMesh(); return this.passes.receive(trigger) }
+   idle(): Promise<void> { return this.passes.idle() }
+   pump(): Promise<void> { return this.passes.pump() }
+@@ -277,7 +277,7 @@ export class Runtime extends Service implements SourceHost {
+       get deployment() { return setup.deployment },
+       get setupProblem() { return setup.problem }, get feishuProblem() { return setup.feishuProblem },
+       configured: () => setup.configured(), links: () => runtime.links(), ticketEnvironment: ticket => runtime.ticketEnvironment(ticket),
+-      checkSetup: () => { setup.check() }, requestPass: () => { passes.request() }, models: () => this.ctx.sessionController.modelCatalog() }
++      checkSetup: authorize => { setup.check(authorize) }, requestPass: () => { passes.request() }, models: () => this.ctx.sessionController.modelCatalog() }
+   }
+   /** Idempotent stop; concurrent or repeated calls share the same shutdown promise. */
+   stop(): Promise<void> { return this.stopping ??= this.shutdown() }
+diff --git a/upstream/superagent/src/app/settings.ts b/upstream/superagent/src/app/settings.ts
+index f3d034d..b11e94f 100644
+--- a/upstream/superagent/src/app/settings.ts
++++ b/upstream/superagent/src/app/settings.ts
+@@ -87,6 +87,13 @@ export class Settings {
+   constructor(private readonly host: SettingsHost) {
+     host.lifetime.addEventListener('abort', () => { for (const { timer } of this.retries.values()) clearTimeout(timer) }, { once: true })
+   }
++  private check(authorize?: () => void): void { this.host.lifetime.throwIfAborted(); authorize?.() }
++  /** Bind Source callbacks and their retained contexts to this operation's original authority. */
++  private sourceHost(authorize?: () => void): SourceHost {
++    const host = this.host.sourceHost, check = () => this.check(authorize)
++    return { get sources() { check(); return host.sources },
++      context: (kind, additional) => host.context(kind, () => { check(); additional?.() }) }
++  }
+   /** Schedule exponential backoff retries (1 minute up to 1 hour) after a failed source sync, or clear pending retries on success. */
+   private retrySync(id: string, failed: boolean): void {
+     const previous = this.retries.get(id)
+@@ -145,7 +152,9 @@ export class Settings {
+    * @throws SettingsConflict when `block`'s revision changed before or during validation checks.
+    * @throws UserError | z.ZodError when `block` is unknown, the source is not installed, `value` is invalid (such as an `executor` block carrying `paused`, which only `pause` sets), a non-panel `origin` changes panel-only fields, or a role-model or account check fails.
+    */
+-  async save(block: SettingsBlock, value: unknown, revision: number, origin: SettingsOrigin) {
++  async save(block: SettingsBlock, value: unknown, revision: number, origin: SettingsOrigin, authorize?: () => void) {
++    const check = () => this.check(authorize)
++    check()
+     const { store, sources, engine, sessions } = this.host
+     const stale = () => revision !== store.blockRevision(block)
+     if (stale()) throw new SettingsConflict('Settings changed. Reload before saving.')
+@@ -161,16 +170,21 @@ export class Settings {
+     const previous = block === 'eval' ? current.eval.model : block === 'executor' ? current.executor.model : null
+     if (model && JSON.stringify(model) !== JSON.stringify(previous)) {
+       try { await resolveRoleModel(this.host.context, model) }
+-      catch (error) { throw new UserError('modelUnavailable', { block, error: error instanceof Error ? error.message : String(error) }) }
++      catch (error) { check(); throw new UserError('modelUnavailable', { block, error: error instanceof Error ? error.message : String(error) }) }
++      check()
+     }
+     rules.guard?.(current, candidate, origin)
+-    if (setupChanged(current, candidate)) await this.host.setup.checkAccounts(block, candidate)
++    if (setupChanged(current, candidate)) {
++      try { await this.host.setup.checkAccounts(block, candidate, check) } catch (error) { check(); throw error }
++      check()
++    }
+     if (stale()) throw new SettingsConflict('Settings changed during the checks. Reload before saving.')
+     // Re-read current settings after async checks in case unrelated blocks were saved concurrently.
+     const old = store.settings()
+     const settings = rules.merge(old, parsed, id)
+     if (JSON.stringify(SettingsSchema.parse(settings)) === JSON.stringify(old)) {
+       const delivery = await sessions.delivery(`settings:${block}`)
++      check()
+       return { saved: true, revision: store.blockRevision(block), policy_changed: false, restarting: false, context_delivery: delivery }
+     }
+     const restarting = setupChanged(old, settings) || !this.host.setup.configured()
+@@ -179,7 +193,9 @@ export class Settings {
+       scope: (input: { source: string; meta: Record<string, unknown> }) => this.host.sources.scope(input, version) })
+     const effects = before === after ? new Map() : policyEffects(store.tickets.open(), old, SettingsSchema.parse(settings), scope)
+     const notified = [...effects.keys()]
++    check() // Persist a denial outside the save transaction as well as checking at its commit boundary.
+     store.atomic(() => {
++      check()
+       store.saveSettings(SettingsSchema.parse(settings), { source: origin, block, policyVersion: after, policyChanged: before !== after, notified })
+       if (origin !== 'tool') sessions.notify(...settingsNotice(block, changedPaths(old, settings)))
+       if (before !== after) engine.policyChanged(before, after, effects)
+@@ -187,10 +203,11 @@ export class Settings {
+     // Rewrite worker command shims immediately when `blockedCommands` changes.
+     const blocked = settings.executor.blockedCommands
+     const changed = blocked.join(' ') !== old.executor.blockedCommands.join(' ')
+-    if (changed) await this.host.setup.blockCommands(blocked)
++    if (changed) { check(); await this.host.setup.blockCommands(blocked, check); check() }
+     // When restarting, the notice stays pending until after the restart; `setup.restart()` defers until this call returns.
+     const delivery = restarting ? 'pending' : await sessions.delivery(`settings:${block}`)
+-    if (restarting) this.host.setup.restart()
++    check()
++    if (restarting) this.host.setup.restart(check)
+     else this.host.requestPass()
+     return { saved: true, revision: store.blockRevision(block), policy_changed: before !== after, restarting, context_delivery: delivery }
+   }
+@@ -199,16 +216,21 @@ export class Settings {
+    * Triggers); saved in its own `'pause'` block so concurrent `executor` edits remain valid across it.
+    * @returns Whether processing is now paused (`{ paused }`).
+    */
+-  async pause(paused: boolean, origin: SettingsOrigin): Promise<{ paused: boolean }> {
++  async pause(paused: boolean, origin: SettingsOrigin, authorize?: () => void): Promise<{ paused: boolean }> {
++    const check = () => this.check(authorize)
++    check()
+     const { store, sessions } = this.host
+     const old = store.settings()
+     if (old.paused === paused) return { paused }
++    check()
+     store.atomic(() => {
++      check()
+       const record = { source: origin, block: 'pause' as const, policyVersion: policyVersion(old), policyChanged: false, notified: [] }
+       store.saveSettings({ ...old, paused }, record)
+       if (origin !== 'tool') sessions.notify(...settingsNotice('pause', ['paused']))
+     })
+     await sessions.delivery('settings:pause')
++    check()
+     this.host.requestPass()
+     return { paused }
+   }
+@@ -228,25 +250,31 @@ export class Settings {
+    * @returns The synchronized policy section for `id`.
+    * @throws UserError (`nothingToSync`) when `id` cannot sync now, `SettingsConflict` if the `'policy'` block changed during synchronization, or the underlying sync error on failure.
+    */
+-  async sync(id: string) {
++  async sync(id: string, authorize?: () => void) {
++    const check = () => this.check(authorize)
++    check()
+     const { store, sources } = this.host
+     if (!this.syncable().includes(id)) throw new UserError('nothingToSync', { source: id })
+     const health = this.syncHealth(id)
+     try {
+       const revision = store.blockRevision('policy')
+-      const part = await sources.kind(id)!.policy!.sync!.run(this.host.sourceHost, sources.policyPart(id)!, this.host.lifetime)
++      const part = await sources.kind(id)!.policy!.sync!.run(this.sourceHost(authorize), sources.policyPart(id)!, this.host.lifetime)
++      check()
+       if (revision !== store.blockRevision('policy')) throw new SettingsConflict('Policy changed during synchronization. Retry with the current settings.')
+       const policy = store.settings().policy
+       // Skip saving a new revision when the synced list is unchanged.
+       if (JSON.stringify(part) !== JSON.stringify(policy.sources[id])) {
+-        await this.save('policy', { ...policy, sources: { ...policy.sources, [id]: part } }, revision, 'sync')
++        await this.save('policy', { ...policy, sources: { ...policy.sources, [id]: part } }, revision, 'sync', check)
+       }
++      check()
+       health.set({ state: 'ready', detail: `${part.allowed.length} allowed`, at: now() })
+       this.retrySync(id, false)
+       return part
+     } catch (error) {
+       health.set({ state: 'error', detail: String(error), at: now() })
+-      this.retrySync(id, true)
++      // A failed management request must never be retried later under the Runtime's system authority.
++      if (!authorize) this.retrySync(id, true)
++      check()
+       throw error
+     }
+   }
+@@ -255,13 +283,15 @@ export class Settings {
+    * @returns Sorted display names (`{ added }`) that were not present in the stored label map before this read.
+    * @throws UserError (`noLabels`) when the Source has no label refresh; rethrows a failed read, keeping the stored list.
+    */
+-  async refreshLabels(id: string): Promise<{ added: string[] }> {
++  async refreshLabels(id: string, authorize?: () => void): Promise<{ added: string[] }> {
++    this.check(authorize)
+     const { store, sources } = this.host
+     const instance = sources.instance(id)
+     const kind = instance && sources.kind(instance.kind)
+     if (!kind?.refreshLabels) throw new UserError('noLabels')
+     const before = store.get(KV.sources.labels(id)) ?? {}
+-    const after = await kind.refreshLabels(this.host.sourceHost)
++    const after = await kind.refreshLabels(this.sourceHost(authorize), this.host.lifetime)
++    this.check(authorize)
+     return { added: Object.entries(after).filter(([key]) => !(key in before)).map(([, name]) => name).sort((a, b) => a.localeCompare(b)) }
+   }
+ }
+diff --git a/upstream/superagent/src/app/setup.ts b/upstream/superagent/src/app/setup.ts
+index a1d353f..2a3012c 100644
+--- a/upstream/superagent/src/app/setup.ts
++++ b/upstream/superagent/src/app/setup.ts
+@@ -51,27 +51,38 @@ export class Setup {
+     }
+   }
+   /** Trigger a restart to re-run setup, refusing if setup and Feishu are already healthy so running assignments are not interrupted. */
+-  check(): void {
++  check(authorize?: () => void): void {
++    this.host.lifetime.throwIfAborted(); authorize?.()
+     if (this.configured() && !this.feishuProblem) throw new UserError('setupComplete')
+-    this.restart()
++    this.restart(authorize)
+   }
+   /** Defer the restart to the next macrotask so the current HTTP or tool caller receives its response first. */
+-  restart(): void { setTimeout(this.host.restart, 0) }
++  restart(authorize?: () => void): void {
++    this.host.lifetime.throwIfAborted(); authorize?.()
++    setTimeout(() => {
++      try { this.host.lifetime.throwIfAborted(); authorize?.() }
++      catch { return } // Revoked/dead requests cannot restart the Runtime after returning a response.
++      this.host.restart()
++    }, 0)
++  }
+   /** Verify account CLIs for a modified source block before saving, ignoring setup errors belonging to other blocks. */
+-  async checkAccounts(block: SettingsBlock, settings: Settings): Promise<void> {
++  async checkAccounts(block: SettingsBlock, settings: Settings, authorize?: () => void): Promise<void> {
+     const { machine } = this.host
+-    const check = block === 'source:feishu' ? resolveFeishuBot(machine, settings.sources.feishu?.config, this.probe())
+-      : resolveDeployment(machine, settings.sources.github?.config, this.probe())
++    const check = block === 'source:feishu' ? resolveFeishuBot(machine, settings.sources.feishu?.config, this.probe(authorize))
++      : resolveDeployment(machine, settings.sources.github?.config, this.probe(authorize))
+     await check.catch((error: unknown) => { if (!(error instanceof SetupError) || error.place === block.slice(7)) throw error })
+   }
+-  async blockCommands(blocked: readonly string[]): Promise<void> {
+-    if (this.resolved) await writeEnvironment(this.resolved, blocked)
++  async blockCommands(blocked: readonly string[], authorize?: () => void): Promise<void> {
++    const check = () => { this.host.lifetime.throwIfAborted(); authorize?.() }
++    check()
++    if (this.resolved) await writeEnvironment(this.resolved, blocked, check)
+   }
+   restore(): void { this.restoreEnvironment?.(); this.restoreEnvironment = undefined }
+   /** Probes CLIs the way worker shells run them, using `stateDir` as `cwd` since it exists even before the repository clone is valid. */
+-  private probe() {
++  private probe(authorize?: () => void) {
+     const { context, machine, lifetime } = this.host
+-    return workerProbe(context.subprocess, machine.stateDir, machine.stateDir, lifetime)
++    const probe = workerProbe(context.subprocess, machine.stateDir, machine.stateDir, lifetime)
++    return (argv: string[]) => { lifetime.throwIfAborted(); authorize?.(); return probe(argv) }
+   }
+   private async resolve(settings: Settings): Promise<Deployment> {
+     const { context, machine, lifetime } = this.host
+@@ -88,7 +99,7 @@ export class Setup {
+       if (error instanceof SetupError) throw error
+       throw new SetupError('environmentFailed', { output: error instanceof Error ? error.message : String(error) })
+     }
+-    await writeEnvironment(resolved, settings.executor.blockedCommands).catch(machineProblem)
++    await writeEnvironment(resolved, settings.executor.blockedCommands, () => lifetime.throwIfAborted()).catch(machineProblem)
+     this.restoreEnvironment = applyEnvironment(this.variables, machine.stateDir, this.path)
+     await verifyEnvironment(resolved, context.subprocess, lifetime).catch((error: unknown) => {
+       this.restore()
+diff --git a/upstream/superagent/src/app/source-context.ts b/upstream/superagent/src/app/source-context.ts
+index 6f06016..e55e293 100644
+--- a/upstream/superagent/src/app/source-context.ts
++++ b/upstream/superagent/src/app/source-context.ts
+@@ -30,41 +30,46 @@ export interface SourceContextDeps {
+  * Builds the context for one Source kind. Health reports are restricted to entries declared by the kind and
+  * bound to the active registration, becoming no-ops once unregistered.
+  */
+-export function sourceContextOf(deps: SourceContextDeps, kind: { kind: string; health: readonly string[] }): SourceContext {
++export function sourceContextOf(deps: SourceContextDeps, kind: { kind: string; health: readonly string[] }, authorize?: () => void): SourceContext {
+   const { store } = deps
+   const health = deps.sources.healthEntries(kind.health)
+   return {
+-    get deployment() { return deps.deployment },
+-    commands: deps.commands,
++    get deployment() { authorize?.(); return deps.deployment },
++    commands: authorize ? deps.commands.withAuthorization(authorize) : deps.commands,
+     ready: deps.ready,
+-    configured: () => deps.configured(),
+-    get problem() { return [deps.feishuProblem, deps.setupProblem].find(problem => problem?.place === kind.kind) },
++    configured: () => { authorize?.(); return deps.configured() },
++    get problem() { authorize?.(); return [deps.feishuProblem, deps.setupProblem].find(problem => problem?.place === kind.kind) },
+     config: <C extends Record<string, unknown>>(id: string) => {
++      authorize?.()
+       const instance = deps.sources.instance<C>(id)
+       return instance?.enabled ? instance.config : undefined
+     },
+-    receive: trigger => deps.receive(trigger),
+-    atomic: work => store.atomic(work),
++    receive: trigger => { authorize?.(); return deps.receive(trigger) },
++    atomic: work => {
++      authorize?.() // Reject and persist the audit before entering a transaction which would roll it back.
++      return store.atomic(() => { authorize?.(); return work() })
++    },
+     state: {
+-      get: name => store.get(name),
+-      set: (name, value) => { if (value === undefined) store.delete(name); else store.set(name, value) },
+-      keys: prefix => store.keys(prefix),
++      get: name => { authorize?.(); return store.get(name) },
++      set: (name, value) => { authorize?.(); if (value === undefined) store.delete(name); else store.set(name, value) },
++      keys: prefix => { authorize?.(); return store.keys(prefix) },
+     },
+     threads: {
+-      get: key => store.threads.get(key),
+-      subscribed: source => store.read.subscribedThreads(source),
+-      describe: (key, description) => store.threads.describe(key, description),
+-      patch: (key, meta) => { store.threads.patchMeta(key, meta) },
++      get: key => { authorize?.(); return store.threads.get(key) },
++      subscribed: source => { authorize?.(); return store.read.subscribedThreads(source) },
++      describe: (key, description) => { authorize?.(); return store.threads.describe(key, description) },
++      patch: (key, meta) => { authorize?.(); store.threads.patchMeta(key, meta) },
+     },
+     tickets: {
+-      get: id => store.tickets.get(id),
+-      open: () => store.tickets.open(),
+-      bindThread: (id, thread, own) => { deps.engine.bindThread(id, thread, own) },
+-      threadClosed: (thread, outcome, at) => { deps.engine.threadClosed(thread, outcome, at) },
++      get: id => { authorize?.(); return store.tickets.get(id) },
++      open: () => { authorize?.(); return store.tickets.open() },
++      bindThread: (id, thread, own) => { authorize?.(); deps.engine.bindThread(id, thread, own) },
++      threadClosed: (thread, outcome, at) => { authorize?.(); deps.engine.threadClosed(thread, outcome, at) },
+     },
+-    triggers: { get: id => store.triggers.get(id), latest: thread => store.read.threadTriggers(thread, 1)[0] },
+-    notify: message => { deps.outbox.send(message) },
++    triggers: { get: id => { authorize?.(); return store.triggers.get(id) }, latest: thread => { authorize?.(); return store.read.threadTriggers(thread, 1)[0] } },
++    notify: message => { authorize?.(); deps.outbox.send(message) },
+     report: (entry, value) => {
++      authorize?.()
+       if (!kind.health.includes(entry)) throw new Error(`The ${kind.kind} Source has no health entry ${entry}`)
+       health.get(entry)?.set(value)
+     },
+diff --git a/upstream/superagent/src/infra/commands.ts b/upstream/superagent/src/infra/commands.ts
+index 120f5a4..fe4394e 100644
+--- a/upstream/superagent/src/infra/commands.ts
++++ b/upstream/superagent/src/infra/commands.ts
+@@ -61,11 +61,19 @@ export class Commands {
+    * @param resolved - returns the resolved deployment setup, or throws while setup is still pending.
+    * @param environment - variables overriding `process.env` for every command (such as isolated git settings).
+    */
+-  constructor(private readonly resolved: () => Deployment, private readonly environment: Record<string, string | undefined>, private readonly signal: AbortSignal) {}
++  constructor(private readonly resolved: () => Deployment, private readonly environment: Record<string, string | undefined>, private readonly signal: AbortSignal,
++    private readonly authorize?: () => void) {}
+   get deployment(): Deployment { return this.resolved() }
+   get repository(): string { return this.deployment.repository }
+-  withSignal(signal?: AbortSignal): Commands { return signal ? new Commands(this.resolved, this.environment, AbortSignal.any([this.signal, signal])) : this }
++  withSignal(signal?: AbortSignal): Commands { return signal ? new Commands(this.resolved, this.environment, AbortSignal.any([this.signal, signal]), this.authorize) : this }
++  /** Carries the original trusted request check through every subsequent CLI dispatch; existing checks cannot be removed. */
++  withAuthorization(authorize: () => void): Commands {
++    return new Commands(this.resolved, this.environment, this.signal, () => { this.authorize?.(); authorize() })
++  }
+   async run(program: string, args: string[], cwd?: string): Promise<string> {
++    // Outside error translation: an authorization refusal must remain an authorization refusal.
++    this.signal.throwIfAborted()
++    this.authorize?.()
+     try {
+       const { stdout } = await exec(program, args, { cwd, signal: this.signal, timeout: TIMEOUT_MS, maxBuffer: 16 * 1024 * 1024,
+         env: { ...process.env, ...this.environment, GH_PROMPT_DISABLED: '1', LARKSUITE_CLI_NO_UPDATE_NOTIFIER: '1', LARKSUITE_CLI_NO_SKILLS_NOTIFIER: '1' } })
+diff --git a/upstream/superagent/src/infra/environment.ts b/upstream/superagent/src/infra/environment.ts
+index b6d92c3..fefc6ac 100644
+--- a/upstream/superagent/src/infra/environment.ts
++++ b/upstream/superagent/src/infra/environment.ts
+@@ -5,6 +5,7 @@
+  */
+ import { lstat, mkdir, readdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
+ import { realpathSync } from 'node:fs'
++import { randomUUID } from 'node:crypto'
+ import { delimiter, join, resolve } from 'node:path'
+ import type { SubprocessOutputReader, SubprocessRuntime } from '@deepseek-ai/dsh-subprocess'
+ import type { Deployment } from '../deployment.ts'
+@@ -63,31 +64,37 @@ async function written(file: string): Promise<boolean> {
+   const head = (await readFile(file, 'utf8')).split('\n', 2)
+   return [MARKER, ...LEGACY_MARKERS].some(marker => head.includes(marker))
+ }
+-async function own(file: string, text: string, mode = 0o644): Promise<void> {
++async function own(file: string, text: string, mode: number, authorize: () => void): Promise<void> {
++  authorize()
+   let foreign = false
+-  try { foreign = !await written(file) } catch { /* The file does not exist yet. */ }
++  try { foreign = !await written(file) } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error }
++  authorize()
+   if (foreign) throw new SetupError('foreignFile', { file })
+-  const temporary = `${file}.${process.pid}.tmp`
+-  await writeFile(temporary, text, { mode })
+-  await rename(temporary, file)
++  const temporary = `${file}.${randomUUID()}.tmp`
++  try {
++    authorize(); await writeFile(temporary, text, { mode })
++    authorize(); await rename(temporary, file)
++  } finally { await unlink(temporary).catch(error => { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error }) }
+ }
+ 
+ /**
+  * Atomically writes worker CLI shims and the isolated git configuration file into the state directory, refusing to overwrite foreign files.
+  * Each shim strips the shim directory from PATH before exec so wrapper scripts resolving `gh` or `lark-cli` by name reach the real binary.
+  */
+-export async function writeEnvironment(deployment: Pick<Deployment, 'stateDir' | 'repository' | 'github' | 'feishu'>, blockedCommands: readonly string[]): Promise<void> {
++export async function writeEnvironment(deployment: Pick<Deployment, 'stateDir' | 'repository' | 'github' | 'feishu'>, blockedCommands: readonly string[], authorize = () => {}): Promise<void> {
+   const { stateDir, repository, github, feishu } = deployment
+   const dir = workerBin(stateDir)
+-  await mkdir(dir, { recursive: true })
++  authorize(); await mkdir(dir, { recursive: true })
+   const before = await readdir(dir)
+-  for (const name of before) { const file = join(dir, name); if (!await written(file)) throw new SetupError('foreignFile', { file }) }
++  for (const name of before) { authorize(); const file = join(dir, name); if (!await written(file)) throw new SetupError('foreignFile', { file }) }
+   // Workers may be running concurrently: write each shim to a temp file and atomically rename it so no command ever resolves past the shim directory.
+   const kept = new Set<string>()
+   const shim = async (name: string, body: string): Promise<void> => {
+-    const temporary = join(dir, `.${name}.${process.pid}.tmp`)
+-    await writeFile(temporary, `#!/bin/sh\n${MARKER}\n${body}\n`, { mode: 0o755 })
+-    await rename(temporary, join(dir, name))
++    const temporary = join(dir, `.${name}.${randomUUID()}.tmp`)
++    try {
++      authorize(); await writeFile(temporary, `#!/bin/sh\n${MARKER}\n${body}\n`, { mode: 0o755 })
++      authorize(); await rename(temporary, join(dir, name))
++    } finally { await unlink(temporary).catch(error => { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error }) }
+     kept.add(name)
+   }
+   const withoutShims = [
+@@ -102,7 +109,7 @@ export async function writeEnvironment(deployment: Pick<Deployment, 'stateDir' |
+   for (const name of new Set(blockedCommands.filter(name => !WORKER_COMMANDS.includes(name)))) {
+     await shim(name, fail(`${name} is blocked in this installation; use gh, which acts as ${github.login}.`))
+   }
+-  for (const name of before) if (!kept.has(name)) await unlink(join(dir, name))
++  for (const name of before) if (!kept.has(name)) { authorize(); await unlink(join(dir, name)) }
+   await own(workerGitConfig(stateDir), [
+     MARKER,
+     // Make git refuse to commit without an explicit identity set by the worker instead of guessing from the operator's OS user.
+@@ -112,7 +119,7 @@ export async function writeEnvironment(deployment: Pick<Deployment, 'stateDir' |
+     '[url "https://github.com/"]', '\tinsteadOf = git@github.com:', '\tinsteadOf = ssh://git@github.com/',
+     // Include Git LFS filters because the operator's global gitconfig (which usually holds them) is ignored.
+     '[filter "lfs"]', '\tclean = git-lfs clean -- %f', '\tsmudge = git-lfs smudge -- %f', '\tprocess = git-lfs filter-process', '\trequired = true',
+-  ].join('\n') + '\n')
++  ].join('\n') + '\n', 0o644, authorize)
+ }
+ 
+ /** Applies environment overrides and prepends worker shims to `process.env.PATH`, returning a restore callback. */
+diff --git a/upstream/superagent/src/sources/host.ts b/upstream/superagent/src/sources/host.ts
+index 20f2088..70f2d8a 100644
+--- a/upstream/superagent/src/sources/host.ts
++++ b/upstream/superagent/src/sources/host.ts
+@@ -23,7 +23,7 @@ export function health(state: Health['state'], code: HealthCode, values: Record<
+ export interface SourceHost {
+   readonly sources: SourceRegistry
+   /** Returns the context for one Source kind; its `report` writes only the health entries declared by the kind. */
+-  context(kind: { kind: string; health: readonly string[] }): SourceContext
++  context(kind: { kind: string; health: readonly string[] }, authorize?: () => void): SourceContext
+ }
+ /** Display label, URL, and facts (`null` removes a fact) that a Source publishes on a Thread. */
+ export interface ThreadDescription { label?: string; url?: string; facts?: Record<string, ThreadFact | null> }
+diff --git a/upstream/superagent/tests/environment.spec.ts b/upstream/superagent/tests/environment.spec.ts
+index db2bf3e..524ed9c 100644
+--- a/upstream/superagent/tests/environment.spec.ts
++++ b/upstream/superagent/tests/environment.spec.ts
+@@ -8,12 +8,27 @@ import { SENSITIVE_ENV_PATTERN, type SubprocessRuntime } from '@deepseek-ai/dsh-
+ import { GIT_LOCATION, agentVariables, credentialHelper, runAsWorker, verifyDirectory, withoutDirectory, workerBin, workerGitConfig, writeEnvironment }
+   from '../src/infra/environment.ts'
+ import { CliError } from '../src/infra/commands.ts'
++import { MeshAccessDenied } from '../src/extensions/mesh/auth.ts'
+ import { testDeployment } from './fixtures/deployment.ts'
+ import { gitEnv } from './fixtures/git.ts'
+ 
+ // Git and shell subprocesses can exceed the 5s default timeout when the test suite runs in parallel.
+ vi.setConfig({ testTimeout: 30_000 })
+ const exec = promisify(execFile)
++it('refuses to publish a shim when authority is revoked after its temporary file was written', async () => {
++  const deployment = testDeployment({ stateDir: dir })
++  await writeEnvironment(deployment, [])
++  const before = readFileSync(join(workerBin(dir), 'gh'), 'utf8')
++  let revoked = false
++  const authorize = () => {
++    if (readdirSync(workerBin(dir)).some(name => name.startsWith('.gh.') && name.endsWith('.tmp'))) revoked = true
++    if (revoked) throw new MeshAccessDenied()
++  }
++  await expect(writeEnvironment({ ...deployment, github: { ...deployment.github, cli: '/fixture/changed-gh' } }, [], authorize)).rejects.toThrow(MeshAccessDenied)
++  expect(revoked).toBe(true)
++  expect(readFileSync(join(workerBin(dir), 'gh'), 'utf8')).toBe(before)
++  expect(readdirSync(workerBin(dir)).some(name => name.endsWith('.tmp'))).toBe(false)
++})
+ let dir: string
+ const program = (path: string, body: string): string => { writeFileSync(path, `#!/bin/sh\n${body}\n`); chmodSync(path, 0o755); return path }
+ /** Worker shell environment after DSH strips credential-shaped variables. */

@@ -1,0 +1,236 @@
+name: M0 offline review and build
+
+on:
+  # Pull requests that only change Markdown are checked by docs-review.yml.
+  # Any non-Markdown change (including code, tests, CI, dependencies or config)
+  # still triggers the complete original M0 matrix.
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore:
+      - '**/*.md'
+  # Preserve the manual full-validation route for document PRs and M0 release gates.
+  workflow_dispatch:
+
+
+env:
+  DSH_TELEMETRY_DISABLED: '1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m0-offline-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24.22.1
+      - name: Preflight regression
+        run: python scripts/ci_record.py --id preflight-tests --cwd . --output artifacts -- node --test scripts/m0-preflight.test.mjs
+      - name: Evidence recorder regression
+        run: python scripts/ci_record.py --id recorder-tests --cwd . --output artifacts -- python -m unittest discover -s scripts -p 'test_*.py' -v
+      - name: Checklist claims and prerequisites
+        run: python scripts/ci_record.py --id checklist-audit --cwd . --output artifacts -- python scripts/checklist_audit.py
+      - name: Audit complete review evidence
+        if: always()
+        run: python scripts/evidence_audit.py artifacts --require preflight-tests --require recorder-tests --require checklist-audit --output artifacts/evidence-audit.json
+      - name: Upload offline evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: m0-review-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artifacts/**/command.log
+            artifacts/**/result.json
+            artifacts/evidence-audit.json
+          if-no-files-found: error
+
+  superagent:
+    needs: review
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24.22.1
+      - name: Frozen install
+        run: python scripts/ci_record.py --id superagent-install --cwd upstream/superagent --output artifacts -- npm exec --yes --package=pnpm@11.7.0 -- pnpm install --frozen-lockfile
+      - name: Full typecheck, tests and build
+        run: python scripts/ci_record.py --id superagent-check --cwd upstream/superagent --output artifacts -- npm exec --yes --package=pnpm@11.7.0 -- pnpm check
+      - name: Install isolated locked profile probe runtime
+        run: |
+          mkdir "$RUNNER_TEMP/m0-profile-runtime"
+          cp scripts/fixtures/m0-profile-runtime/package.json scripts/fixtures/m0-profile-runtime/package-lock.json "$RUNNER_TEMP/m0-profile-runtime/"
+          python scripts/ci_record.py --id profile-runtime-install --cwd "$RUNNER_TEMP/m0-profile-runtime" --output artifacts -- npm ci --ignore-scripts --no-audit --no-fund
+      - name: Real unconfigured profile lifecycle
+        run: python scripts/ci_record.py --id superagent-profile-probe --cwd . --output artifacts --timeout 100 -- node scripts/m0-profile-probe.mjs "$RUNNER_TEMP/m0-profile-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js" upstream/superagent artifacts/profile-details --boot-unconfigured
+      - name: Real native dependency unload and restore
+        run: python scripts/ci_record.py --id superagent-dependency-profile --cwd . --output artifacts --timeout 100 -- node scripts/m0-profile-probe.mjs "$RUNNER_TEMP/m0-profile-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js" upstream/superagent artifacts/dependency-profile-details --boot-service-dependency-cycle
+      - name: Configured fixture account and real native restricted Session
+        run: python scripts/ci_record.py --id superagent-configured-profile --cwd . --output artifacts --timeout 100 -- node scripts/m0-profile-probe.mjs "$RUNNER_TEMP/m0-profile-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js" upstream/superagent artifacts/configured-profile-details --boot-configured-fixture
+      - name: Verify dependency files stayed frozen
+        if: always()
+        run: git diff --exit-code -- upstream/superagent/package.json upstream/superagent/pnpm-lock.yaml scripts/fixtures/m0-profile-runtime/package.json scripts/fixtures/m0-profile-runtime/package-lock.json
+      - name: Audit complete SuperAgent evidence
+        if: always()
+        run: python scripts/evidence_audit.py artifacts --require superagent-install --require superagent-check --require profile-runtime-install --require superagent-profile-probe --require superagent-dependency-profile --require superagent-configured-profile --output artifacts/evidence-audit.json
+      - name: Upload offline evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: m0-superagent-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artifacts/**/command.log
+            artifacts/**/result.json
+            artifacts/evidence-audit.json
+            artifacts/profile-details/**
+            artifacts/dependency-profile-details/**
+            artifacts/configured-profile-details/**
+          if-no-files-found: error
+
+  isolation-fixture:
+    needs: review
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24.22.1
+      - name: Install kernel probe runner on disposable CI host
+        run: sudo apt-get update && sudo apt-get install -y bubblewrap
+      - name: Harmless OS mount, environment and network boundary fixture
+        # The disposable host grants namespace setup to this probe only. Business Workers stay disabled.
+        run: python scripts/ci_record.py --id os-boundary-fixture --cwd . --output artifacts --timeout 30 -- sudo -n "$(command -v node)" scripts/m0-isolation-probe.mjs artifacts/os-boundary-details
+      - name: Audit isolation fixture evidence
+        if: always()
+        run: python scripts/evidence_audit.py artifacts --require os-boundary-fixture --output artifacts/evidence-audit.json
+      - name: Preserve isolation attempt including failures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: m0-isolation-fixture-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/**
+          if-no-files-found: error
+
+  harness:
+    needs: review
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      # Matches the pinned upstream CI: inline Vitest projects read this variable.
+      DSH_COVERAGE_TEST_TIMEOUT_MS: '90000'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Exact upstream commit remains fixed; only the expired test fixture is patched.
+          - label: baseline-fixture-patched
+            sha: e8f7b93a344964de3dca1ace9e72b6e4d6de87cb
+          - label: matching-release-candidate
+            sha: d743267388641bc76f17c45ce8b4c231aed1d32c
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Fetch isolated Harness candidate
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: deepseek-ai/deepseek-harness
+          ref: ${{ matrix.sha }}
+          path: harness-under-test
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24.22.1
+      - name: Verify selected source and package manager
+        env:
+          EXPECTED_SHA: ${{ matrix.sha }}
+        run: |
+          test "$(git -C harness-under-test rev-parse HEAD)" = "$EXPECTED_SHA"
+          node -e "const p=require('./harness-under-test/package.json'); if(p.packageManager!=='pnpm@11.28.5') process.exit(1)"
+      - name: Apply date-only fixture patch and record original upstream SHA (baseline only)
+        if: matrix.label == 'baseline-fixture-patched'
+        run: |
+          python scripts/ci_record.py --id harness-fixture-patch --cwd harness-under-test --output artifacts --timeout 60 -- bash -euc '
+            test "$(git rev-parse HEAD)" = "e8f7b93a344964de3dca1ace9e72b6e4d6de87cb"
+            patch="$PWD/../patches/harness-baseline-liveshare-horizon-relative-dates.patch"
+            sha256sum "$patch"
+            git apply --check "$patch"
+            git apply "$patch"
+            test "$(git diff --name-only)" = "packages/experimental/liveshare/tests/owner-credential-horizon.host.spec.ts"
+            git diff --exit-code -- package.json pnpm-lock.yaml
+            git diff --check
+          '
+      - name: Frozen install
+        run: python scripts/ci_record.py --id harness-install --cwd harness-under-test --output artifacts --timeout 1200 -- npm exec --yes --package=pnpm@11.28.5 -- pnpm install --frozen-lockfile
+      - name: Prepare and probe upstream Linux sandbox
+        run: python scripts/ci_record.py --id harness-sandbox-setup --cwd harness-under-test --output artifacts --timeout 180 -- bash scripts/prepare-ci-bubblewrap.sh
+      - name: Complete original build
+        run: python scripts/ci_record.py --id harness-build --cwd harness-under-test --output artifacts --timeout 1200 -- npm exec --yes --package=pnpm@11.28.5 -- pnpm build
+      - name: Reproduce observed workflow cleanup regression
+        run: python scripts/ci_record.py --id harness-workflow-regression --cwd harness-under-test --output artifacts --timeout 180 -- npm exec --yes --package=pnpm@11.28.5 -- pnpm exec vitest run packages/workflow/workflow-ptc/tests/workflow-ptc.spec.ts
+      - name: Preserve completed prerequisites before full tests
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: m0-harness-prerequisites-${{ matrix.label }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artifacts/**/command.log
+            artifacts/**/result.json
+          if-no-files-found: error
+      - name: Full pnpm test on fixture-patched locked baseline (NOT unmodified baseline)
+        if: matrix.label == 'baseline-fixture-patched'
+        run: python scripts/ci_record.py --id harness-test-patched --cwd harness-under-test --output artifacts --timeout 2400 -- npm exec --yes --package=pnpm@11.28.5 -- pnpm test
+      - name: Original full pnpm test on untouched matching candidate
+        if: matrix.label == 'matching-release-candidate'
+        run: python scripts/ci_record.py --id harness-test --cwd harness-under-test --output artifacts --timeout 2400 -- npm exec --yes --package=pnpm@11.28.5 -- pnpm test
+      - name: Verify exact source, expected patch scope, and immutable dependencies
+        if: always()
+        env:
+          EXPECTED_SHA: ${{ matrix.sha }}
+          ROLE: ${{ matrix.label }}
+        shell: bash
+        run: |
+          test "$(git -C harness-under-test rev-parse HEAD)" = "$EXPECTED_SHA"
+          git -C harness-under-test diff --exit-code -- package.json pnpm-lock.yaml
+          if [ "$ROLE" = "baseline-fixture-patched" ]; then
+            test "$(git -C harness-under-test diff --name-only)" = "packages/experimental/liveshare/tests/owner-credential-horizon.host.spec.ts"
+          else
+            git -C harness-under-test diff --exit-code
+          fi
+      - name: Audit full logs and immutable Harness revision (patch recorded separately)
+        if: always()
+        env:
+          EXPECTED_SHA: ${{ matrix.sha }}
+          ROLE: ${{ matrix.label }}
+        shell: bash
+        run: |
+          if [ "$ROLE" = "baseline-fixture-patched" ]; then
+            python scripts/evidence_audit.py artifacts --source "$EXPECTED_SHA" --require harness-fixture-patch --require harness-install --require harness-sandbox-setup --require harness-build --require harness-workflow-regression --require harness-test-patched --output artifacts/evidence-audit.json
+          else
+            python scripts/evidence_audit.py artifacts --source "$EXPECTED_SHA" --require harness-install --require harness-sandbox-setup --require harness-build --require harness-workflow-regression --require harness-test --output artifacts/evidence-audit.json
+          fi
+      - name: Upload offline evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: m0-harness-${{ matrix.label }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artifacts/**/command.log
+            artifacts/**/result.json
+            artifacts/evidence-audit.json
+          if-no-files-found: error

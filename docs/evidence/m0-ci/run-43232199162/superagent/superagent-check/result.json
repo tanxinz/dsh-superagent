@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "check_id": "superagent-check",
+  "mode": "OFFLINE_BUILD_OR_TEST",
+  "started_at": "2026-11-12T13:57:30.265647+00:00",
+  "finished_at": "2026-11-12T13:58:14.834599+00:00",
+  "duration_seconds": 44.569,
+  "command": [
+    "npm",
+    "exec",
+    "--yes",
+    "--package=pnpm@11.7.0",
+    "--",
+    "pnpm",
+    "check"
+  ],
+  "source_commit": "06fc982632238789f25b572a2cf8c876269c507b",
+  "exit_code": 0,
+  "timed_out": false,
+  "launch_error": null,
+  "status": "PASS",
+  "log": "command.log",
+  "log_sha256": "8ce59902e3f97f3fd7be119778c23d283708d3251d2906437ac61e1ef86c5da8",
+  "lockfile_sha256": "ba6b997c448984a04b28eeb5b620c14c7cfeff5eb170e1abd6e0734007405c39",
+  "online_sdk": "NOT_RUN",
+  "real_session": "NOT_RUN",
+  "m0_exit": "BLOCKED"
+}

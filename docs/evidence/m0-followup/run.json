@@ -1,0 +1,54 @@
+{
+  "date": "2026-11-12T15:16:52.488745+08:00",
+  "base_commit": "bc841de6c78d6ebcb8e0d812eb13473e09d80a68",
+  "harness_commit": "e8f7b93a344964de3dca1ace9e72b6e4d6de87cb",
+  "source_scope": "Connector-fetched partial source snapshot; not a full Git checkout or complete native package tree. No dependency installation.",
+  "verified_source_git_blobs": {
+    "upstream/harness/package.json": "afa89fcf0733a1122f2ab7c164e29d19dcc31471",
+    "upstream/harness/native/system/scripts/build.ts": "ca995d9c035007e2af982683dd11cc7dc8c98eb0",
+    "upstream/harness/native/system/packages/linux-x64/prebuilds.json": "9408c7d4304d3204ada2bc5e581cb3e3eb4f37b9",
+    "upstream/harness/native/system/packages/entry/src/flock.c": "cd5d1f2c1db051e9649be8eae53495588c78e4ff",
+    "upstream/harness/vendor/cordis/package.json": "1699637857f8fce16fc107544e0745c162ea8e57",
+    "upstream/harness/vendor/schemastery/package.json": "35dbac2ac00fc696de88a93bc15e2d926a62f6af",
+    "upstream/superagent/package.json": "6afd24bce2aebd6858e37d00aab4505a070bfce3"
+  },
+  "scripts_sha256": {
+    "scripts/m0-preflight.mjs": "e8281bbd284ff9f0152913f42256f2708cc3f6e9493d634bd7fc2f8701ca6182",
+    "scripts/m0-preflight.test.mjs": "ebf738f3646e61bf5f21b3c5d698ac0ecf4ec911f91e7b87336af75112e837ad"
+  },
+  "checks": [
+    {
+      "command": [
+        "node",
+        "--test",
+        "scripts/m0-preflight.test.mjs"
+      ],
+      "cwd": ".",
+      "exit_code": 0,
+      "path": "docs/evidence/m0-followup/preflight-tests.log",
+      "sha256": "0b58265cd0de6e9b6d193a2c9a30e5a72d566a08ef221cc5c32b92965187afa3"
+    },
+    {
+      "command": [
+        "node",
+        "scripts/m0-preflight.mjs"
+      ],
+      "cwd": ".",
+      "exit_code": 2,
+      "path": "docs/evidence/m0-followup/preflight.json",
+      "sha256": "a7a48ce38310e37431819a7cc75422f8aa5475ec83b5d9ef81e7087c0423254c"
+    },
+    {
+      "command": [
+        "node",
+        "native/system/scripts/build.ts",
+        "--host-addon-only"
+      ],
+      "cwd": "upstream/harness",
+      "exit_code": 1,
+      "path": "docs/evidence/m0-followup/native-direct.log",
+      "sha256": "80ea6e06cf7355eba18bf627e634fd6201dbb8abb463160ca388c43fef5b6c06"
+    }
+  ],
+  "m0_exit": "BLOCKED"
+}

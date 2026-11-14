@@ -1,0 +1,28 @@
+{
+  "schema_version": 2,
+  "check_id": "reviewed-dependency-profile",
+  "mode": "OFFLINE_BUILD_OR_TEST",
+  "started_at": "2026-11-13T04:56:33.061839+00:00",
+  "finished_at": "2026-11-13T04:56:35.120536+00:00",
+  "duration_seconds": 2.059,
+  "command": [
+    "node",
+    "scripts/m0-profile-probe.mjs",
+    "/private/tmp/m0-local-profile-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js",
+    "upstream/superagent",
+    "docs/evidence/m0-local-20261113-mac/reviewed-dependency-details",
+    "--boot-service-dependency-cycle"
+  ],
+  "source_commit": "1475ffa241f89ff806c9d5e01684ffa50bd0e246",
+  "exit_code": 0,
+  "timed_out": false,
+  "launch_error": null,
+  "interrupted_signal": null,
+  "status": "PASS",
+  "log": "command.log",
+  "log_sha256": "3d3300aaa78924cca3ab389359c248f5fb3a4126a69b6da3e892938c50487438",
+  "lockfile_sha256": null,
+  "online_sdk": "NOT_RUN",
+  "real_session": "NOT_RUN",
+  "m0_exit": "BLOCKED"
+}

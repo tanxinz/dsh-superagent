@@ -1,0 +1,81 @@
+{
+  "run_id": 43241222611,
+  "url": "https://github.com/tanxinz/dsh-superagent/actions/runs/43241222611",
+  "head_commit": "5f8aba71847651926b1432c7bd15c4294c5bb05f",
+  "tested_parent_merge": "5dd355bb02fd76fc2ef21d61bf6d6cb630511f82",
+  "status": "completed",
+  "conclusion": "success",
+  "jobs": [
+    {
+      "id": 131261820865,
+      "name": "review",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 131261969784,
+      "name": "superagent",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 131261970015,
+      "name": "harness (matching-release-candidate, d743267388641bc76f17c45ce8b4c231aed1d32c)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 131261970039,
+      "name": "harness (baseline, e8f7b93a344964de3dca1ace9e72b6e4d6de87cb)",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "artifacts": [
+    {
+      "artifact_id": 13957731392,
+      "name": "m0-harness-baseline-43241222611-1",
+      "archive_sha256": "96b936895604393ead177e2af686d2dd2455549613184de7d206a85ff6eb6b6a",
+      "expires_at": "2027-02-10T14:49:35Z",
+      "full_logs_saved": true
+    },
+    {
+      "artifact_id": 13956304472,
+      "name": "m0-harness-matching-release-candidate-43241222611-1",
+      "archive_sha256": "c24565ae4d392065951f5bdac99b38422e9069321db1e673f914e11f76e65ce5",
+      "expires_at": "2027-02-10T14:49:35Z",
+      "full_logs_saved": true
+    },
+    {
+      "artifact_id": 13955751164,
+      "name": "m0-harness-prerequisites-matching-release-candidate-43241222611-1",
+      "archive_sha256": "f8d57d872f129c36d884a5d2079a8aa64456ff72ee5aac8ec3ef1e797ef6e7d9",
+      "expires_at": "2027-02-10T14:49:35Z",
+      "full_logs_saved": false,
+      "note": "Same command evidence included in final per-label archive"
+    },
+    {
+      "artifact_id": 13955670518,
+      "name": "m0-superagent-43241222611-1",
+      "archive_sha256": "e001f8219bb252e42bc6dde342888c6797a9f7a95021e315517e119409c60473",
+      "expires_at": "2027-02-10T14:49:35Z",
+      "full_logs_saved": true
+    },
+    {
+      "artifact_id": 13955515482,
+      "name": "m0-review-43241222611-1",
+      "archive_sha256": "93787dadfd2ecef5401a329ae56bca6404d4841917f7f04cff746115547f9a99",
+      "expires_at": "2027-02-10T14:49:35Z",
+      "full_logs_saved": true
+    },
+    {
+      "artifact_id": 13954872076,
+      "name": "m0-harness-prerequisites-baseline-43241222611-1",
+      "archive_sha256": "2f51925e962a5b97ab92482f8d77c572750da52cf242125d1c8671ed7c39cc6c",
+      "expires_at": "2027-02-10T14:49:35Z",
+      "full_logs_saved": false,
+      "note": "Same command evidence included in final per-label archive"
+    }
+  ],
+  "m0_exit": "BLOCKED"
+}

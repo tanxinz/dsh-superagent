@@ -1,0 +1,9 @@
+
+ RUN  v4.1.8 <cwd>
+
+
+ Test Files  3 passed (3)
+      Tests  18 passed (18)
+   Start at  12:48:56
+   Duration  335ms (transform 455ms, setup 0ms, import 699ms, tests 95ms, environment 0ms)
+

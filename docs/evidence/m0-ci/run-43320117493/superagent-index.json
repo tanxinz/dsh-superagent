@@ -1,0 +1,21 @@
+{
+  "run_id": 43320117493,
+  "head_sha": "8cc9ec09ff83a85498dbc231258b1031b4237a19",
+  "artifact_id": 13990351052,
+  "sha256": "13109c44264cd2a568f2c890a39824b2252247868a08caa6770447e4408be024",
+  "audit": {
+    "evidence_integrity": "PASS",
+    "checks": {
+      "profile-runtime-install": "PASS",
+      "superagent-check": "PASS",
+      "superagent-install": "PASS",
+      "superagent-profile-probe": "PASS"
+    },
+    "errors": [],
+    "required_commands_pass": true,
+    "m0_exit": "BLOCKED",
+    "real_session": "NOT_RUN"
+  },
+  "harness_full_suite": "PENDING_AT_CAPTURE",
+  "publication": "Explicit file-specific public upload approved by user on 2026-11-13 (Asia/Shanghai); archived unchanged in follow-up evidence branch based on PR #9."
+}

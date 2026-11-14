@@ -1,0 +1,12 @@
+{
+  "id": 43328280921,
+  "status": "completed",
+  "conclusion": "failure",
+  "head_sha": "130a766a142ff0c009c9d563e4f3c17309eb258a",
+  "head_branch": "feat/m0-profile-dependency-lifecycle-20261113",
+  "run_attempt": 1,
+  "event": "pull_request",
+  "created_at": "2026-11-12T23:22:17Z",
+  "updated_at": "2026-11-13T00:02:12Z",
+  "html_url": "https://github.com/tanxinz/dsh-superagent/actions/runs/43328280921"
+}

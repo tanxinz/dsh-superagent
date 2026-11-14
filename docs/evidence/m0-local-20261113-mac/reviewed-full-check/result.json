@@ -1,0 +1,24 @@
+{
+  "schema_version": 2,
+  "check_id": "reviewed-full-check",
+  "mode": "OFFLINE_BUILD_OR_TEST",
+  "started_at": "2026-11-13T04:55:35.206398+00:00",
+  "finished_at": "2026-11-13T04:55:55.627136+00:00",
+  "duration_seconds": 20.421,
+  "command": [
+    "pnpm",
+    "check"
+  ],
+  "source_commit": "1475ffa241f89ff806c9d5e01684ffa50bd0e246",
+  "exit_code": 0,
+  "timed_out": false,
+  "launch_error": null,
+  "interrupted_signal": null,
+  "status": "PASS",
+  "log": "command.log",
+  "log_sha256": "e6567be658d1fe2ce351cefa1ff015613cc47b06fd4724e1ade996735d720f8f",
+  "lockfile_sha256": "ba6b997c448984a04b28eeb5b620c14c7cfeff5eb170e1abd6e0734007405c39",
+  "online_sdk": "NOT_RUN",
+  "real_session": "NOT_RUN",
+  "m0_exit": "BLOCKED"
+}

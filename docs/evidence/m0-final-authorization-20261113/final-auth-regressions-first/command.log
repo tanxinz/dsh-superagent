@@ -1,0 +1,50 @@
+
+ RUN  v4.1.8 <cwd>
+
+ ❯ tests/management-final-auth.spec.ts (9 tests | 3 failed) 606ms
+   × keeps a retained Source context and its signal/authorization clones revoked at actual subprocess dispatch 67ms
+   × does not disclose a late model-catalog success after request revocation 65ms
+   × does not disclose a late model-catalog failure after request revocation 62ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/management-final-auth.spec.ts > keeps a retained Source context and its signal/authorization clones revoked at actual subprocess dispatch
+AssertionError: promise resolved "'{"ok":true,"data":{}}'" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+"{\"ok\":true,\"data\":{}}"
+
+ ❯ tests/management-final-auth.spec.ts:97:122
+     95|   revoke()
+     96|   expect(() => context.state.set(KV.sources.labels('feishu'), {})).toT…
+     97|   await expect(commands.run(process.execPath, ['-e', 'require("node:fs…
+       |                                                                                                                          ^
+     98|   expect(existsSync(target)).toBe(false)
+     99| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  tests/management-final-auth.spec.ts > does not disclose a late model-catalog success after request revocation
+ FAIL  tests/management-final-auth.spec.ts > does not disclose a late model-catalog failure after request revocation
+Error: The property "modelCatalog" is not defined on the object.
+ ❯ tests/management-final-auth.spec.ts:102:6
+    100| it.each(['success', 'failure'])('does not disclose a late model-catalo…
+    101|   const { ctx, api } = await host(), pending = deferred<never>(), ente…
+    102|   vi.spyOn(ctx.sessionController, 'modelCatalog').mockImplementationOn…
+       |      ^
+    103|   const response = api('GET', 'models')
+    104|   await entered.promise; revoke()
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+
+ Test Files  1 failed | 5 passed (6)
+      Tests  3 failed | 51 passed (54)
+   Start at  16:32:10
+   Duration  2.61s (transform 905ms, setup 0ms, import 1.71s, tests 3.22s, environment 0ms)
+

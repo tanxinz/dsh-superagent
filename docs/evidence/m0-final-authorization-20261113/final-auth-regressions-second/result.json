@@ -1,0 +1,32 @@
+{
+  "schema_version": 2,
+  "check_id": "final-auth-regressions-second",
+  "mode": "OFFLINE_BUILD_OR_TEST",
+  "started_at": "2026-11-13T08:32:57.564237+00:00",
+  "finished_at": "2026-11-13T08:33:00.370780+00:00",
+  "duration_seconds": 2.807,
+  "command": [
+    "pnpm",
+    "exec",
+    "vitest",
+    "run",
+    "tests/management-final-auth.spec.ts",
+    "tests/environment.spec.ts",
+    "tests/settings.spec.ts",
+    "tests/commands.spec.ts",
+    "tests/http.spec.ts",
+    "tests/management-security.spec.ts"
+  ],
+  "source_commit": "e1bd28add66e95784feaa2b66fa81ddd75a5184a",
+  "exit_code": 0,
+  "timed_out": false,
+  "launch_error": null,
+  "interrupted_signal": null,
+  "status": "PASS",
+  "log": "command.log",
+  "log_sha256": "063809b1aaeb8b283a769eb3d1a81ffdf4fdf18086b5a09572dcfd08fdefa6ae",
+  "lockfile_sha256": "ba6b997c448984a04b28eeb5b620c14c7cfeff5eb170e1abd6e0734007405c39",
+  "online_sdk": "NOT_RUN",
+  "real_session": "NOT_RUN",
+  "m0_exit": "BLOCKED"
+}

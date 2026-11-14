@@ -1,0 +1,15 @@
+{
+  "name": "dsh-profile-m0-probe",
+  "private": true,
+  "dependencies": {},
+  "dsh": {
+    "profile": {
+      "bundles": [
+        "m0-probe-log",
+        "@deepseek-ai/dsh-base",
+        "@deepseek-ai/dsh-web-app",
+        "dsh-superagent"
+      ]
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "baseline-superagent-check-ready": {
+    "initial_observation": "UNKNOWN while only raw log was visible after recovery",
+    "final_observation": "FAIL/1; recorder survived and completed; full original log retained",
+    "source_limit": "no initial dirty-worktree snapshot; not an immutable-source acceptance result"
+  },
+  "binding-full-check-first": {
+    "source_limit": "source edits continued while this attempt was running; not a complete immutable-source acceptance result"
+  },
+  "review-first-findings.txt": {
+    "log_limit": "final review output only; intermediate tool transcript truncated; complete second review saved separately"
+  }
+}

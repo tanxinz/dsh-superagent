@@ -1,0 +1,26 @@
+{
+  "evidence_integrity": "PASS",
+  "checks": {
+    "bridge-focused-final": "PASS",
+    "bridge-focused": "FAIL",
+    "checklist-stage": "FAIL",
+    "drift-profile-refusal": "FAIL",
+    "drift-runtime-install": "PASS",
+    "offline-review": "PASS",
+    "profile-dump-only": "PASS",
+    "profile-fresh-runtime": "PASS",
+    "profile-probe-final": "PASS",
+    "profile-probe-observed": "PASS",
+    "profile-probe": "FAIL",
+    "profile-reviewed-build": "PASS",
+    "profile-runtime-frozen-install": "PASS",
+    "superagent-check-final": "PASS",
+    "superagent-check-reviewed": "PASS",
+    "superagent-check": "FAIL",
+    "superagent-install": "PASS"
+  },
+  "errors": [],
+  "required_commands_pass": true,
+  "m0_exit": "BLOCKED",
+  "real_session": "NOT_RUN"
+}

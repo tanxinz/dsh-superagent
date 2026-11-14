@@ -77,3 +77,7 @@ PR #5 的复测 run 43241222611 也已完成两版原始全量及证据完整性
 **升级门禁**：须在单独验证分支固定完整 Git SHA、Node/pnpm/lockfile、实际解析的 Cordis/Schemastery/DSH 包；各仓库全量 install/build/test 与原始日志不可混用；再做真实配置树、主/Worker/子 Session、ToolGuard/非 Tool Gateway、Store/Effects/Outbox、出站网络隔离、Team/Browser/Schedule/API 用例。所有证据注明真实/Mock、失败、跳过、expected-fail 和命令退出码。未达到兼容准入不提修改原 gitlink/锁文件；M0-14 未准出不进入 M1 运行集成。
 
 详见 [V1.2 详细设计](SuperAgent_Harness_Design_Final.md) 和 [开发清单 V12-01—V12-10](SuperAgent_Harness_Development_Checklist_V1.0_20261112.md)。
+
+### V1.2 第二轮候选兼容审核补充
+
+新增待测接口与配置：`sendOriginalQuestion: false`、`ori_question` 实际 HTTP 载荷、`searchBilling/fetchBilling` 在不同模型路由下的真实选择、业务直调 `ctx.web` 的独立 EvidenceGateway、`WebFetchResult.statusCode` 与 DeepSeek Fetch Provider Error 差异、Browser MCP 进程目录隔离、Schedule inbox/receipt 重放窗口。涉及不同锁版的公共 API 名称和配置字段必须通过 TypeScript/配置树验证；**不能假定 current DSH 0.2.1-alpha.2 具备 rc.3 行为**。V12-01—V12-10 及其子例目前 `NOT_RUN`，保持 `CANDIDATE_NOT_COMBINED`。

@@ -61,5 +61,25 @@ class DocsReviewCheckTests(unittest.TestCase):
         self.assertIn("missing.md", errors[0])
 
 
+    def test_link_like_example_inside_inline_code_is_not_a_link(self):
+        rel = self.write("# Example\nThe literal `[PR #123](<actual link>)` is not a Markdown link.\n")
+        self.assertEqual(inspect_document(self.root, rel), [])
+
+    def test_multibacktick_inline_code_masks_fake_links(self):
+        rel = self.write("``[fake](missing.md) with ` single backtick``\n")
+        self.assertEqual(inspect_document(self.root, rel), [])
+
+    def test_inline_code_does_not_hide_broken_links_next_to_it(self):
+        rel = self.write("`[fake](missing.md)` but [real](missing.md)\n")
+        errors = inspect_document(self.root, rel)
+        self.assertEqual(len(errors), 1)
+        self.assertIn("missing.md", errors[0])
+
+    def test_unmatched_and_escaped_backticks_do_not_suppress_links(self):
+        for data in ("`[real](missing.md)\n", "\\`[real](missing.md)\\`\n"):
+            with self.subTest(data=data):
+                rel = self.write(data)
+                self.assertTrue(any("missing.md" in x for x in inspect_document(self.root, rel)))
+
 if __name__ == "__main__":
     unittest.main()

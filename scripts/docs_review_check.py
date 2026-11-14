@@ -17,6 +17,37 @@ FENCE_RE = re.compile(r"^\s{0,3}(`{3,}|~{3,})")
 CONFLICT_RE = re.compile(r"^(?:<{7}|={7}|>{7})(?:\s|$)")
 
 
+def mask_inline_code(line: str) -> str:
+    """Hide Markdown code spans while leaving real links visible for validation."""
+    runs = list(re.finditer(r"`+", line))
+    masked = list(line)
+
+    def is_escaped(index: int) -> bool:
+        cursor = index - 1
+        while cursor >= 0 and line[cursor] == "\\":
+            cursor -= 1
+        return (index - cursor - 1) % 2 == 1
+
+    index = 0
+    while index < len(runs):
+        opening = runs[index]
+        if is_escaped(opening.start()):
+            index += 1
+            continue
+        closing = None
+        for candidate_index in range(index + 1, len(runs)):
+            candidate = runs[candidate_index]
+            if not is_escaped(candidate.start()) and len(candidate.group()) == len(opening.group()):
+                closing = candidate_index
+                break
+        if closing is None:
+            index += 1
+            continue
+        for position in range(opening.start(), runs[closing].end()):
+            masked[position] = " "
+        index = closing + 1
+    return "".join(masked)
+
 def inspect_document(root: Path, relative: Path) -> list[str]:
     root = root.resolve()
     source = (root / relative).resolve()
@@ -37,7 +68,7 @@ def inspect_document(root: Path, relative: Path) -> list[str]:
             continue
         if CONFLICT_RE.match(line):
             failures.append(f"{relative}:{line_num}: unresolved merge conflict")
-        for found in LINK_RE.finditer(line):
+        for found in LINK_RE.finditer(mask_inline_code(line)):
             raw = found.group(1).strip()
             # Markdown link titles: (path "label").
             value = raw[1:].split(">", 1)[0] if raw.startswith("<") else raw.split(" ", 1)[0]

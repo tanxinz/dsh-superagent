@@ -1288,7 +1288,7 @@ R24-A/R24-B 是原 R24 的测试子例，不新增业务状态，也不改变 R0
 
 **验收口径**：用例必须绑定 SHA、实际配置、真实/Mock 来源、命令、退出码、原始日志及 SHA-256。通过文档静态检查不等于运行时实现；未符合现有阶段条件的原任务保持 IN_PROGRESS/BLOCKED。若未来确定某一新功能必须提前到 M0，应另行评估关键路径和阶段依赖，而不是在本节偷偷更改原 100 项。
 
-### 14.4 V1.2 第二轮复审新增负例（补充 V12，不新建任务 ID）
+### 14.3 V1.2 第二轮复审新增负例（补充 V12，不新建任务 ID）
 
 - [ ] **V12-01A / V12-03A**：真实 rc.3 Search Provider 默认 `sendOriginalQuestion=true` 会额外发送原始 `ori_question`；企业受控配置显式设 `false` 后，HTTP 夹具断言没有该字段。参数或凭据切换后重新验证 endpoint、数据级别、计费身份及实际请求体。
 - [ ] **V12-03B**：分别检查 Harness 模型 `web_search/web_fetch` 的 ToolGuard、插件直调 `ctx.web.search/fetch` 的受信 EvidenceGateway、DeepSeek 模型服务端联网路由；任一路越过批准域均拒绝。ToolGuard 结果不作为另两路径的安全证据。
@@ -1298,3 +1298,22 @@ R24-A/R24-B 是原 R24 的测试子例，不新增业务状态，也不改变 R0
 - [ ] **V12-09A**：故障注入验证 Schedule Session inbox 持久写入成功但 receipt 记录失败，重复投递以稳定周期键被 Engine 去重；不能证明键稳定时禁止可写执行。
 
 以上均为 `NOT_RUN`，不得因静态审查完成更改原清单任务状态。
+
+### 14.4 第三轮外部复审修复与功能准入门禁（2026-11-14）
+
+- [ ] **P1-1 Stagehand 独立模型出站**：默认不装配 Stagehand Native；其 `stagehand_act/observe/extract` 走独立模型/凭据/用量，DSH Session usage 与主模型路由不覆盖。首期默认 `DISABLED`；若需实验，只能在显式批准且无敏感数据的隔离 Fixture 中进行，并限制模型请求数、费用、页面内容出站及取消后的在途结果。
+- [ ] **P1-2 Web 最终派发绑定（能力启用阻断）**：先采用固定 Provider/endpoint/凭据来源且不许运行时修改配置的隔离执行域；必须有不可绕过的网络出口约束。单独验证模型 `web_search/web_fetch` 与业务直接 `ctx.web` 的真实外送路径；如需动态切换，则先在独立候选分支设计/实现经源码验证的最终派发钩子。不能把调用前读取配置、`ToolGuard` 单独成功或 `waitToSend` 内部名称作为派发点批准事实。
+- [ ] **P1-3 Schedule 自动与手动执行身份**：自动计划在有权威周期时采用稳定周期去重；手动 `runNow()` 会每次取新 `occurrenceAt`，不得据此认定重复请求。受信人工入口先持久化 `manualExecutionRequestId`，由 Engine/Effects 以同一 ID 派发与恢复；原生 `runNow()` 当前不接受业务请求 ID，未经接线验证不得直接推动可写 ActionRun。
+- [ ] **P2 功能准入状态与阶段状态拆分**：原 M0—M5 依赖/完成条件不修改；新能力按 `DISABLED/FIXTURE_ONLY/READY_READONLY/READY_WRITE` 单独管理，绑定真实 Provider 配置、安全出口、代码版本和准入测试证据。功能实际启用前通过对应 V12 测试；未启用功能不强制作为 M0 必选任务。阶段通过不自动授权可选能力。
+
+| 子例 ID | 对应反馈 | 必须验证的结果 | 当前状态 |
+| --- | --- | --- | --- |
+| V12-01B | P1-2 | Gate 通过后切换 Provider、endpoint、凭据/账号，再发出真实请求；配置无法绑定的外送被出口策略拒绝且无敏感数据流出 | NOT_RUN |
+| V12-03C | P1-2 | 模型工具 Web、业务直接 `ctx.web`、服务端自动搜索三条路径单独限制；禁用的路由/凭据与底层 HTTP 旁路不得绕过 | NOT_RUN |
+| V12-08B | P1-2 | Browser/Playwright 在受限容器中无生产密钥，最终网络出口、撤权竞态与断线副作用对账被证明 | NOT_RUN |
+| V12-08C | P1-1 | Stagehand 独立模型 Provider、Key 来源、出站页面内容、预算/取消和日志审计逐项实测，主 DSH Token 统计不冒充总费用 | NOT_RUN |
+| V12-09B | P1-3 | 定时周期与手动运行分别去重；同一受信 `manualExecutionRequestId` 的投递/崩溃/重试仅产生一次业务效果，第二个真实人工请求独立处理 | NOT_RUN |
+| V12-10B | P1-1 | Stagehand 外部模型在 Token/费用、请求数量、时间限制、取消后仍在途时保持可追溯；控制不可证则 Provider 关闭 | NOT_RUN |
+| V12-GATE | P2 | 每项能力的 `capabilityId + executionMode + upstreamCommit + providerConfigDigest + egressPolicyVersion + requiredCaseRefs` 验收齐全才允许升级准入状态；变更后旧验收自动失效 | NOT_RUN |
+
+**优先顺序及隔离边界**：P1-2 先于 Web 真实调用；Stagehand 未通过 V12-08C/10B 永不业务启用；`runNow()` 未建立可靠受信执行请求 ID 只允许只读通知；V12-GATE 并不提前扩大 M0 必选内容。以上只是设计清单，不代表当前锁版已经具备配置冻结/出口代理、Stagehand 实验或手动调度幂等实现。

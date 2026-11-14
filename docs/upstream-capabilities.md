@@ -85,3 +85,13 @@ contracts.ts 的 11 项依赖与 Bundle inject 共享。此处只验证服务可
 **V1.2 必须新验证**：provider 选择与查询次数、敏感出站/SSRF、证据可信级别与哈希、Team CAS/持久不确定/Verifier 隔离、浏览器真实负向动作与未知结果、Schedule 重复触发/Engine 去重、API 错误分类与预算。参见 [详细设计 §16.6](SuperAgent_Harness_Design_Final.md) 的 V12-01—V12-10；所有用例均保持 `NOT_RUN`。
 
 公开依据：[Web](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.2-rc.3/docs/subsystems/web.md)、[DeepSeek Web API Provider](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.2-rc.3/packages/web/web-deepseek-api/README.md)、[AgentTeam](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.2-rc.3/packages/team/agent-team/README.md)、[Browser Use](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.2-rc.3/docs/subsystems/browser-use.md)、[Schedule](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.2-rc.3/docs/subsystems/schedule.md)。
+
+### V1.2 第二轮静态发现：配置与错误语义补充
+
+- **默认隐私字段**：rc.3 `dsh-web-deepseek-api` 的 `sendOriginalQuestion` 默认 `true`，会将最近人工问题（最多128字符）作为 `ori_question` 发送；企业路径须显式设 `false` 并验证实际 HTTP 请求体。
+- **三条调用链**：Harness 模型 `web_search/web_fetch` 进入 ToolRuntime；服务插件直接 `ctx.web.search/fetch` 不自动经 ToolGuard，须额外受信业务校验；DeepSeek 模型服务端 Web Tools 独立执行，也不经本地逐次 Guard。
+- **Fetch 错误**：本地 HTTP Fetch 可返回 `WebFetchResult.statusCode=404/500` 而不抛错，且会遵循其网络策略；远端 DeepSeek Fetch API 的非成功抓取是 Provider 错误，响应不提供最终重定向 URL。二者不能以同一成功规则或“原站字节”处理。
+- **凭据与预算**：`searchBilling/fetchBilling=auto` 随当前会话模型路由及账户/API Key 选择而变；插件实例 QPS 并非账户级全局限流；授权与派发应核验真实 endpoint/凭据引用/预算。
+- **Schedule**：Host 先保存 Session inbox 后保存 receipt，中间崩溃可能重复投递；必须由业务稳定周期标识及 Engine 幂等处理。Browser MCP 进程在 Session 启动目录启动，后续目录改变不会迁移，不能替代 OS/网络隔离。
+
+本轮只完成公开官方源码核查及设计问题登记；相关运行负例依旧 `NOT_RUN`。参见 [复审记录](reviews/V1.2-DeepSeek-Harness-Static-Review-20261114.md)。

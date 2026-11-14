@@ -1548,7 +1548,7 @@ M0—M5 不要求大规模吞吐、复杂审批、生产渠道送达、正式环
 - **项目阶段状态**：维持 M0—M5 / G0—G5 的原有依赖、必须完成任务与退出条件；未通过 M0-14 仍禁止 M1 运行集成。
 - **功能准入状态**（拟新增设计状态，非已存在代码）：`DISABLED`（默认无真实调用）、`FIXTURE_ONLY`（隔离无敏感数据）、`READY_READONLY`（仅批准的可审计只读/外送）、`READY_WRITE`（另经业务 Effect/Attempt/授权/对账实测的副作用）。状态必须绑定 `capabilityId + executionMode + upstreamCommit + providerConfigDigest + egressPolicyVersion + requiredCaseRefs + reviewedEvidenceRefs`；配置、版本、路由、隔离边界发生变化须重新评审并降级，不能继续沿用旧 PASS。
 
-**准出规则**：某 M 阶段通过，只代表该阶段规定的必选能力通过。新增的 Web、Stagehand、Browser、AgentTeam、Schedule 功能在其首次真实启用**之前**，必须通过与其模式相关的 V12 子例、静态配置审核、动态安全/恢复测试及独立审核；不是“全部 V12 项必须在 M0 通过”。不满足时保持 `DISABLED/FIXTURE_ONLY`，禁止仅因 M2 或 M5 完成就自动晋级。阶段任务如显式依赖某功能才能达到该阶段真实出口，则须在**该能力真正启用的同一模式**完成其子例；无法完成则保留该阶段对应任务未完成，不可用 Mock 结果冒充真实模式。
+**准出规则**：某 M 阶段通过，只代表该阶段规定的必选能力通过。新增的 Web、Stagehand、Browser、AgentTeam、Schedule 功能在其首次真实启用**之前**，必须通过与其模式相关的 V12 子例、静态配置审核、动态安全/恢复测试及可追溯的技术证据复核；不是“全部 V12 项必须在 M0 通过”。这里的技术证据复核可以由受信负责人组织，并不等于 GitHub 必须由另一位协作者提交 `APPROVE`，详见 §17.12。不满足时保持 `DISABLED/FIXTURE_ONLY`，禁止仅因 M2 或 M5 完成就自动晋级。阶段任务如显式依赖某功能才能达到该阶段真实出口，则须在**该能力真正启用的同一模式**完成其子例；无法完成则保留该阶段对应任务未完成，不可用 Mock 结果冒充真实模式。
 
 | 能力/模式 | 默认 | 首次业务使用前的最低对应 V12 子例 | 验证未完成时 |
 | --- | --- | --- | --- |
@@ -1558,7 +1558,7 @@ M0—M5 不要求大规模吞吐、复杂审批、生产渠道送达、正式环
 | Stagehand Native（独立模型） | **`DISABLED`** | V12-08C、10B，独立模型出站与调用后预算/取消、凭据与内容审计；可写另验 ActionRun | 仅专用无敏感数据 Fixture 且有显式试验批准 |
 | Schedule 自动 / 手动 | `DISABLED`（可单独开只读通知） | V12-09/09B，自动周期 / 手动受信请求身份与 inbox/receipt 崩溃重试 | 只读提醒；手动 `runNow()` 不得派发可写 |
 
-**两处判定不能混淆**：文档评审通过不等于上述功能准入已 PASS；PR #14 的 CI 即使通过，也仅属于其实际执行的测试和提交，不自动满足 V12。现有 100 项任务和原阶段出口保持不变，本节只是启用**可选**能力之前的强制条件。
+**两处判定不能混淆**：文档评审或 GitHub PR 合并通过，不等于上述功能准入已 PASS；PR #14 的 CI 即使通过，也仅属于其实际执行的测试和提交，不自动满足 V12。现有 100 项任务和原阶段出口保持不变，本节只是启用**可选**能力之前的强制条件。仓库合并审批责任见 §17.12，M0/M1 与可选能力状态不随该审批自动提升。
 
 ## 17. 工程依赖、风险控制与交付门槛
 
@@ -1709,6 +1709,38 @@ M0—M5 不要求大规模吞吐、复杂审批、生产渠道送达、正式环
 ### 17.11 V1.2 第三轮外部反馈处理（2026-11-14；文档层）
 
 外部审查反馈 P1-1 Stagehand 独立模型出站、P1-2 Web 实际派发点缺少可实施绑定、P1-3 Schedule 手动 `runNow()` 周期键变化，以及 P2 阶段/功能门禁不分，分别修订于 §10.6、§5.1.3、§13.6、§16.7 并在 §14.6/开发清单新增验收子例。所有项当前为 `DESIGN_CORRECTED / IMPLEMENTATION_NOT_RUN`，本 PR 不更改产品代码、M0 状态与 Harness gitlink。原独立设计复审记录追加第三轮评估，不冒充不同成员的运行代码审核。
+
+### 17.12 GitHub 审核责任、Harness 基线证据与 CI 分流交接（2026-11-14）
+
+本节是**仓库工程交付和治理记录**，不新增 L1—L5 业务模块、Engine、Effects、队列或可运行产品能力。以下 CI 状态是对应链接所指 **2026-11-14 当次查询时的快照**；以后必须以准确 PR head SHA、GitHub Actions 最新 Job、原始 Artifact 和退出码重新判定，不得将历史快照自动延用为当前通过。
+
+#### 17.12.1 审核责任制与真实授权边界
+
+- 本仓库 `CONTRIBUTING.md` 已在目标分支 `feat/m0-local-20261113-mac` 的提交 `ff0ed0b1fe8deba73673c1a2d4a28ec9b3a78cec` 中改为 **`tanxinz` 统一审核和合并决策**，项目内部不再强制第二位 GitHub 协作者 `APPROVE`。这只改变 GitHub 仓库维护流程，不修改产品中 `Mandate/Policy/ToolGuard/ActionGateway` 对工具和业务副作用的授权条件。
+- GitHub 不允许作者自行对其 PR 提交原生 `APPROVE`。因此由 `tanxinz` 在 PR 评论或 `COMMENTED` Review 记录 `OWNER_REVIEW: READY_TO_MERGE` 或 `OWNER_REVIEW: BLOCKED`；**此为项目责任人审核，不伪称独立成员已批准**。
+- 有效 Owner Review 至少包括：`head SHA`、目标分支 SHA、变更范围及敏感信息排查、适用的 CI Run/Artifact、实际完整与定向测试区分、`PASS/FAIL/NOT_RUN/UNKNOWN`、锁版/依赖/数据安全影响、遗留风险与明确合并决定。HEAD、策略或执行环境变化必须重新评估。
+- 项目不再要求协作者审阅 **≠** 可以跳过源码、CI、权限边界和失败恢复的客观证据；若 GitHub Branch Protection/Rulesets 在服务器端另有必选审批或状态检查，仍应由所有者检查并合法配置，不能仅凭改写 Markdown 绕过。不同于本项目代码审阅，§10—§16 中的 Verifier 证据隔离和业务权限拒绝仍须独立于模型建议与外部输入，不能合并成“本人认为安全”。
+- 学习版的 GitHub/生产配置变更和真正 PR 合并仍属于 §1 所禁用的**模型驱动业务副作用**；这里的 `tanxinz` 维护者行为不授权运行态 Agent 自主合并真实 PR。
+
+#### 17.12.2 Harness 已知固定日期失效与两种不能混写的全量测试
+
+| 项目 | 锁定事实与证据 | 允许的审计结论 |
+| --- | --- | --- |
+| 未修改 Harness baseline | `e8f7b93a344964de3dca1ace9e72b6e4d6de87cb`；[原始 Run #43544511314](https://github.com/tanxinz/dsh-superagent/actions/runs/43544511314) 的 LiveShare `owner-credential-horizon.host.spec.ts` 两个用例各超时 90 秒；`LIVE` 固定截止 `2026-11-14T00:00:00Z`，运行时已过期 | **原始全量 FAIL，必须永久保留**，不能由后续重跑或补丁 PASS 覆盖 |
+| 日期测试夹具修复 | [PR #18](https://github.com/tanxinz/dsh-superagent/pull/18) 的 `patches/harness-baseline-liveshare-horizon-relative-dates.patch` 将 `PAST/LIVE` 改为测试时刻 ±30 天；只修改 LiveShare 测试，不动上游产品判断、锁文件、Harness gitlink | 可独立测试，**不等于主仓已升级 Harness 版本** |
+| 已完成的修订夹具全量 | [独立 Run #43548225798](https://github.com/tanxinz/dsh-superagent/actions/runs/43548225798) 完成并成功，覆盖该专用工作流实际执行的构建、定向和完整测试 | 仅称 **patched pinned baseline full PASS**，不称 unmodified baseline PASS |
+| 默认 M0 的正式验证 | [PR #18 默认 Run #43551553456](https://github.com/tanxinz/dsh-superagent/actions/runs/43551553456) 使用 `baseline-fixture-patched/harness-test-patched`，另一矩阵 `matching-release-candidate` 仍跑未修改的 `pnpm test` | 查询时 candidate full **PASS**、patched baseline full **IN_PROGRESS**；默认 M0 总结论仍非 FULL PASS |
+| 与文档分流组合验证 | [PR #19 组合 Run #43551881352](https://github.com/tanxinz/dsh-superagent/actions/runs/43551881352) 同时含正确的补丁与原 M0 矩阵 | 查询时两版 Harness 全量仍 **IN_PROGRESS**，不得由 docs-review 成功代替 |
+
+固定 `e8f7b93` 和候选 `d743267388641bc76f17c45ce8b4c231aed1d32c` 的测试身份必须记录在每个命令 `result.json`、CI Job 名和证据目录中；`harness-test-patched` 与原始 `harness-test` 不得合并统计。原失败 ZIP、完整 `command.log` 和 SHA-256 记录见 [Issue #17](https://github.com/tanxinz/dsh-superagent/issues/17) 及 PR #18 RCA 文档。
+
+#### 17.12.3 Markdown 变更与 M0 全量 CI 的分流边界
+
+- [PR #19](https://github.com/tanxinz/dsh-superagent/pull/19) 的拟合入规则：仅修改 `**/*.md` 的 PR 由 `docs-review.yml` 检查本地相对链接、代码围栏、冲突标记及相关回归、preflight 和证据审计；只改源码/配置/测试/CI 的 PR 仍跑完整 `m0-offline.yml`；**同时改 Markdown 和非 Markdown 的 PR 两条流程都运行**。`workflow_dispatch` 保留人工执行完整 M0 的能力。
+- 真正纯 Markdown 的 [临时 PR #20](https://github.com/tanxinz/dsh-superagent/pull/20) 触发 [Run #43551618865](https://github.com/tanxinz/dsh-superagent/actions/runs/43551618865) 的 docs-only SUCCESS，未触发完整 M0，已关闭未合并。PR #19 当前版本 [docs-review Run #43551881399](https://github.com/tanxinz/dsh-superagent/actions/runs/43551881399) SUCCESS，仍不能冒充实际业务设计审查或两版 Harness 全量。
+- 该分流在 **PR #19 合并前不自动回溯改变 PR #14 历史红色 CI**。GitHub Rulesets/Branch Protection 中的 Required Checks 若要求在 docs-only PR 上报告未触发的 Harness Job，可能出现 `Expected/Pending`；必须由仓库所有者核对并保证代码 PR 原有状态门禁有效。
+- 合并依赖顺序保持 [PR #18](https://github.com/tanxinz/dsh-superagent/pull/18) → [PR #19](https://github.com/tanxinz/dsh-superagent/pull/19) → [PR #14](https://github.com/tanxinz/dsh-superagent/pull/14)。PR #19 当前验证分支包含与 #18 同一字节补丁以便组合测试；**#18 先合入目标分支后**须重新比较 #19 的新增差异及测试状态，不得作为重复改动再次引入。最终合并后的目标分支并不自动等于 `main`。
+- GitHub 合并与应用运行态验收必须分别记录：此段只明确当前工程证据和审核职责；**M0-14 仍为 `BLOCKED`、M0 整体验收 0/14、M1 不允许运行集成，§16.7 的新 V12 动态用例仍 `NOT_RUN`**，可选 Web/Stagehand/Schedule 等能力未经许可保持 `DISABLED/FIXTURE_ONLY`。
 
 ## 18. 设计依据和技术参考
 

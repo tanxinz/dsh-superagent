@@ -23,6 +23,8 @@
 
 > **Bridge 接续更新（2026-11-12）**：第三轮两版 Harness 原始全量已通过，失败历史继续保留；PR #5 的新一轮两版原始全量也已通过，完整原包另存。已新增原生 M0 Bridge、4 项 Cordis 生命周期回归及真实未配置 profile 两次启停，完整 pnpm check 为 61 文件/1213 项通过。M0-04 改为 IN_PROGRESS，前置和服务/权限验收未闭合，不勾选整项。见 [Bridge 验收记录](acceptance/M0-bundle-profile-20261112.md)。
 
+> **V1.2 设计修订（2026-11-14）**：承接 [详细设计](SuperAgent_Harness_Design_Final.md) 的 DeepSeek API 与 Harness rc.3 能力复用审查。原 100 项任务、原有 M0—M5 依赖和阶段出口不变；新增 V12-01—V12-10 是横切的待执行子例，不能因此勾选任务或提前准出 M0。修订仅修改 Markdown；运行时代码、gitlink、依赖锁和历史测试证据不变。
+
 ## 1. 使用方式与开发边界
 
 先完成 M0，再按 M1→M2→M3→M4→M5 推进阶段集成；本清单中任务号用于稳定引用，**同阶段实施顺序以“前置任务”为准，不按数字机械顺排**。例如基础 Exit 依赖 M2-24 结清机制。可以提前编写不依赖底座运行的 Fixture/契约草稿，但未通过阶段门槛不能宣称后续集成完成。
@@ -1249,3 +1251,40 @@ R24-A/R24-B 是原 R24 的测试子例，不新增业务状态，也不改变 R0
 本轮实际运行的检查包括：100个任务ID唯一性、显式依赖存在与无环、每个阶段出口覆盖全部同阶段任务、安全前置祖先关系、17模块/24种扩展记录/R01—R25/I-01—I-16覆盖、Markdown表格列数和围栏配对，以及源设计SHA-256未变。
 
 没有运行项目源码的编译、迁移、故障注入、Jev请求、真实Session、许可竞争或网络副作用测试。审核后清单可作为实施输入；实际API/Hook是否可用、运行安全是否成立，仍须按M0/M2及后续阶段取得证据。
+
+## 14. V1.2 上游复用与外部能力补充验收（待执行）
+
+> 本节修复上轮审核 P0-01—06、P1-01—05，并记录 P2-01—02 的推迟范围。原 100 项任务 ID、原有 R01—R25 与 I-01—I-16 不变；以下勾选框初始均未完成。
+
+### 14.1 设计修复与原能力复用
+
+- [ ] **P0-01 去重**：优先通过 Harness `ctx.web.search/fetch` 接入 `@deepseek-ai/dsh-web-deepseek-api`；不要另写 Search/Fetch HTTP 客户端、提供方注册或通用网络队列。项目扩展仅承担 EvidenceCapture、业务审计、来源与可信等级。
+- [ ] **P0-02 服务端工具信任域**：明确 `deepseek_web_search/deepseek_read_url` 在服务端执行，不能假定经过 `ctx.tools.guard()`；审批类和敏感任务必须通过经过验证的本地能力路径，禁止向外送生产密钥、内部 URL、私有源码或客户资料。
+- [ ] **P0-03 Team 去重**：原生 AgentTeam 管理具名成员、共享板、消息和 CAS，业务 TeamRun/ActionRun/Mandate 仍经 Engine；`writeScopes` 只提示冲突，独立 Verifier 需隔离只读工件。
+- [ ] **P0-04 Browser**：`ctx.browserUse` 只注册提供方，无标准化 `navigate/click` 方法；根据 Playwright MCP、Chrome DevTools MCP、Stagehand 的真实工具接口做受限适配，所有可写网页动作经受信 ActionRun。
+- [ ] **P0-05 安全**：校验外送数据等级、URL、DNS 解析后 IP、每次跳转、目的地和凭据；本地 HTTP Fetch 默认不防 SSRF；MCP/网页/OCR 返回数据必须作为不可信内容。
+- [ ] **P0-06 版本**：rc.3 仅在独立候选分支评估；保留现有锁版、M0 状态、原始 CI 和失败记录，不把 Harness 单仓测试通过等同 SuperAgent 组合通过。
+- [ ] **P1-01 证据**：搜索摘要、Fetch Markdown、OCR 文本、GitHub 原始字节的哈希、来源和证明等级分别记录。
+- [ ] **P1-02 错误**：Messages / Responses / Chat Completions 不同能力及 HTTP 200 内失败、流式截断、拒答、429/5xx 有保守分类。
+- [ ] **P1-03 Safety**：Safety 仅作辅助，不能取代 Mandate、ToolGuard、ActionGateway 或业务决定。
+- [ ] **P1-04 Schedule**：Host 定时投递只是触发，Session inbox receipt 不代表 Agent 或业务完成；业务由 Engine + Effects 去重、授权和恢复。
+- [ ] **P1-05 预算**：统一约束模型 Token、Search/Fetch 请求、OCR 页、浏览器资源、并发、墙钟和重试，分别记录计费与资源指标。
+- [ ] **P2-01 / P2-02**：OCR 版面/图表核对、浏览器回放 UI、Team 可视化、ASR/TTS 按 M5 或产品化需求再设计。
+
+### 14.2 V1.2 新增横切回归用例
+
+| 子例 | 依赖里程碑 | 必须证明 | 当前状态 |
+| --- | --- | --- | --- |
+| V12-01 | M0 隔离兼容评估、M1 接入 | `ctx.web` 提供方选择、费用记录及单次逻辑查询没有重复调用 | NOT_RUN |
+| V12-02 | M0 安全前置/M2 | localhost、内网、云元数据、DNS 重绑定、重定向都被实际阻断 | NOT_RUN |
+| V12-03 | M0 安全前置/M1 | 服务端搜索禁用真实有效，敏感查询不绕过本地限制外送 | NOT_RUN |
+| V12-04 | M1/M3 | 网页摘要、Markdown、OCR 文本和 GitHub 原件有明确可信等级及准确哈希 | NOT_RUN |
+| V12-05 | M1/M4 | HTTP 200 内模型失败、截断、拒答、多协议错误被保守映射 | NOT_RUN |
+| V12-06 | M5，受 M2 授权限制 | Team CAS 冲突、任务持久不确定、失联不重复业务写 | NOT_RUN |
+| V12-07 | M5，受 M0 隔离限制 | Verifier 只读隔离且不能修改 Worker 的原始工件 | NOT_RUN |
+| V12-08 | M2/M5 | 浏览器副作用后的断线记录未知并对账，撤权后拒绝新操作 | NOT_RUN |
+| V12-09 | M5 试验/生产 G 阶段 | Schedule 投递与业务完成区分，同周期重复不会造成重复外部写 | NOT_RUN |
+| V12-10 | M1/M2/M4 | 模型、Search/Fetch、OCR、Browser 资源预算及取消/重试/脱敏有效 | NOT_RUN |
+
+**验收口径**：用例必须绑定 SHA、实际配置、真实/Mock 来源、命令、退出码、原始日志及 SHA-256。通过文档静态检查不等于运行时实现；未符合现有阶段条件的原任务保持 IN_PROGRESS/BLOCKED。若未来确定某一新功能必须提前到 M0，应另行评估关键路径和阶段依赖，而不是在本节偷偷更改原 100 项。
+

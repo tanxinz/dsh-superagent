@@ -31,3 +31,10 @@
 5. 本集成 PR 合并且内容被最终 main 接收后，才可逐个关闭已被替代的 #1—#13，必须逐项给出替代提交与证据链接。
 
 **本文件是集成修复与质量门禁说明，不是 M0 准出证明。**
+
+## PR #23 文档校验失败复盘及受限修复（2026-11-14）
+
+- 原始失败 [docs-review Run 43563629316](https://github.com/tanxinz/dsh-superagent/actions/runs/43563629316)：`docs-markdown-check` exit 1，随后的四项回归因为前置步骤失败而 SKIPPED，证据审计按设计 FAIL；原始 Job/Artifact 不删除。
+- 独立复核改动 Markdown 时确认 `upstream/superagent/prompts/team/communication.md` 第 19、64 行的 Markdown 示例 `[PR #123](<actual link>)` 是无实际路径的占位符，旧校验器将它错误地解析为本地路径；不修改提示词原文。
+- 修复仅在路径 `upstream/superagent/prompts/` 且链接目标恰好为 `<actual link>` 时跳过本地路径检查。普通 Markdown 和其他确实缺失的本地链接仍必须 FAIL；已添加正反单元测试。
+- 本记录属于 PR #24 修复分支的审查说明，不能替代本修复提交的文档检查及 M0 两版 Harness 原始证据。本 PR 未修复 M0-14，仍为 BLOCKED。

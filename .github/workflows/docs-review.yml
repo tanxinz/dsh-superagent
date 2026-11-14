@@ -26,9 +26,17 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+          # Base commit must be available for precise changed-Markdown validation.
+          fetch-depth: 0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24.22.1
+      - name: Validate changed Markdown links and structure
+        env:
+          DOCS_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: python scripts/ci_record.py --id docs-markdown-check --cwd . --output artifacts/docs-review -- python scripts/docs_review_check.py
+      - name: Documentation validator regression
+        run: python scripts/ci_record.py --id docs-markdown-regression --cwd . --output artifacts/docs-review -- python -m unittest discover -s scripts -p test_docs_review_check.py -v
       - name: Preflight regression
         run: python scripts/ci_record.py --id docs-preflight-tests --cwd . --output artifacts/docs-review -- node --test scripts/m0-preflight.test.mjs
       - name: Evidence recorder regression
@@ -37,7 +45,7 @@ jobs:
         run: python scripts/ci_record.py --id docs-checklist-audit --cwd . --output artifacts/docs-review -- python scripts/checklist_audit.py
       - name: Audit actual document review checks
         if: always()
-        run: python scripts/evidence_audit.py artifacts/docs-review --require docs-preflight-tests --require docs-recorder-tests --require docs-checklist-audit --output artifacts/docs-review/evidence-audit.json
+        run: python scripts/evidence_audit.py artifacts/docs-review --require docs-markdown-check --require docs-markdown-regression --require docs-preflight-tests --require docs-recorder-tests --require docs-checklist-audit --output artifacts/docs-review/evidence-audit.json
       - name: Preserve static review evidence, including failures
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

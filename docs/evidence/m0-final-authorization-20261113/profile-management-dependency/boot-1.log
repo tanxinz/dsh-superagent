@@ -1,0 +1,6 @@
+[cognitive-mesh] m0 bridge installed
+[cognitive-mesh] m0 bridge disposed
+[cognitive-mesh] m0 bridge installed
+dsh web: http://127.0.0.1:57601/?token=<redacted>
+M0_DEPENDENCY_CYCLE {"status":"PASS","provider":"@deepseek-ai/dsh-permission-presets","retainedRefused":true,"intakeRefused":true,"staleRefused":true,"staleRuntimeRefused":true,"providerCount":1,"globalProviderCount":3,"presetsUnchanged":true,"lifetimeAborted":true,"reloaded":true,"configuredProfile":false,"account":"UNCONFIGURED","businessWorker":"NOT_RUN","realModelSession":"NOT_RUN"}
+[cognitive-mesh] m0 bridge disposed

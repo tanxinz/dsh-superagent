@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "check_id": "preflight-tests",
+  "mode": "OFFLINE_BUILD_OR_TEST",
+  "started_at": "2026-11-12T07:47:43.001167+00:00",
+  "finished_at": "2026-11-12T07:47:43.115718+00:00",
+  "duration_seconds": 0.115,
+  "command": [
+    "node",
+    "--test",
+    "scripts/m0-preflight.test.mjs"
+  ],
+  "source_commit": "98372b1368c992716d86d91d1f4ca0936d650d36",
+  "exit_code": 0,
+  "timed_out": false,
+  "launch_error": null,
+  "status": "PASS",
+  "log": "command.log",
+  "log_sha256": "e4252f58efaae8ad1b7ab42a7c05e8cea6b8d6df9bd9a3c8ac45781f34ff68e4",
+  "lockfile_sha256": null,
+  "online_sdk": "NOT_RUN",
+  "real_session": "NOT_RUN",
+  "m0_exit": "BLOCKED"
+}

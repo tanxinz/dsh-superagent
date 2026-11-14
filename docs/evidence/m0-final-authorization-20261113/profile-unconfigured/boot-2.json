@@ -1,0 +1,76 @@
+{
+  "index": 2,
+  "state": {
+    "setup": {
+      "machine": {
+        "stateDir": "/var/folders/_j/x6wlg74j4nz51xcf6bt5y3ch0000gn/T/m0-dsh-profile-9ogUiQ/state",
+        "promptMaxChars": 100000,
+        "admissionContextMaxPages": 10,
+        "admissionContextTimeoutMs": 15000
+      },
+      "problem": {
+        "place": "github",
+        "code": "repositoryUnset",
+        "values": {},
+        "detail": "The GitHub Source names no repository."
+      },
+      "feishuProblem": null,
+      "accounts": null
+    },
+    "load": {
+      "running": 0,
+      "queued": 0,
+      "maxWorkers": 3
+    },
+    "masterId": "orchestrator-3846867e3f3ebe7224b1741154ed1bcd",
+    "paused": false,
+    "health": {
+      "runtime": {
+        "state": "paused",
+        "detail": "Waiting for the deployment check",
+        "code": "setupPending",
+        "at": "2026-11-13T08:36:55.441Z"
+      },
+      "relay": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T08:36:55.433Z"
+      },
+      "notice": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T08:36:55.433Z"
+      },
+      "launch": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T08:36:55.433Z"
+      },
+      "delivery": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T08:36:55.433Z"
+      },
+      "assessment": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T08:36:55.433Z"
+      },
+      "reply": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T08:36:55.433Z"
+      },
+      "evals": {
+        "state": "ready",
+        "detail": "No unavailable Eval in the last hour"
+      }
+    }
+  },
+  "forced": false,
+  "exit_code": 0,
+  "signal": null,
+  "installed": 1,
+  "disposed": 1,
+  "log_sha256": "20fb849939c93b523420fcb43c59545a00d9da4239c6499aa30ec14cbcf2613a"
+}

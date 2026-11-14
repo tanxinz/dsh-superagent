@@ -1,0 +1,76 @@
+{
+  "index": 2,
+  "state": {
+    "setup": {
+      "machine": {
+        "stateDir": "/var/folders/_j/x6wlg74j4nz51xcf6bt5y3ch0000gn/T/m0-dsh-profile-TjGue8/state",
+        "promptMaxChars": 100000,
+        "admissionContextMaxPages": 10,
+        "admissionContextTimeoutMs": 15000
+      },
+      "problem": {
+        "place": "github",
+        "code": "repositoryUnset",
+        "values": {},
+        "detail": "The GitHub Source names no repository."
+      },
+      "feishuProblem": null,
+      "accounts": null
+    },
+    "load": {
+      "running": 0,
+      "queued": 0,
+      "maxWorkers": 3
+    },
+    "masterId": "orchestrator-e26c44fe4773e674e80b7640b63d08c9",
+    "paused": false,
+    "health": {
+      "runtime": {
+        "state": "paused",
+        "detail": "Waiting for the deployment check",
+        "code": "setupPending",
+        "at": "2026-11-13T04:56:34.847Z"
+      },
+      "relay": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T04:56:34.837Z"
+      },
+      "notice": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T04:56:34.837Z"
+      },
+      "launch": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T04:56:34.837Z"
+      },
+      "delivery": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T04:56:34.837Z"
+      },
+      "assessment": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T04:56:34.837Z"
+      },
+      "reply": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T04:56:34.838Z"
+      },
+      "evals": {
+        "state": "ready",
+        "detail": "No unavailable Eval in the last hour"
+      }
+    }
+  },
+  "forced": false,
+  "exit_code": 0,
+  "signal": null,
+  "installed": 1,
+  "disposed": 1,
+  "log_sha256": "25583251e02ebf011d89e61f6260cac9a076a5cf26c2454bf09c5f7d6a9b5962"
+}

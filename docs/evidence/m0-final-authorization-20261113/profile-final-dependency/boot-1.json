@@ -1,0 +1,93 @@
+{
+  "index": 1,
+  "state": {
+    "setup": {
+      "machine": {
+        "stateDir": "/var/folders/_j/x6wlg74j4nz51xcf6bt5y3ch0000gn/T/m0-dsh-profile-xlead7/state",
+        "promptMaxChars": 100000,
+        "admissionContextMaxPages": 10,
+        "admissionContextTimeoutMs": 15000
+      },
+      "problem": {
+        "place": "github",
+        "code": "repositoryUnset",
+        "values": {},
+        "detail": "The GitHub Source names no repository."
+      },
+      "feishuProblem": null,
+      "accounts": null
+    },
+    "load": {
+      "running": 0,
+      "queued": 0,
+      "maxWorkers": 3
+    },
+    "masterId": "orchestrator-da48662dc9a7c013a9fcb13c3aa9debc",
+    "paused": false,
+    "health": {
+      "runtime": {
+        "state": "paused",
+        "detail": "Waiting for the deployment check",
+        "code": "setupPending",
+        "at": "2026-11-13T08:47:30.864Z"
+      },
+      "relay": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T08:47:30.858Z"
+      },
+      "notice": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T08:47:30.858Z"
+      },
+      "launch": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T08:47:30.858Z"
+      },
+      "delivery": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T08:47:30.858Z"
+      },
+      "assessment": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T08:47:30.858Z"
+      },
+      "reply": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T08:47:30.858Z"
+      },
+      "evals": {
+        "state": "ready",
+        "detail": "No unavailable Eval in the last hour"
+      }
+    }
+  },
+  "dependencyCycle": {
+    "status": "PASS",
+    "provider": "@deepseek-ai/dsh-permission-presets",
+    "retainedRefused": true,
+    "intakeRefused": true,
+    "staleRefused": true,
+    "staleRuntimeRefused": true,
+    "providerCount": 1,
+    "globalProviderCount": 3,
+    "presetsUnchanged": true,
+    "lifetimeAborted": true,
+    "reloaded": true,
+    "configuredProfile": false,
+    "account": "UNCONFIGURED",
+    "businessWorker": "NOT_RUN",
+    "realModelSession": "NOT_RUN"
+  },
+  "forced": false,
+  "exit_code": 0,
+  "signal": null,
+  "installed": 2,
+  "disposed": 2,
+  "log_sha256": "c500d9c7f780a427eb2abd03bf655d4b2e4500658b7193c1454b5d251fa0abf1"
+}

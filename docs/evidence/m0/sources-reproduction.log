@@ -1,0 +1,38 @@
+
+ RUN  v4.1.8 <workspace>/upstream/superagent
+
+ ❯ tests/sources.spec.ts (71 tests | 1 failed) 3298ms
+     × takes in the event lines it reads, records each chat as direct or not, and reports a malformed line without stopping 73ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/sources.spec.ts > feishu event consumer > takes in the event lines it reads, records each chat as direct or not, and reports a malformed line without stopping
+AssertionError: expected { state: 'ready', …(2) } to match object { state: 'error', …(1) }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "detail": StringContaining "JSON",
+-   "state": "error",
++   "detail": "Listening for bot events",
++   "state": "ready",
+  }
+
+ ❯ tests/sources.spec.ts:1097:27
+    1095|     expect(['om_1', 'om_2'].map(id => store.triggers.get(feishuTrigger…
+    1096|     expect(store.get(KV.feishu.chats)).toEqual({ oc_group: false, oc_d…
+    1097|     expect(health.feishu).toMatchObject({ state: 'error', detail: expe…
+       |                           ^
+    1098|     controller.abort(); await running; store.close()
+    1099|   }, 20_000)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 70 passed (71)
+   Start at  13:57:16
+   Duration  4.40s (transform 679ms, setup 0ms, import 902ms, tests 3.30s, environment 0ms)
+

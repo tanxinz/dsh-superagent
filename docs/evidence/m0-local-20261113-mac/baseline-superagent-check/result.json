@@ -1,0 +1,24 @@
+{
+  "schema_version": 2,
+  "check_id": "baseline-superagent-check",
+  "mode": "OFFLINE_BUILD_OR_TEST",
+  "started_at": "2026-11-13T04:45:09.610569+00:00",
+  "finished_at": "2026-11-13T04:45:09.612834+00:00",
+  "duration_seconds": 0.002,
+  "command": [
+    "pnpm",
+    "check"
+  ],
+  "source_commit": "1475ffa241f89ff806c9d5e01684ffa50bd0e246",
+  "exit_code": null,
+  "timed_out": false,
+  "launch_error": "PermissionError",
+  "interrupted_signal": null,
+  "status": "FAIL",
+  "log": "command.log",
+  "log_sha256": "42a50714c02f79561e9c1b0922b5e0dd84e7cf54129597c176c60b2e10409282",
+  "lockfile_sha256": "ba6b997c448984a04b28eeb5b620c14c7cfeff5eb170e1abd6e0734007405c39",
+  "online_sdk": "NOT_RUN",
+  "real_session": "NOT_RUN",
+  "m0_exit": "BLOCKED"
+}

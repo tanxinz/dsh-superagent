@@ -1,0 +1,366 @@
+{
+  "mode": "--boot-service-dependency-cycle",
+  "status": "PASS",
+  "config_tree": "PASS",
+  "boot": "PASS",
+  "business_worker": "NOT_RUN",
+  "real_model_session": "NOT_RUN",
+  "m0_exit": "BLOCKED",
+  "cycles": [
+    {
+      "index": 1,
+      "state": {
+        "setup": {
+          "machine": {
+            "stateDir": "/var/folders/_j/x6wlg74j4nz51xcf6bt5y3ch0000gn/T/m0-dsh-profile-xlead7/state",
+            "promptMaxChars": 100000,
+            "admissionContextMaxPages": 10,
+            "admissionContextTimeoutMs": 15000
+          },
+          "problem": {
+            "place": "github",
+            "code": "repositoryUnset",
+            "values": {},
+            "detail": "The GitHub Source names no repository."
+          },
+          "feishuProblem": null,
+          "accounts": null
+        },
+        "load": {
+          "running": 0,
+          "queued": 0,
+          "maxWorkers": 3
+        },
+        "masterId": "orchestrator-da48662dc9a7c013a9fcb13c3aa9debc",
+        "paused": false,
+        "health": {
+          "runtime": {
+            "state": "paused",
+            "detail": "Waiting for the deployment check",
+            "code": "setupPending",
+            "at": "2026-11-13T08:47:30.864Z"
+          },
+          "relay": {
+            "state": "ready",
+            "detail": "Nothing waiting",
+            "at": "2026-11-13T08:47:30.858Z"
+          },
+          "notice": {
+            "state": "ready",
+            "detail": "Nothing waiting",
+            "at": "2026-11-13T08:47:30.858Z"
+          },
+          "launch": {
+            "state": "ready",
+            "detail": "Nothing waiting",
+            "at": "2026-11-13T08:47:30.858Z"
+          },
+          "delivery": {
+            "state": "ready",
+            "detail": "Nothing waiting",
+            "at": "2026-11-13T08:47:30.858Z"
+          },
+          "assessment": {
+            "state": "ready",
+            "detail": "Nothing waiting",
+            "at": "2026-11-13T08:47:30.858Z"
+          },
+          "reply": {
+            "state": "ready",
+            "detail": "Nothing waiting",
+            "at": "2026-11-13T08:47:30.858Z"
+          },
+          "evals": {
+            "state": "ready",
+            "detail": "No unavailable Eval in the last hour"
+          }
+        }
+      },
+      "dependencyCycle": {
+        "status": "PASS",
+        "provider": "@deepseek-ai/dsh-permission-presets",
+        "retainedRefused": true,
+        "intakeRefused": true,
+        "staleRefused": true,
+        "staleRuntimeRefused": true,
+        "providerCount": 1,
+        "globalProviderCount": 3,
+        "presetsUnchanged": true,
+        "lifetimeAborted": true,
+        "reloaded": true,
+        "configuredProfile": false,
+        "account": "UNCONFIGURED",
+        "businessWorker": "NOT_RUN",
+        "realModelSession": "NOT_RUN"
+      },
+      "forced": false,
+      "exit_code": 0,
+      "signal": null,
+      "installed": 2,
+      "disposed": 2,
+      "log_sha256": "c500d9c7f780a427eb2abd03bf655d4b2e4500658b7193c1454b5d251fa0abf1"
+    },
+    {
+      "index": 2,
+      "state": {
+        "setup": {
+          "machine": {
+            "stateDir": "/var/folders/_j/x6wlg74j4nz51xcf6bt5y3ch0000gn/T/m0-dsh-profile-xlead7/state",
+            "promptMaxChars": 100000,
+            "admissionContextMaxPages": 10,
+            "admissionContextTimeoutMs": 15000
+          },
+          "problem": {
+            "place": "github",
+            "code": "repositoryUnset",
+            "values": {},
+            "detail": "The GitHub Source names no repository."
+          },
+          "feishuProblem": null,
+          "accounts": null
+        },
+        "load": {
+          "running": 0,
+          "queued": 0,
+          "maxWorkers": 3
+        },
+        "masterId": "orchestrator-da48662dc9a7c013a9fcb13c3aa9debc",
+        "paused": false,
+        "health": {
+          "runtime": {
+            "state": "paused",
+            "detail": "Waiting for the deployment check",
+            "code": "setupPending",
+            "at": "2026-11-13T08:47:31.645Z"
+          },
+          "relay": {
+            "state": "ready",
+            "detail": "Nothing waiting",
+            "at": "2026-11-13T08:47:31.639Z"
+          },
+          "notice": {
+            "state": "ready",
+            "detail": "Nothing waiting",
+            "at": "2026-11-13T08:47:31.639Z"
+          },
+          "launch": {
+            "state": "ready",
+            "detail": "Nothing waiting",
+            "at": "2026-11-13T08:47:31.639Z"
+          },
+          "delivery": {
+            "state": "ready",
+            "detail": "Nothing waiting",
+            "at": "2026-11-13T08:47:31.639Z"
+          },
+          "assessment": {
+            "state": "ready",
+            "detail": "Nothing waiting",
+            "at": "2026-11-13T08:47:31.639Z"
+          },
+          "reply": {
+            "state": "ready",
+            "detail": "Nothing waiting",
+            "at": "2026-11-13T08:47:31.639Z"
+          },
+          "evals": {
+            "state": "ready",
+            "detail": "No unavailable Eval in the last hour"
+          }
+        }
+      },
+      "dependencyCycle": {
+        "status": "PASS",
+        "provider": "@deepseek-ai/dsh-permission-presets",
+        "retainedRefused": true,
+        "intakeRefused": true,
+        "staleRefused": true,
+        "staleRuntimeRefused": true,
+        "providerCount": 1,
+        "globalProviderCount": 3,
+        "presetsUnchanged": true,
+        "lifetimeAborted": true,
+        "reloaded": true,
+        "configuredProfile": false,
+        "account": "UNCONFIGURED",
+        "businessWorker": "NOT_RUN",
+        "realModelSession": "NOT_RUN"
+      },
+      "forced": false,
+      "exit_code": 0,
+      "signal": null,
+      "installed": 2,
+      "disposed": 2,
+      "log_sha256": "c500d9c7f780a427eb2abd03bf655d4b2e4500658b7193c1454b5d251fa0abf1"
+    }
+  ],
+  "peers": [
+    {
+      "name": "@deepseek-ai/cordis",
+      "actual": "4.0.5-alpha.1",
+      "reference": "4.0.5-alpha.1",
+      "exact_reference_match": true,
+      "manifest_sha256": "37ac1aefbfc2a8d601bd061cec506159a1ca47aabf116f9682e4253fce1ead27"
+    },
+    {
+      "name": "@deepseek-ai/dsh-agent",
+      "actual": "0.2.1-alpha.2",
+      "reference": "0.2.1-alpha.2",
+      "exact_reference_match": true,
+      "manifest_sha256": "59296f117b6487d4ada7a8cc20069420cec4af2e496bce83ef40c6e96dfb14b8"
+    },
+    {
+      "name": "@deepseek-ai/dsh-api-session-controller",
+      "actual": "0.2.1-alpha.2",
+      "reference": "0.2.1-alpha.2",
+      "exact_reference_match": true,
+      "manifest_sha256": "9434ebb4cb49772edbfba819701aa343296a5106f3b0081677919cf752d52b67"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-locale",
+      "actual": "0.2.1-alpha.2",
+      "reference": "0.2.1-alpha.2",
+      "exact_reference_match": true,
+      "manifest_sha256": "e0af03e922c0396381b9f284e2990f53e3a8333899723802a961c20e5a6f480f"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-renderer",
+      "actual": "0.2.1-alpha.2",
+      "reference": "0.2.1-alpha.2",
+      "exact_reference_match": true,
+      "manifest_sha256": "4919526330db82a17b1f3e226ebcc3b5d7ece112fcc82bb40d6f807a15b5a416"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-settings",
+      "actual": "0.2.1-alpha.2",
+      "reference": "0.2.1-alpha.2",
+      "exact_reference_match": true,
+      "manifest_sha256": "4838ce179790ab1252748f0a8aaa0a8a61407ab75fde3b651e7e09444c799156"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-layout",
+      "actual": "0.2.1-alpha.2",
+      "reference": "0.2.1-alpha.2",
+      "exact_reference_match": true,
+      "manifest_sha256": "0a51aa2a4d3e591dcaf691e5952e248edf8b6996a02e20e089a3a2b8fb60b8b3"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-sidebar",
+      "actual": "0.2.1-alpha.2",
+      "reference": "0.2.1-alpha.2",
+      "exact_reference_match": true,
+      "manifest_sha256": "bad5bbfe46067d8dbaa13fddc0eb86edec530bf17235af90ad0816cfb603fc65"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-workspace",
+      "actual": "0.2.1-alpha.2",
+      "reference": "0.2.1-alpha.2",
+      "exact_reference_match": true,
+      "manifest_sha256": "985e0db162296bdeca2db80f451d2b1823ceb3a9555e30d207ac28d6d0bdb35b"
+    },
+    {
+      "name": "@deepseek-ai/dsh-host-webserver",
+      "actual": "0.2.1-alpha.2",
+      "reference": "0.2.1-alpha.2",
+      "exact_reference_match": true,
+      "manifest_sha256": "38eb00c916eae3ee78300310dd16d445aca7622fab301932a39a448cebf96dce"
+    },
+    {
+      "name": "@deepseek-ai/dsh-llm",
+      "actual": "0.2.1-alpha.2",
+      "reference": "0.2.1-alpha.2",
+      "exact_reference_match": true,
+      "manifest_sha256": "a8413fe498f22e759e5e1538fa932620fc074684e24cd7f8b32ef076d9a1854a"
+    },
+    {
+      "name": "@deepseek-ai/dsh-permission-presets",
+      "actual": "0.2.1-alpha.2",
+      "reference": "0.2.1-alpha.2",
+      "exact_reference_match": true,
+      "manifest_sha256": "8e94a46ebd7393b7be5a7e34c54cf3a62774c9df8ab5e3494f6ee4e838a29a8c"
+    },
+    {
+      "name": "@deepseek-ai/dsh-scope",
+      "actual": "0.2.1-alpha.2",
+      "reference": "0.2.1-alpha.2",
+      "exact_reference_match": true,
+      "manifest_sha256": "87760690e9f4777e95c86fc0db71373189c837ad2c40688fa5dee9a646fb8a43"
+    },
+    {
+      "name": "@deepseek-ai/dsh-session",
+      "actual": "0.2.1-alpha.2",
+      "reference": "0.2.1-alpha.2",
+      "exact_reference_match": true,
+      "manifest_sha256": "a3fc9844c0c6f9bd800f1d510bfe69300f9c1d5d201d869f5e15e854ef3b961b"
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-persistence",
+      "actual": "0.2.1-alpha.2",
+      "reference": "0.2.1-alpha.2",
+      "exact_reference_match": true,
+      "manifest_sha256": "e754d1d77718016344f630b3dea893503d270c96983c3ac54e22eb221c5846f7"
+    },
+    {
+      "name": "@deepseek-ai/dsh-system-prompt",
+      "actual": "0.2.1-alpha.2",
+      "reference": "0.2.1-alpha.2",
+      "exact_reference_match": true,
+      "manifest_sha256": "6d80c8fb0506cf370a1795028ab124019be5054257132a24486f2371705c0770"
+    },
+    {
+      "name": "@deepseek-ai/dsh-tools",
+      "actual": "0.2.1-alpha.2",
+      "reference": "0.2.1-alpha.2",
+      "exact_reference_match": true,
+      "manifest_sha256": "79cfb0da665839d4f9a2bf38a32669bda61c5d2928a48cc8b4b7e1a4970b6e55"
+    },
+    {
+      "name": "@deepseek-ai/dsh-workspace",
+      "actual": "0.2.1-alpha.2",
+      "reference": "0.2.1-alpha.2",
+      "exact_reference_match": true,
+      "manifest_sha256": "22733ff521d3174e539300569852146e03820842427aed2590814df5e9ad3e30"
+    },
+    {
+      "name": "@deepseek-ai/schemastery",
+      "actual": "3.18.5-alpha.1",
+      "reference": "3.18.5-alpha.1",
+      "exact_reference_match": true,
+      "manifest_sha256": "277eb34d37279ff52d0bbe93704130d722517f400e9cda39df28e7bd3ec01d8d"
+    },
+    {
+      "name": "@deepseek-ai/dsh-skill",
+      "actual": "0.2.1-alpha.2",
+      "reference": "0.2.1-alpha.2",
+      "exact_reference_match": true,
+      "manifest_sha256": "054762a8a51ff03b2b4ee9c86fe0b0cfb40c34d869efad62bbf3e9c8371d8c3b"
+    },
+    {
+      "name": "@deepseek-ai/dsh-attachment",
+      "actual": "0.2.1-alpha.2",
+      "reference": "0.2.1-alpha.2",
+      "exact_reference_match": true,
+      "manifest_sha256": "64b685b8b33ecf0f72bbda35771ef8213c56c4e765cdfe9e54a2f6f8133422bf"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-slots",
+      "actual": "0.2.1-alpha.2",
+      "reference": "0.2.1-alpha.2",
+      "exact_reference_match": true,
+      "manifest_sha256": "59d139682eabcc36fadf71ee6b9319be742438ef943a51c318d865c96c0291bb"
+    },
+    {
+      "name": "@deepseek-ai/dsh-subprocess",
+      "actual": "0.2.1-alpha.2",
+      "reference": "0.2.1-alpha.2",
+      "exact_reference_match": true,
+      "manifest_sha256": "c4fbbdc36e916a8370eeb596aae394b04ed1501af70b74f25ed748384d229530"
+    }
+  ],
+  "bundle_manifest_sha256": "f5170d812137dd370c568decb481e19f4da9a3d1fd7bad341a0f07942020a559",
+  "bundle_patch_sha256": "fc9271cdf9b3d96bcb7febffe194f92cb427a88044168f83b3fb7522ab5c9bce",
+  "built_entry_sha256": "c51fee26cc79966773e640b03bb1d0d56a1de609ef21e0c708043b25d0c9e22a",
+  "dependency_provider_entry_sha256": "4f23c620145098d611d04d8363bc6716f49b26930c9141a21dc9a8df2b72ba63",
+  "dependency_observer_sha256": "e9abc6adcf1724ff43f38d56a3d3cb27844d466e94ce723e8fb5425c3b13b1f8",
+  "config_tree_sha256": "2cdb6e1d5cd112b63ce398c4c19a690c4a1d3e85f05b507ff558fdd2a1cba839"
+}

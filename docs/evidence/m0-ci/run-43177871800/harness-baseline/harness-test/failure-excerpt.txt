@@ -1,0 +1,37 @@
+EXCERPT ONLY: full original log is in the GitHub artifact; result.json hashes that original log.
+
+ ❯  process-bound  packages/workflow/workflow-ptc/tests/workflow-ptc.spec.ts (42 tests | 1 failed) 36005ms
+       × waits for a late provider publication to release its file after cancellation 25ms
+ ❯  thread-safe  packages/experimental/client-ui-forge/tests/controller.host.spec.ts (132 tests | 15 failed) 225550ms
+     × binds the open change requests of the upstream branch once per remote and branch, and looks again on refresh 5070ms
+     × reports filter configuration overflow separately and recovers after it is reduced 5034ms
+     × compares the branch scope with a chosen base branch and lists the branches it can choose 5037ms
+     × lists the commits of the branch scope and reads chosen ones 5432ms
+     × lists more refs than other Git output may print, up to maxDiffBytes 5299ms
+     × reports a directory outside a checkout, a branch without a fork point, and a diff over the limit 5132ms
+     × follows the Session into the worktree created at its first step 5118ms
+     × creates the requested worktree as Agent maintenance while the first message waits in the inbox, showing each step, then starts its turn 5035ms
+     × shows a removed worktree whose branch remains, and holds the next message until the branch is checked out again 5043ms
+     × shows a removed worktree whose branch is gone, and creates the branch again at its base commit 5052ms
+     × checks once for all the messages that wait, publishing the answer once 5024ms
+     × finds a removed worktree on inspection, and lets messages go on without offering restoration while Git cannot answer 5027ms
+     × keeps the message waiting when a restoration inside its wait fails or is aborted, and lets it go on once one succeeds 5038ms
+     × moves the Session from its removed worktree to the source checkout inside the wait of the message that waits for it 5052ms
+     × keeps a failed restoration blocked after the panel reloads, despite its leftover directory 5092ms
+ ❯  thread-safe  packages/experimental/worktree/tests/worktree.spec.ts (38 tests | 1 failed) 81593ms
+     × checks the branch out again at its latest commit after removing only its stale registration, without entering the checkout 5051ms
+ ❯  thread-safe  packages/experimental/worktree/tests/archive.spec.ts (26 tests | 2 failed) 88051ms
+     × removes the checkout after the Session moved elsewhere, and the ordinary ensure contract holds afterwards 5104ms
+     × removes a persisted checkout without loading its Agent, reading cold Sessions from the projection cache when present 5081ms
+
+LAST OUTPUT:
+ ✓  thread-safe  packages/lsp/lsp-stdio/tests/instance.spec.ts (26 tests) 5369ms
+     ✓ cancels an in-flight request on abort and rejects  523ms
+     ✓ terminates the instance when the server ignores $/cancelRequest past the grace  417ms
+     ✓ resolves the cancel grace when the server honors $/cancelRequest  323ms
+     ✓ observes abort while awaiting a slow initialize handshake  328ms
+     ✓ carries a non-Error abort reason as a generic aborted error  417ms
+ ✓  thread-safe  packages/subagent/tool-subagent/tests/model-selection-settings.spec.ts (14 tests) 390ms
+ ✓  thread-safe  packages/experimental/client-ui-forge/tests/change-request-overview.client.spec.tsx (26 tests) 1525ms
+ ✓  thread-safe  packages/ssh/ssh/tests/helper-processes.spec.ts (19 tests) 631ms
+ ✓  thread-safe  packages/util/http-proxy/tests/install.spec.ts (24 tests) 296ms

@@ -1,0 +1,11 @@
+{
+  "base_commit": "7d9f51d0d1f63c5cd2fd189b1b81bca64c437779",
+  "tested_worktree_sha256": {
+    "scripts/ci_record.py": "ff6703829b8f3e3f67e0ee067ccc0210dad6d006c4ca801526bddfbbcab9fbc3",
+    "scripts/test_ci_record.py": "befa306d30b4b20703c9fc38199aecb4b62f7de431ca65bd19d2d7b896fa08ff",
+    "scripts/evidence_audit.py": "113602ce3a6313292064dfbb43922a738c1393eebdf88f11c8eed8a0e06a2358",
+    "scripts/test_evidence_audit.py": "4db12de85b5624d18d8b4b3205cf234bb34af97f9aa097c859ed1e8ad36f9f2a",
+    ".github/workflows/m0-offline.yml": "62a4454a7f29097aba6c19a8078580488ec78be2b3efa7f44753f08576efd50b",
+    "scripts/m0-preflight.test.mjs": "74e68b0e2c14cd9aacd49d035e5001409f9d1a7d835ba10653c347bff8b96dfa"
+  }
+}

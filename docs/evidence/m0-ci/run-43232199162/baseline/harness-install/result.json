@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "check_id": "harness-install",
+  "mode": "OFFLINE_BUILD_OR_TEST",
+  "started_at": "2026-11-12T13:57:30.090646+00:00",
+  "finished_at": "2026-11-12T13:57:57.618647+00:00",
+  "duration_seconds": 27.528,
+  "command": [
+    "npm",
+    "exec",
+    "--yes",
+    "--package=pnpm@11.28.5",
+    "--",
+    "pnpm",
+    "install",
+    "--frozen-lockfile"
+  ],
+  "source_commit": "e8f7b93a344964de3dca1ace9e72b6e4d6de87cb",
+  "exit_code": 0,
+  "timed_out": false,
+  "launch_error": null,
+  "status": "PASS",
+  "log": "command.log",
+  "log_sha256": "c2a2301735d0a186744ea8b5fa956b023af8793c2b68b73387e610c0a1379da2",
+  "lockfile_sha256": "c42783bd9f1c61f18867e0b41b60f7514d1447c09f993673cc02dbe90fab21c0",
+  "online_sdk": "NOT_RUN",
+  "real_session": "NOT_RUN",
+  "m0_exit": "BLOCKED"
+}

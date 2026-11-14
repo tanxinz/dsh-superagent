@@ -1,0 +1,76 @@
+{
+  "index": 1,
+  "state": {
+    "setup": {
+      "machine": {
+        "stateDir": "/var/folders/_j/x6wlg74j4nz51xcf6bt5y3ch0000gn/T/m0-dsh-profile-d74pcD/state",
+        "promptMaxChars": 100000,
+        "admissionContextMaxPages": 10,
+        "admissionContextTimeoutMs": 15000
+      },
+      "problem": {
+        "place": "github",
+        "code": "repositoryUnset",
+        "values": {},
+        "detail": "The GitHub Source names no repository."
+      },
+      "feishuProblem": null,
+      "accounts": null
+    },
+    "load": {
+      "running": 0,
+      "queued": 0,
+      "maxWorkers": 3
+    },
+    "masterId": "orchestrator-0428d8e3833a94a371625bec592021ba",
+    "paused": false,
+    "health": {
+      "runtime": {
+        "state": "paused",
+        "detail": "Waiting for the deployment check",
+        "code": "setupPending",
+        "at": "2026-11-13T08:53:59.314Z"
+      },
+      "relay": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T08:53:59.306Z"
+      },
+      "notice": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T08:53:59.306Z"
+      },
+      "launch": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T08:53:59.306Z"
+      },
+      "delivery": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T08:53:59.306Z"
+      },
+      "assessment": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T08:53:59.306Z"
+      },
+      "reply": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T08:53:59.306Z"
+      },
+      "evals": {
+        "state": "ready",
+        "detail": "No unavailable Eval in the last hour"
+      }
+    }
+  },
+  "forced": false,
+  "exit_code": 0,
+  "signal": null,
+  "installed": 1,
+  "disposed": 1,
+  "log_sha256": "0afe59dd237b5fd308507896c44e133ead5c3856b3237ebf9de0cc7f96a8e6a0"
+}

@@ -1,0 +1,41 @@
+{
+  "parent_commit": "130a766a142ff0c009c9d563e4f3c17309eb258a",
+  "branch": "feat/m0-trust-and-permission-baseline-20261113",
+  "status": "M0_BLOCKED",
+  "files": {
+    ".github/workflows/m0-offline.yml": "6b70744d7612f7542499bf3745dc3e2debd0dc66b505b115f3b1bea021af2871",
+    "scripts/fixtures/m0-profile-runtime/mesh-dependency-observer.mjs": "89cdc965c2508382947eb7eed1c51acfaa1e405cca475d708db8ca4460dbbf87",
+    "scripts/m0-isolation-probe.mjs": "3f07982f741827d4c18cfaefff72f46e16361b42f1144cc4a13453e028dd5085",
+    "scripts/m0-profile-probe.mjs": "b8ae5dc65bd9efdd0df0976584c533102014ce7e044a485b0477941d932708e6",
+    "upstream/superagent/src/app/http.ts": "223259629c9b55da0464e087e6defa7c1b2bd0f670dfe7effb0fb1dcd928fa04",
+    "upstream/superagent/src/app/runtime.ts": "b7f5af28173738c4c9beaa15208e2b4a6a5a7eb2713fbd4a2597be15b8717e9c",
+    "upstream/superagent/src/app/sessions.ts": "fd81258b2dba8171eed4f2358eb30497129128cad79d21ebeb3b094639b56782",
+    "upstream/superagent/src/app/store.ts": "038e1c5aa6e7cb91030ce97a8a2d8a93d9e927d837849ceb6716c066f287ac3e",
+    "upstream/superagent/src/client/api.ts": "76e5641174e54c16d64c2625ae711926bf1b6fe428bf7aaa2d2e0bb429566035",
+    "upstream/superagent/src/client/index.tsx": "1d7ed28f85b86e44d4b3d68696dc54036139cdf35d08f6072ddf7f8f9a4421be",
+    "upstream/superagent/src/client/management-auth.tsx": "7ae8a122851051871b8415ac92cb9f296589d0a557ad8723e3a3b2ac103be41c",
+    "upstream/superagent/src/extensions/mesh/auth.ts": "75f6f55db98ef314382ef7ad0d917e57f2f727f4ae6a960bac74a78ac461ac96",
+    "upstream/superagent/src/extensions/mesh/restricted-session.ts": "04d94f82f06f58f2da9f2faa545678e15ca11ecf33e6e4918f9c71aa68995402",
+    "upstream/superagent/src/extensions/mesh/safety.ts": "63f1b987179610afc7181481fbf8734314db43ca3e78ed71bc6caaa6a453dae0",
+    "upstream/superagent/src/extensions/mesh/security-store.ts": "c9504092fef1bd9d08ca732f0ec260dae51d169c2e303986b1ac5cec182d5a73",
+    "upstream/superagent/src/extensions/mesh/service.ts": "6ce9815e9d1c7e5575a672de7b6d519b78b776437d4376d5a6d8293b9235ceb5",
+    "upstream/superagent/src/index.ts": "10f67cd795c11fb6fdcc97fe2fa8098075e0af13562b95832257d846bb4e6f2c",
+    "upstream/superagent/tests/client.spec.tsx": "58b859ff92e87f1f27798d455ec78f1734463062e69d9f3c75c40b6bd7e0ad30",
+    "upstream/superagent/tests/fixtures/host.ts": "4cea77dec33adc1f08ddf86135810d650ddb0a3ef36805facbde2d9e73e23c45",
+    "upstream/superagent/tests/http.spec.ts": "a053f34d04b3881b9cda19ff677c2cb7f35dcf4774242306578a4cc6c0e2a739",
+    "upstream/superagent/tests/index.spec.ts": "f8b6557eef5db486dd476f8f2448d5498ab963d48bdcb6ed1c9e4032e7046826",
+    "upstream/superagent/tests/mesh-safety.spec.ts": "4d7725be8bdc96a9a0fb19af80e2efb554c72d1f2dd4b476869f2fb3e4f95cad",
+    "upstream/superagent/tests/mesh-security.spec.ts": "0de4fc24f35bf2b027a92a130f30dafdf122a881402c11e5fe5553f31e2bbf6e",
+    "upstream/superagent/tests/model-surface.spec.ts": "a930e2fc5567a9a42963f4def35fcb75e93b4a46b854ce389a8b6d872511be41",
+    "upstream/superagent/tests/restricted-session.spec.ts": "aeb3fb3c99d699ceb69b017eade1aaf9e2f13a1720dfc90beed6c88e9f420bea",
+    "upstream/superagent/tests/runtime.spec.ts": "7ecc4bcc4abfe23975e6663045b9577f7eb19ccd5f16efa82288f4b910e6d559"
+  },
+  "locks": {
+    ".gitmodules": "9dcc7d6a7a40a5292de5d860e8542a698dddc5eeb21649f03de011f2d0b1af1f",
+    "upstream/superagent/package.json": "f5170d812137dd370c568decb481e19f4da9a3d1fd7bad341a0f07942020a559",
+    "upstream/superagent/pnpm-lock.yaml": "ba6b997c448984a04b28eeb5b620c14c7cfeff5eb170e1abd6e0734007405c39",
+    "scripts/fixtures/m0-profile-runtime/package.json": "03c2d61882911768216fa0b49bae7b18658e8f45b6c2b869a79301d019793deb",
+    "scripts/fixtures/m0-profile-runtime/package-lock.json": "a24c63d231ed2f8a7b3ff848151f79c0d2a07121546036050130a4b19b01a83b"
+  },
+  "harness_gitlink": "e8f7b93a344964de3dca1ace9e72b6e4d6de87cb"
+}

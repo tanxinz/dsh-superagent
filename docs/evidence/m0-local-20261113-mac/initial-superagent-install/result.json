@@ -1,0 +1,30 @@
+{
+  "schema_version": 2,
+  "check_id": "initial-superagent-install",
+  "mode": "OFFLINE_BUILD_OR_TEST",
+  "started_at": "2026-11-13T04:41:21.863739+00:00",
+  "finished_at": "2026-11-13T04:42:32.226612+00:00",
+  "duration_seconds": 70.363,
+  "command": [
+    "npm",
+    "exec",
+    "--yes",
+    "--package=pnpm@11.7.0",
+    "--",
+    "pnpm",
+    "install",
+    "--frozen-lockfile"
+  ],
+  "source_commit": "1475ffa241f89ff806c9d5e01684ffa50bd0e246",
+  "exit_code": 1,
+  "timed_out": false,
+  "launch_error": null,
+  "interrupted_signal": null,
+  "status": "FAIL",
+  "log": "command.log",
+  "log_sha256": "684a07c79725a4544d828fc50d2acc1186addf119cf206f7496c1133b07395b7",
+  "lockfile_sha256": "ba6b997c448984a04b28eeb5b620c14c7cfeff5eb170e1abd6e0734007405c39",
+  "online_sdk": "NOT_RUN",
+  "real_session": "NOT_RUN",
+  "m0_exit": "BLOCKED"
+}

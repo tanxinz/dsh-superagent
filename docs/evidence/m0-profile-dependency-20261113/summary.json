@@ -1,0 +1,80 @@
+{
+  "status": "PASS",
+  "boot": "PASS",
+  "config_tree": "PASS",
+  "business_worker": "NOT_RUN",
+  "real_model_session": "NOT_RUN",
+  "m0_exit": "BLOCKED",
+  "dependency_provider_entry_sha256": "4f23c620145098d611d04d8363bc6716f49b26930c9141a21dc9a8df2b72ba63",
+  "dependency_observer_sha256": "d9152bdcaf2f925970dd8b6fdacd120173aba8cb44d42bda6c2a016b48488fe1",
+  "cycles": [
+    {
+      "index": 1,
+      "dependencyCycle": {
+        "status": "PASS",
+        "provider": "@deepseek-ai/dsh-permission-presets",
+        "retainedRefused": true,
+        "intakeRefused": true,
+        "staleRefused": true,
+        "staleRuntimeRefused": true,
+        "providerCount": 1,
+        "presetsUnchanged": true,
+        "lifetimeAborted": true,
+        "reloaded": true,
+        "configuredProfile": false,
+        "businessWorker": "NOT_RUN",
+        "realModelSession": "NOT_RUN"
+      },
+      "forced": false,
+      "exit_code": 0,
+      "signal": null,
+      "installed": 2,
+      "disposed": 2,
+      "log_sha256": "ea23a3acf54cef884952f9a2a9e1c5db2b565c1621773fdc0fb7fe615de71164"
+    },
+    {
+      "index": 2,
+      "dependencyCycle": {
+        "status": "PASS",
+        "provider": "@deepseek-ai/dsh-permission-presets",
+        "retainedRefused": true,
+        "intakeRefused": true,
+        "staleRefused": true,
+        "staleRuntimeRefused": true,
+        "providerCount": 1,
+        "presetsUnchanged": true,
+        "lifetimeAborted": true,
+        "reloaded": true,
+        "configuredProfile": false,
+        "businessWorker": "NOT_RUN",
+        "realModelSession": "NOT_RUN"
+      },
+      "forced": false,
+      "exit_code": 0,
+      "signal": null,
+      "installed": 2,
+      "disposed": 2,
+      "log_sha256": "ea23a3acf54cef884952f9a2a9e1c5db2b565c1621773fdc0fb7fe615de71164"
+    }
+  ],
+  "historical_attempts": {
+    "dependency-profile-final": "PASS",
+    "original-profile-regression": "PASS",
+    "dependency-profile-reviewed": "FAIL",
+    "complete-check": "PASS",
+    "preflight-regressions": "PASS",
+    "dependency-profile-repeat": "PASS",
+    "frozen-install": "PASS",
+    "dump-only-regression": "PASS",
+    "dependency-profile-diagnosis": "PASS",
+    "root-regressions": "FAIL",
+    "dependency-profile": "PASS",
+    "root-regressions-repeat": "PASS"
+  },
+  "limits": [
+    "Real unconfigured profile only",
+    "One aggregate restoration check failed once; original evidence retained, exact cause unproven",
+    "Final granular checks and repeated runs passed; M0 remains BLOCKED"
+  ],
+  "final_required_commands_pass": true
+}

@@ -1,0 +1,9 @@
+- id: webserver
+  config:
+    host: 127.0.0.1
+    port: 56558
+- id: dsh-superagent
+  config:
+    stateDir: /var/folders/_j/x6wlg74j4nz51xcf6bt5y3ch0000gn/T/m0-dsh-profile-xlead7/state
+- id: dsh-superagent-github
+  disabled: true

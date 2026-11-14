@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "check_id": "recorder-tests",
+  "mode": "OFFLINE_BUILD_OR_TEST",
+  "started_at": "2026-11-12T07:47:43.154172+00:00",
+  "finished_at": "2026-11-12T07:47:43.368720+00:00",
+  "duration_seconds": 0.215,
+  "command": [
+    "python",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "scripts",
+    "-p",
+    "test_*.py",
+    "-v"
+  ],
+  "source_commit": "98372b1368c992716d86d91d1f4ca0936d650d36",
+  "exit_code": 0,
+  "timed_out": false,
+  "launch_error": null,
+  "status": "PASS",
+  "log": "command.log",
+  "log_sha256": "2f12fb505da60d5f74ca8061432ecbc68489a2e2b10ba270a5d2a3d5ddfc1087",
+  "lockfile_sha256": null,
+  "online_sdk": "NOT_RUN",
+  "real_session": "NOT_RUN",
+  "m0_exit": "BLOCKED"
+}

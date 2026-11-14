@@ -47,3 +47,11 @@ PR #14 只改 Markdown，但原 `.github/workflows/m0-offline.yml` 对所有 `pu
 - 静态文档检查是语法与引用完整性检查，**不替代设计、授权、安全和变更内容的独立 Reviewer**。本次同样没有把旧 Harness baseline FAIL 改写为 PASS。
 
 已完成的真实纯文档触发验收与尚未验证的 Branch Protection/Required Checks 必须独立标注；PR #19 合并前由仓库管理员核对 required-check 约束，确保不会因路径跳过而产生不可解的 Expected 检查。合并与功能准入的其他约束仍保持原样。
+
+## 与 PR #18 的默认 CI 修复依赖及合并顺序
+
+PR #19 的隔离验证分支已包含 PR #18 中**相同字节的** `patches/harness-baseline-liveshare-horizon-relative-dates.patch` 和默认 `m0-offline.yml` 的应用步骤，确保在 PR #19 的完整 M0 测试中也执行已补丁 baseline；matching candidate 保留未修改源码。该补丁已在 PR #18 独立完成定向 + 全量验证，但本组合仍须以 PR #19 最新 SHA 对应的 CI 结果为准。
+
+**依赖先后**：优先独立审阅、合并 PR #18 到 `feat/m0-local-20261113-mac`，随后重新比较 PR #19 与更新后的 base，确认 `patches/*` 与 baseline 应用逻辑已由前置 PR 引入，不得在最终 diff 里重复作为新改动。再合并 PR #19 的文档路由与校验。最后对 PR #14 做独立设计复审。所有 PR 在合并前仍需其它成员正式审核。
+
+原始未修改 baseline 的失败工件不变；新的 `baseline-fixture-patched` 全量只能证明补丁后基线结果。此组合不改变 Harness gitlink 或业务源码，M0-14 仍 BLOCKED。

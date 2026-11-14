@@ -1,8 +1,14 @@
 name: M0 offline review and build
 
 on:
+  # Pull requests that only change Markdown are checked by docs-review.yml.
+  # Any non-Markdown change (including code, tests, CI, dependencies or config)
+  # still triggers the complete original M0 matrix.
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore:
+      - '**/*.md'
+  # Preserve the manual full-validation route for document PRs and M0 release gates.
   workflow_dispatch:
 
 env:

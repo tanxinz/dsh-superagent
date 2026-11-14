@@ -1124,6 +1124,8 @@ SuperAgent Outbox 仍是唯一渠道消息发起者。`DELIVERABLE_VERIFIED` 在
 
 **令牌状态与原生 Effects 的界线**：许可状态只存于 `mesh_action_attempt`，不替代原生 Effects claim/lease。`ISSUED` 是有时限、一次性的执行资格，并非已完成外部写；`CONSUMED` 是本地最终 Gateway 已放行且可能开始发送，**也不是远端成功证据**。`REVOKED/EXPIRED/ABORTED` 的未消费许可不得重新消费；已 `CONSUMED` 且进程在网络调用窗口崩溃只能保持未决并对账。Gateway 必须与 Engine 撤权 epoch 的持久化 CAS 串行判定；跨数据库/远端系统并不存在恰好一次跨域提交，真实远端写的撤权截止点需要远端共同执行检查，否则仅承诺最末端本地拦截。
 
+**原生 Effects 的真实能力与实施前置**：已核对锁版 SuperAgent `src/app/effects.ts`：`EffectPayloads` 的原生 kind 联合不包含计划中的 `action/side-route/context-patch/watchdog/sop-step/team`，任何启用必须经最小类型扩展和 Handler 注册，并通过完整编译与失败回归。`Effects.enqueue()` 对相同 `(kind,key)` 的待处理工作项采用 `ON CONFLICT DO UPDATE`，会覆盖载荷并递增 `generation`；必须在**同一 Store 事务**由唯一受信封装计算不可变载荷哈希，重复且同哈希只引用原工作项，不同哈希拒绝并写 `EFFECT_PAYLOAD_CONFLICT`，不可直接调用裸 enqueue 造成隐性覆盖。原生 `tasks` 集合提供**进程内**正在运行项去重，但当前 Effect 表没有可直接证明跨进程互斥的持久 `lease/claim_token/owner`；单进程崩溃重启可再次派发旧 Effect，必须以持久 Attempt + 远端幂等/对账防重，在 M2 故障注入证明前只允许隔离单进程 Mock，不宣称多 Worker 并发安全或可写自动恢复已实现。
+
 **认领字段来源**：`ActionRun.CLAIMED` 不代表 ActionRun 自带租约。`claimed_by/lease_until/claim_token`（名称以锁版源码实际暴露为准）属于原生 Effects 处理器或其受控 Adapter 的工作项状态；业务层通过 `action:${actionId}` 的真实 Effect 键追溯认领和重试。M0 必须实证此能力，M2 必须在进程退出、超时和重复入队时证明认领不造成并发重复执行；否则仅允许单进程 Mock，并将可靠租约能力标记未实现，**不要在 `mesh_action_run` 再造一套独立调度器**。
 
 `inputRevision/workVersion/stepVersion` 对应真正新的受信输入或工作版本，不是为了绕过重试而随意递增。未确认执行结果的 RPC 不能因为启动了新 Plan 就重发；同一业务效果的唯一约束是最终控制点。
@@ -1547,6 +1549,18 @@ M0—M5 不要求大规模吞吐、复杂审批、生产渠道送达、正式环
 | V12-09 | Schedule 投递回执与 Engine 业务完成分离；同周期重复触发不产生重复副作用 |
 | V12-10 | 模型/查询/网页/OCR 用量预算、异常退避、取消与日志脱敏生效，且不把测试 Mock 冒称真实在线服务 |
 
+**V1.2 新增关键子例与功能准入验证（正式定义，当前均 `NOT_RUN`）**：以下是 §16.7 所引用子例的正式验收契约。每次测试须提供准确 upstream/project SHA、执行模式、配置摘要、命令及退出码、原始脱敏日志、HTTP/网络/存储证据和负例结论。静态通过不代表功能验收。
+
+| 子例 ID | 必须验证的正/负行为 | 最低证据要求 | 结果 |
+| --- | --- | --- | --- |
+| `V12-01B` | 准入后切换 Provider/endpoint/凭据；最终派发不得越过已批准出站与身份边界 | 真实代理/网络请求记录、provider/endpoint/凭据引用与阻断证据 | `NOT_RUN` |
+| `V12-03C` | 模型 Web 工具、`ctx.web` 直调、DeepSeek 服务端联网分别拒绝越权；HTTP 绕过亦受限 | 三条真实路径分别记录请求数、敏感数据外送与失败关闭 | `NOT_RUN` |
+| `V12-08B` | Playwright Browser 隔离挂载/凭据/出网，断线和撤权后不重写未知远端事实 | 容器/进程/网络负例、Session 与远端对账凭证 | `NOT_RUN` |
+| `V12-08C` | Stagehand 独立模型 Provider/Key、页面外送内容与取消后在途调用受控 | 脱敏模型请求、模型端点、实际出站、独立凭据与取消证据 | `NOT_RUN` |
+| `V12-09B` | 自动周期与人工 `runNow` 身份分离；同一个已持久 `manualExecutionRequestId` 重试不重复写 | Engine/Effects/Inbox/receipt 关联、唯一业务效果计数 | `NOT_RUN` |
+| `V12-10B` | Stagehand 独立调用量、Token/费用、墙钟预算、取消后请求均受审计/阻断 | 独立费用与调用记录、越预算和取消的负向用例 | `NOT_RUN` |
+| `V12-GATE` | 可选能力与 M/G 项目阶段分离；代码、Provider 配置、执行模式和出站策略改变则旧许可失效 | `capabilityId + executionMode + upstreamCommit + providerConfigDigest + egressPolicyVersion + requiredCaseRefs + reviewedEvidenceRefs` 不可变引用及降级证据 | `NOT_RUN` |
+
 ### 16.7 两级准出：项目阶段与可选功能的独立启用许可（V1.2 第三轮复审）
 
 **两套状态不可互相推导**：
@@ -1747,6 +1761,14 @@ M0—M5 不要求大规模吞吐、复杂审批、生产渠道送达、正式环
 - 该分流在 **PR #19 合并前不自动回溯改变 PR #14 历史红色 CI**。GitHub Rulesets/Branch Protection 中的 Required Checks 若要求在 docs-only PR 上报告未触发的 Harness Job，可能出现 `Expected/Pending`；必须由仓库所有者核对并保证代码 PR 原有状态门禁有效。
 - 合并依赖顺序保持 [PR #18](https://github.com/tanxinz/dsh-superagent/pull/18) → [PR #19](https://github.com/tanxinz/dsh-superagent/pull/19) → [PR #14](https://github.com/tanxinz/dsh-superagent/pull/14)。PR #19 当前验证分支包含与 #18 同一字节补丁以便组合测试；**#18 先合入目标分支后**须重新比较 #19 的新增差异及测试状态，不得作为重复改动再次引入。最终合并后的目标分支并不自动等于 `main`。
 - GitHub 合并与应用运行态验收必须分别记录：此段只明确当前工程证据和审核职责；**M0-14 仍为 `BLOCKED`、M0 整体验收 0/14、M1 不允许运行集成，§16.7 的新 V12 动态用例仍 `NOT_RUN`**，可选 Web/Stagehand/Schedule 等能力未经许可保持 `DISABLED/FIXTURE_ONLY`。
+
+### 17.13 静态复核修复与正式文档状态说明（2026-11-14）
+
+本节补充 §17.12 的**历史快照**，不重写其当时的 CI 状态，也不替代任何原始日志或 ZIP。2026-11-14 核验：PR [#18](https://github.com/tanxinz/dsh-superagent/pull/18) 已合并，默认 M0 [Run #43551553456](https://github.com/tanxinz/dsh-superagent/actions/runs/43551553456) 的 patched baseline 与未修改 matching candidate **各自全量 SUCCESS**；[PR #14](https://github.com/tanxinz/dsh-superagent/pull/14) 已合并到 `feat/m0-local-20261113-mac`，主设计正文又单独发布到 `main`；PR [#19](https://github.com/tanxinz/dsh-superagent/pull/19) 在本次查询时仍为 Open，文档分流未进入 `main`，其 [Run #43551881352](https://github.com/tanxinz/dsh-superagent/actions/runs/43551881352) 的 patched baseline 仍未完成。上述变化只证明特定提交/测试矩阵，不代表未补丁原 baseline 历史 FAIL 被修复为 PASS。
+
+`main` 目前是**设计发布分支**，不能推定其中有可运行的 M0 源码、CI 工作流或 `CONTRIBUTING.md` 责任制文件；运行态源码和受控验收资料仍以 [M0 开发分支](https://github.com/tanxinz/dsh-superagent/tree/feat/m0-local-20261113-mac) 固定提交为准。正式 [V1.2 开发清单](SuperAgent_Harness_Development_Checklist_V1.0_20261112.md) 和本文 §16.6 共同定义新子例，其 `NOT_RUN` 不能推断为缺失功能已通过。相关 [兼容矩阵](compatibility-matrix.md)、[上游能力核验](upstream-capabilities.md) 和 [静态审核记录](reviews/V1.2-DeepSeek-Harness-Static-Review-20261114.md) 只作为标注分支/SHA 的历史技术证据。
+
+本次修复范围：§6.4 将可能已外发的 `CLAIMED → UNKNOWN_RECONCILE` 纳入合法状态机并严格限证；§6.2/§9.4 在同库同事务保留 ContextPatch 精确不可变载荷且恢复时再次核验；§13.2 明确原生 Effects 的 kind、覆盖及无持久租约约束；§16.4.1 增加 R18-A/R24-C；§16.6 补齐 V12 子例。**均为 `DESIGN_CORRECTED / CODE_UNTESTED`**。M0-01—13 保持 IN_PROGRESS、M0-14 BLOCKED、0/14 完成、M1 未准出；真实网络/Stagehand/调度能力在其启用门禁通过前仍 DISABLED/FIXTURE_ONLY。
 
 ## 18. 设计依据和技术参考
 

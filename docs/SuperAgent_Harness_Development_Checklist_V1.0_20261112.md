@@ -1,5 +1,9 @@
 # SuperAgent Harness 详细开发清单 V1.1（审核修订）
 
+> 最终授权接续（2026-11-13）：同一PR #13个人分支在e1bd28a后推进，贯穿管理请求的模型/账户检查、Source命令与落库、文件发布和延迟重启的原上下文复查；撤权后的配置恢复仅允许新的管理授权，工具/后台不能代为恢复。完整68文件/1278测试、类型检查/构建和三个真实无模型profile通过，四轮复审的问题已修复，最终复审无可操作回归；新提交CI另核验。M0仍0/14整项，M0-14/M1 BLOCKED，实际Worker隔离/子会话/全部Gateway仍待完成。详见[本批验收](acceptance/M0-final-authorization-20261113.md)。
+
+> Mac 接续（2026-11-13）：从PR #12实际head1475ffa创建个人分支；归档其全部成功CI。新增受信根Session绑定投放/撤权/恢复及原请求上下文撤权复核；完整67文件/1263测试、类型检查/构建通过，真实无模型profile绑定重载/持久撤权通过。实际Worker隔离、子会话投放及全部Gateway仍未完成；M0-01—13 IN_PROGRESS、M0-14 BLOCKED、0/14整项，M1未准出。详见[本批验收](acceptance/M0-local-bindings-20261113.md)。
+
 编制日期：2026-11-12（北京时间）  
 依据文件：`SuperAgent_Harness_Design_Final.md`，当前读取版本 **9**，234,014 字节，18 章。  
 源文件最近修改时间：2026-11-12 08:02:20（北京时间）。  
@@ -18,6 +22,8 @@
 > **首轮 CI 历史记录（2026-11-12）**：PR #3 / run 43177871800 已完成 SuperAgent 1209 项回归及两套 Harness 完整构建；Harness 全量测试均超时且有已观察失败，未准出。新增自动检查和预检缺口修复，详见 [CI 验收记录](acceptance/M0-ci-review-20261112.md)。未满足完整验收的任务保持未勾选。
 
 > **Bridge 接续更新（2026-11-12）**：第三轮两版 Harness 原始全量已通过，失败历史继续保留；PR #5 的新一轮两版原始全量也已通过，完整原包另存。已新增原生 M0 Bridge、4 项 Cordis 生命周期回归及真实未配置 profile 两次启停，完整 pnpm check 为 61 文件/1213 项通过。M0-04 改为 IN_PROGRESS，前置和服务/权限验收未闭合，不勾选整项。见 [Bridge 验收记录](acceptance/M0-bundle-profile-20261112.md)。
+
+> **V1.2 设计修订（2026-11-14）**：承接 [详细设计](SuperAgent_Harness_Design_Final.md) 的 DeepSeek API 与 Harness rc.3 能力复用审查。原 100 项任务、原有 M0—M5 依赖和阶段出口不变；新增 V12-01—V12-10 是横切的待执行子例，不能因此勾选任务或提前准出 M0。修订仅修改 Markdown；运行时代码、gitlink、依赖锁和历史测试证据不变。
 
 ## 1. 使用方式与开发边界
 
@@ -344,7 +350,7 @@
 - **前置任务**：M2-01、M0-08。设计依据：§5.1.1、§13.2。
 - **开发内容**：封装原生 enqueue，保存稳定逻辑 kind/key 与不可变 payload 指纹；同 Key 同内容复用，不同内容拒绝 EFFECT_PAYLOAD_CONFLICT；禁止扩展模块绕过封装。
 - **交付物/建议落点**：mesh/effects-adapter.ts、逻辑/原生 Key 映射和不可变性测试。
-- **验收标准**：action:${actionId} 不随 attempt 改变；原生可覆盖 payload 的入口不被业务直接使用；无另建队列。
+- **验收标准**：action:${actionId} 不随 attempt 改变；原生可覆盖 payload 的入口不被业务直接使用；无另建队列。必须核实锁版 EffectPayloads kind/Handler 注册、TypeScript 完整编译和同一 Store.atomic() 内的唯一受信入队；相同 (kind,key) 不同哈希必须拒绝 EFFECT_PAYLOAD_CONFLICT，原生 enqueue 的 ON CONFLICT 不能悄然覆盖不可变 payload。进程内 tasks 去重不等于持久跨进程 lease，多 Worker/自动恢复未经故障实证保持 NOT_RUN。
 
 #### M2-05 实现 commitPlan 同步原子命令
 
@@ -360,7 +366,7 @@
 - **前置任务**：M2-05。设计依据：§6.4、§6.6、§10.1；R05。
 - **开发内容**：以设计唯一状态表建立允许迁移矩阵与 expectedVersion；Executor 单次 FAILED 根据可信证据映射 RETRY_WAIT/PAUSED/终态或 UNKNOWN_RECONCILE；未启用审批分支明确拒绝。
 - **交付物/建议落点**：mesh/actions/state-machine.ts、迁移审计及合法/非法迁移参数化用例。
-- **验收标准**：终态 SUCCEEDED/FAILED/BLOCKED/CANCELLED 不被重放复活；临时资源竞争非终态；未知结果不能靠模型自报失败清零。
+- **验收标准**：终态 SUCCEEDED/FAILED/BLOCKED/CANCELLED 不被重放复活；临时资源竞争非终态；未知结果不能靠模型自报失败清零。按主设计 §6.4 的唯一合法表显式实现 CLAIMED→UNKNOWN_RECONCILE，并以可信“已可能外发但尚无明确远端结果”证据触发 CAS；只有证明未外发时方可回退 PENDING/PAUSED。新增 R18-A 合法/非法迁移参数化用例，不允许重发同一未知效果。
 
 #### M2-07 建立共享 MANDATE_ROOT 执行预算
 
@@ -464,7 +470,7 @@
 - **前置任务**：M2-09、M2-10、M2-12、M2-06。设计依据：§6.2、§13.2—13.3；R20。
 - **开发内容**：发送前保存 remote_request_ref、effect_payload_fingerprint、固定 remote_idempotency_key，返回后追加 operation_ref；不可变证据对账确认已执行/未执行/未知。
 - **交付物/建议落点**：reconcile 命令与 Mock 对账适配器、超时/断线/回执丢失用例。
-- **验收标准**：无查询且无可验证幂等能力维持 UNKNOWN_RECONCILE/RECONCILIATION_MANUAL_REQUIRED；只有受信未执行证据及有效授权预算才允许恢复；不盲重发。
+- **验收标准**：无查询且无可验证幂等能力维持 UNKNOWN_RECONCILE/RECONCILIATION_MANUAL_REQUIRED；只有受信未执行证据及有效授权预算才允许恢复；不盲重发。R18-A 在持久 CLAIMED、外发或崩溃竞态中核验原 Effect/Attempt、业务幂等键和 remote_request_ref 保留且不盲重投。
 
 #### M2-20 实现启动恢复屏障和在途扫描
 
@@ -518,7 +524,7 @@
 
 - [ ] **状态：TODO**｜优先级：P0｜责任角色：测试工程。
 - **前置任务**：M2-18、M2-20、M2-22、M2-25。设计依据：§16.4.1；R03—R07、R10、R14—R16、R18、R20—R23。
-- **开发内容**：覆盖第二 Effect 入队失败、提交后强杀、消费后超时、许可并发/撤权、根首次启动崩溃、终态重放、跨 Plan 复用与并发结清；保留 DB/Mock 计数及时间证据。
+- **开发内容**：覆盖第二 Effect 入队失败、提交后强杀、消费后超时、许可并发/撤权、根首次启动崩溃、终态重放、跨 Plan 复用与并发结清；保留 DB/Mock 计数及时间证据。另执行 R18-A：CLAIMED 时可能已外发且 RUNNING 未持久，恢复只能有证据地进入 UNKNOWN_RECONCILE，远端实际效果计数最多一次，未能证明则 BLOCKED/UNKNOWN，不得伪造自动恢复 PASS。
 - **交付物/建议落点**：test/faults/m2-*、复现实验命令和逐例结果。
 - **验收标准**：所有适用 R 项可追溯；降级路径明确验证状态与禁止重复写；自动恢复缺能力不伪记成功。
 
@@ -546,7 +552,7 @@
 
 - [ ] **状态：TODO**｜优先级：P0｜责任角色：数据工程。
 - **前置任务**：M2-28。设计依据：§6.2—6.4。
-- **开发内容**：增加 relation_proposal/trend_finding/context_patch/context_patch_evidence；实现提案版本/证据指纹双去重、趋势窗口复合唯一、Patch 版本唯一及 VERIFIED 模型请求条件唯一索引。
+- **开发内容**：增加 relation_proposal/trend_finding/context_patch/context_patch_evidence；实现提案版本/证据指纹双去重、趋势窗口复合唯一、Patch 版本唯一及 VERIFIED 模型请求条件唯一索引。同一 SQLite 中为 Patch 增加不可变 payload_bytes、payload_ref、payload_format、payload_hash、ticket_version、binding_version、mandate_ref、evidence_refs；Patch 与唯一持久投递 Effect 在同一 Store.atomic() 事务提交，原字节可通过行内引用受限恢复，不能只存哈希。
 - **交付物/建议落点**：迁移、状态/证据双轴类型、索引一致性及重启测试。
 - **验收标准**：Patch 明细不可变且可保留多请求；主表请求字段只是汇总；同证据指纹不能通过增版本绕过去重。
 
@@ -602,7 +608,7 @@
 
 - [ ] **状态：TODO**｜优先级：P0｜责任角色：领域后端。
 - **前置任务**：M3-07、M2-14。设计依据：§6.4、§9.4。
-- **开发内容**：验证活动 Session、Ticket 版本、Mandate/expiry，落 CREATED、payloadHash、evidenceRefs 和 patchVersion；按相同证据防重，不把提示文本当成新的权限。
+- **开发内容**：验证活动 Session、Ticket 版本、Mandate/expiry，规范化/脱敏精确 payload_bytes；同一 Store.atomic() 持久 payload_ref、payload_format、SHA256(payload_bytes)、evidence_refs、ticket_version、mandate_ref、binding_version、Session 身份和唯一 Effect。按相同证据防重，不把提示文本当成权限，也不能恢复时由模型重新生成补丁。
 - **交付物/建议落点**：publishContextPatch 领域命令、过期/撤权/错误会话反例。
 - **验收标准**：没有有效绑定不得创建可执行投递；主路与旁路同线索不放大副作用；Patch 不改变既定允许范围。
 
@@ -612,7 +618,7 @@
 - **前置任务**：M3-08、M0-02。设计依据：§9.4、§13.2。
 - **开发内容**：先复用原生 Input/Delivery 持久路径，不足才注册经核验的 context-patch Handler；调用真实 agent.inject，按 QUEUED/INJECTED/DELIVERED_UNVERIFIED 记录。
 - **交付物/建议落点**：投递 adapter、稳定 patch key、真实 Session 注入与 Inbox 记录。
-- **验收标准**：inject/inserted/claimed 均不能直接标 CONSUMED；无可靠请求关联保持未证实；不假设空闲 Agent 自动唤醒。
+- **验收标准**：inject/inserted/claimed 均不能直接标 CONSUMED；无可靠请求关联保持未证实；不假设空闲 Agent 自动唤醒。真实递送必须使用同库持久载荷精确字节，并复验 payload_hash、Session 绑定及撤权；Inbox 接受但回执丢失时，不能仅凭 Effect 重试再次注入。
 
 #### M3-10 接收可信模型请求包含证据
 
@@ -636,7 +642,7 @@
 - **前置任务**：M3-11。设计依据：§6.4、§9.4、§13.3。
 - **开发内容**：重启核查持久状态与实际投递/模型请求证据；只有证明未投递且仍授权才补投；注入前结束可 REJECTED/EXPIRED，已注入只能按合法路径过期或确认。
 - **交付物/建议落点**：运行中/空闲/结束/取消/撤权及崩溃窗口测试。
-- **验收标准**：不向失权 Session 再注入；已 INJECTED 不倒退 REJECTED；恢复不重复扩大输入或丢弃历史事实。
+- **验收标准**：不向失权 Session 再注入；已 INJECTED 不倒退 REJECTED；恢复不重复扩大输入或丢弃历史事实。执行 R24-C：Store 提交前/后崩溃与 Inbox 成功但回执丢失三窗口；重新取得原字节并校验哈希、Ticket/Mandate/Session 版本、过期/撤权；内容缺失、哈希不符、身份不符 fail-closed，无可验证 Inbox 幂等时禁止盲重投。
 
 #### M3-13 运行 S2-A/S2-B 并扩展只读时间线
 
@@ -652,7 +658,7 @@
 - **前置任务**：M3-01、M3-02、M3-03、M3-04、M3-05、M3-06、M3-07、M3-08、M3-09、M3-10、M3-11、M3-12、M3-13。设计依据：§15.2、§16.4；R08、R17、R24。
 - **开发内容**：检查全部 M3 迁移、引用/指纹、S2 两分支、Patch 合法迁移与重启；确认线上来源/请求证据各自能力边界。
 - **交付物/建议落点**：docs/acceptance/M3.md、S2-A/S2-B 与回归证据。
-- **验收标准**：R08/R17/R24 的确定性证据协议测试通过；真实投递接通；若真实消费不可观测，只验收允许的未证实状态，不伪造 CONSUMED。 若缺可靠请求 Hook，消费适配器保留未接通能力项，只有降级投递与受信测试夹具的协议验证可通过；不得把模型消费能力标 DONE/PASS。
+- **验收标准**：R08/R17/R24（包含 R24-C）的确定性证据协议测试通过；真实投递接通；若真实消费不可观测，只验收允许的未证实状态，不伪造 CONSUMED。 若缺可靠请求 Hook，消费适配器保留未接通能力项，只有降级投递与受信测试夹具的协议验证可通过；不得把模型消费能力标 DONE/PASS。
 
 ### 4.5 M4：安全治理与 S3
 
@@ -1245,3 +1251,77 @@ R24-A/R24-B 是原 R24 的测试子例，不新增业务状态，也不改变 R0
 本轮实际运行的检查包括：100个任务ID唯一性、显式依赖存在与无环、每个阶段出口覆盖全部同阶段任务、安全前置祖先关系、17模块/24种扩展记录/R01—R25/I-01—I-16覆盖、Markdown表格列数和围栏配对，以及源设计SHA-256未变。
 
 没有运行项目源码的编译、迁移、故障注入、Jev请求、真实Session、许可竞争或网络副作用测试。审核后清单可作为实施输入；实际API/Hook是否可用、运行安全是否成立，仍须按M0/M2及后续阶段取得证据。
+
+## 14. V1.2 上游复用与外部能力补充验收（待执行）
+
+> 本节修复上轮审核 P0-01—06、P1-01—05，并记录 P2-01—02 的推迟范围。原 100 项任务 ID、原有 R01—R25 与 I-01—I-16 不变；以下勾选框初始均未完成。
+
+### 14.1 设计修复与原能力复用
+
+- [ ] **P0-01 去重**：优先通过 Harness `ctx.web.search/fetch` 接入 `@deepseek-ai/dsh-web-deepseek-api`；不要另写 Search/Fetch HTTP 客户端、提供方注册或通用网络队列。项目扩展仅承担 EvidenceCapture、业务审计、来源与可信等级。
+- [ ] **P0-02 服务端工具信任域**：明确 `deepseek_web_search/deepseek_read_url` 在服务端执行，不能假定经过 `ctx.tools.guard()`；审批类和敏感任务必须通过经过验证的本地能力路径，禁止向外送生产密钥、内部 URL、私有源码或客户资料。
+- [ ] **P0-03 Team 去重**：原生 AgentTeam 管理具名成员、共享板、消息和 CAS，业务 TeamRun/ActionRun/Mandate 仍经 Engine；`writeScopes` 只提示冲突，独立 Verifier 需隔离只读工件。
+- [ ] **P0-04 Browser**：`ctx.browserUse` 只注册提供方，无标准化 `navigate/click` 方法；根据 Playwright MCP、Chrome DevTools MCP、Stagehand 的真实工具接口做受限适配，所有可写网页动作经受信 ActionRun。
+- [ ] **P0-05 安全**：校验外送数据等级、URL、DNS 解析后 IP、每次跳转、目的地和凭据；本地 HTTP Fetch 默认不防 SSRF；MCP/网页/OCR 返回数据必须作为不可信内容。
+- [ ] **P0-06 版本**：rc.3 仅在独立候选分支评估；保留现有锁版、M0 状态、原始 CI 和失败记录，不把 Harness 单仓测试通过等同 SuperAgent 组合通过。
+- [ ] **P1-01 证据**：搜索摘要、Fetch Markdown、OCR 文本、GitHub 原始字节的哈希、来源和证明等级分别记录。
+- [ ] **P1-02 错误**：Messages / Responses / Chat Completions 不同能力及 HTTP 200 内失败、流式截断、拒答、429/5xx 有保守分类。
+- [ ] **P1-03 Safety**：Safety 仅作辅助，不能取代 Mandate、ToolGuard、ActionGateway 或业务决定。
+- [ ] **P1-04 Schedule**：Host 定时投递只是触发，Session inbox receipt 不代表 Agent 或业务完成；业务由 Engine + Effects 去重、授权和恢复。
+- [ ] **P1-05 预算**：统一约束模型 Token、Search/Fetch 请求、OCR 页、浏览器资源、并发、墙钟和重试，分别记录计费与资源指标。
+- [ ] **P2-01 / P2-02**：OCR 版面/图表核对、浏览器回放 UI、Team 可视化、ASR/TTS 按 M5 或产品化需求再设计。
+
+### 14.2 V1.2 新增横切回归用例
+
+| 子例 | 依赖里程碑 | 必须证明 | 当前状态 |
+| --- | --- | --- | --- |
+| V12-01 | M0 隔离兼容评估、M1 接入 | `ctx.web` 提供方选择、费用记录及单次逻辑查询没有重复调用 | NOT_RUN |
+| V12-02 | M0 安全前置/M2 | localhost、内网、云元数据、DNS 重绑定、重定向都被实际阻断 | NOT_RUN |
+| V12-03 | M0 安全前置/M1 | 服务端搜索禁用真实有效，敏感查询不绕过本地限制外送 | NOT_RUN |
+| V12-04 | M1/M3 | 网页摘要、Markdown、OCR 文本和 GitHub 原件有明确可信等级及准确哈希 | NOT_RUN |
+| V12-05 | M1/M4 | HTTP 200 内模型失败、截断、拒答、多协议错误被保守映射 | NOT_RUN |
+| V12-06 | M5，受 M2 授权限制 | Team CAS 冲突、任务持久不确定、失联不重复业务写 | NOT_RUN |
+| V12-07 | M5，受 M0 隔离限制 | Verifier 只读隔离且不能修改 Worker 的原始工件 | NOT_RUN |
+| V12-08 | M2/M5 | 浏览器副作用后的断线记录未知并对账，撤权后拒绝新操作 | NOT_RUN |
+| V12-09 | M5 试验/生产 G 阶段 | Schedule 投递与业务完成区分，同周期重复不会造成重复外部写 | NOT_RUN |
+| V12-10 | M1/M2/M4 | 模型、Search/Fetch、OCR、Browser 资源预算及取消/重试/脱敏有效 | NOT_RUN |
+
+**验收口径**：用例必须绑定 SHA、实际配置、真实/Mock 来源、命令、退出码、原始日志及 SHA-256。通过文档静态检查不等于运行时实现；未符合现有阶段条件的原任务保持 IN_PROGRESS/BLOCKED。若未来确定某一新功能必须提前到 M0，应另行评估关键路径和阶段依赖，而不是在本节偷偷更改原 100 项。
+
+### 14.3 V1.2 第二轮复审新增负例（补充 V12，不新建任务 ID）
+
+- [ ] **V12-01A / V12-03A**：真实 rc.3 Search Provider 默认 `sendOriginalQuestion=true` 会额外发送原始 `ori_question`；企业受控配置显式设 `false` 后，HTTP 夹具断言没有该字段。参数或凭据切换后重新验证 endpoint、数据级别、计费身份及实际请求体。
+- [ ] **V12-03B**：分别检查 Harness 模型 `web_search/web_fetch` 的 ToolGuard、插件直调 `ctx.web.search/fetch` 的受信 EvidenceGateway、DeepSeek 模型服务端联网路由；任一路越过批准域均拒绝。ToolGuard 结果不作为另两路径的安全证据。
+- [ ] **V12-05A**：本地 HTTP `ctx.web.fetch()` 返回 `statusCode=404/500` 时不得视为正常网页证据；远端 DeepSeek Fetch 的 Provider 错误、无最终 URL 与未知 `WebError.code` 均分别保守分类。
+- [ ] **V12-02A**：内网/环回/云元数据和 DNS 重绑定、重定向负例须在实际网络出口被阻断；远端 Fetch 不虚构重定向最终 IP 证明。
+- [ ] **V12-08A**：Browser MCP 进程保持原启动工作目录及独立浏览器状态；后续 Session 目录切换不构成隔离，断线或动作已发后仅记录可核查未知结果。
+- [ ] **V12-09A**：故障注入验证 Schedule Session inbox 持久写入成功但 receipt 记录失败，重复投递以稳定周期键被 Engine 去重；不能证明键稳定时禁止可写执行。
+
+以上均为 `NOT_RUN`，不得因静态审查完成更改原清单任务状态。
+
+### 14.4 第三轮外部复审修复与功能准入门禁（2026-11-14）
+
+- [ ] **P1-1 Stagehand 独立模型出站**：默认不装配 Stagehand Native；其 `stagehand_act/observe/extract` 走独立模型/凭据/用量，DSH Session usage 与主模型路由不覆盖。首期默认 `DISABLED`；若需实验，只能在显式批准且无敏感数据的隔离 Fixture 中进行，并限制模型请求数、费用、页面内容出站及取消后的在途结果。
+- [ ] **P1-2 Web 最终派发绑定（能力启用阻断）**：先采用固定 Provider/endpoint/凭据来源且不许运行时修改配置的隔离执行域；必须有不可绕过的网络出口约束。单独验证模型 `web_search/web_fetch` 与业务直接 `ctx.web` 的真实外送路径；如需动态切换，则先在独立候选分支设计/实现经源码验证的最终派发钩子。不能把调用前读取配置、`ToolGuard` 单独成功或 `waitToSend` 内部名称作为派发点批准事实。
+- [ ] **P1-3 Schedule 自动与手动执行身份**：自动计划在有权威周期时采用稳定周期去重；手动 `runNow()` 会每次取新 `occurrenceAt`，不得据此认定重复请求。受信人工入口先持久化 `manualExecutionRequestId`，由 Engine/Effects 以同一 ID 派发与恢复；原生 `runNow()` 当前不接受业务请求 ID，未经接线验证不得直接推动可写 ActionRun。
+- [ ] **P2 功能准入状态与阶段状态拆分**：原 M0—M5 依赖/完成条件不修改；新能力按 `DISABLED/FIXTURE_ONLY/READY_READONLY/READY_WRITE` 单独管理，绑定真实 Provider 配置、安全出口、代码版本和准入测试证据。功能实际启用前通过对应 V12 测试；未启用功能不强制作为 M0 必选任务。阶段通过不自动授权可选能力。
+
+| 子例 ID | 对应反馈 | 必须验证的结果 | 当前状态 |
+| --- | --- | --- | --- |
+| V12-01B | P1-2 | Gate 通过后切换 Provider、endpoint、凭据/账号，再发出真实请求；配置无法绑定的外送被出口策略拒绝且无敏感数据流出 | NOT_RUN |
+| V12-03C | P1-2 | 模型工具 Web、业务直接 `ctx.web`、服务端自动搜索三条路径单独限制；禁用的路由/凭据与底层 HTTP 旁路不得绕过 | NOT_RUN |
+| V12-08B | P1-2 | Browser/Playwright 在受限容器中无生产密钥，最终网络出口、撤权竞态与断线副作用对账被证明 | NOT_RUN |
+| V12-08C | P1-1 | Stagehand 独立模型 Provider、Key 来源、出站页面内容、预算/取消和日志审计逐项实测，主 DSH Token 统计不冒充总费用 | NOT_RUN |
+| V12-09B | P1-3 | 定时周期与手动运行分别去重；同一受信 `manualExecutionRequestId` 的投递/崩溃/重试仅产生一次业务效果，第二个真实人工请求独立处理 | NOT_RUN |
+| V12-10B | P1-1 | Stagehand 外部模型在 Token/费用、请求数量、时间限制、取消后仍在途时保持可追溯；控制不可证则 Provider 关闭 | NOT_RUN |
+| V12-GATE | P2 | 每项能力的 `capabilityId + executionMode + upstreamCommit + providerConfigDigest + egressPolicyVersion + requiredCaseRefs` 验收齐全才允许升级准入状态；变更后旧验收自动失效 | NOT_RUN |
+
+**优先顺序及隔离边界**：P1-2 先于 Web 真实调用；Stagehand 未通过 V12-08C/10B 永不业务启用；`runNow()` 未建立可靠受信执行请求 ID 只允许只读通知；V12-GATE 并不提前扩大 M0 必选内容。以上只是设计清单，不代表当前锁版已经具备配置冻结/出口代理、Stagehand 实验或手动调度幂等实现。
+
+### 14.5 V1.2 正式设计 PR #21 同步差异（2026-11-14，全部未实测）
+
+- **唯一正式设计基准**：[main 中 V1.2 设计](https://github.com/tanxinz/dsh-superagent/blob/main/docs/SuperAgent_Harness_Design_Final.md)，PR [#21](https://github.com/tanxinz/dsh-superagent/pull/21)；本开发分支正文已同步为同一 Blob。过去 §14.1—14.4 的日期和 sourceSHA 为当时快照，不代表源代码已按新契约实现。
+- **M2 受影响任务**：M2-04（原生 Effects 入队不可变性、kind/Handler、无持久租约）、M2-06（CLAIMED→UNKNOWN_RECONCILE）、M2-19（远端未知结果对账）、M2-26（R18-A 强杀/不盲重发）。对应主设计 §6.4、§13.2、§16.4.1。
+- **M3 受影响任务**：M3-01（同库持久载荷字段与事务）、M3-08（原字节及权限版本原子入队）、M3-09（可靠 Inbox 投递和哈希）、M3-12（R24-C 崩溃/回执丢失）、M3-14（阶段准出）。对应主设计 §6.2、§9.4、§16.4.1。
+- **能力准入**：§14.4 的 V12-01B/03C/08B/08C/09B/10B/GATE 仍 NOT_RUN；Web 最终派发与独立模型/Stagehand 出站不得在无实际隔离和负向网络证据时启用。
+- **状态声明**：以上均为设计与任务契约同步（DESIGN_SYNCED），所有相关 M2/M3 任务仍 TODO，M0-01—13 IN_PROGRESS、M0-14 BLOCKED、M0 完成 0/14、M1 未准出；既有 CI 历史 PASS/FAIL 不因本次同步变更。

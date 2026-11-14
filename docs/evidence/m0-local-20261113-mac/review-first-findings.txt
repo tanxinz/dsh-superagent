@@ -1,0 +1,13 @@
+codex
+The runtime guard introduces a persistent denial-audit regression, although execution remains blocked. Type checking passed; runtime tests were not executed.
+
+Review comment:
+
+- [P2] Persist an audit record when isolation blocks a tool — /Users/tanxinz/ai_study/dsh_superagent/dsh-superagent-cli/upstream/superagent/src/app/runtime.ts:157-158
+  For a managed Session with valid read-only permissions, every tool attempt now returns before reaching `LocalSafetyGate.refusal()`, because `executionReady()` currently always returns false. Previously, missing or stale bindings produced a durable denial audit; these attempts now leave no `mesh_gate_audit` record. This violates the synchronous-denial audit requirement in `docs/SuperAgent_Harness_Design_Final.md:911`. Record the isolation denial before returning, while retaining the unconditional execution block.
+The runtime guard introduces a persistent denial-audit regression, although execution remains blocked. Type checking passed; runtime tests were not executed.
+
+Review comment:
+
+- [P2] Persist an audit record when isolation blocks a tool — /Users/tanxinz/ai_study/dsh_superagent/dsh-superagent-cli/upstream/superagent/src/app/runtime.ts:157-158
+  For a managed Session with valid read-only permissions, every tool attempt now returns before reaching `LocalSafetyGate.refusal()`, because `executionReady()` currently always returns false. Previously, missing or stale bindings produced a durable denial audit; these attempts now leave no `mesh_gate_audit` record. This violates the synchronous-denial audit requirement in `docs/SuperAgent_Harness_Design_Final.md:911`. Record the isolation denial before returning, while retaining the unconditional execution block.

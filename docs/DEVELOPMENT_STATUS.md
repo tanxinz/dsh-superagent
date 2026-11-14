@@ -1,10 +1,21 @@
 # 开发交接状态
 
+> **2026-11-14 正式 V1.2 设计→开发任务同步（本条为新记录，历史原文不回写）**：`main` 设计基准为合并 [PR #21](https://github.com/tanxinz/dsh-superagent/pull/21) 后的 `cf3119c80cf1aa888b10ac7c81ec17184b2263f0`，主设计 Blob `14b49173c34153bd9b46d347a0c1c5b38558ea82`。本 M0 开发分支已经以同一 Blob 同步 `docs/SuperAgent_Harness_Design_Final.md`，并在 [开发清单 §14.5](SuperAgent_Harness_Development_Checklist_V1.0_20261112.md) 将 P1/P2 设计修订映射至 M2-04/06/19/26、M3-01/08/09/12/14。**仅同步文档与验收合同，不等于完成对应源码实现、动态测试或 M0 准出**。
+> **新增强制回归**：`R18-A` 验证 CLAIMED→UNKNOWN_RECONCILE 的状态迁移和远端未知结果零盲重发；`R24-C` 验证 ContextPatch 同库原字节/Effect 原子提交、哈希验真及 Inbox 回执丢失恢复。原 R01—R25、100 项任务、层级依赖和历史测试结果全部保留；M2/M3 相关任务继续 `TODO`，V12 子例全部 `NOT_RUN`。`M0-01—13 IN_PROGRESS`，`M0-14 BLOCKED`，整项 `0/14` 完成，M1 尚未准出。Issue #16 Web 动态派发/出网核验保持未执行，不准开启真实外送。
+> **合并与 CI 快照**：PR [#14](https://github.com/tanxinz/dsh-superagent/pull/14)、[#18](https://github.com/tanxinz/dsh-superagent/pull/18)、[#19](https://github.com/tanxinz/dsh-superagent/pull/19)、[#21](https://github.com/tanxinz/dsh-superagent/pull/21) 已分别合并到其对应目标分支；[#19 的完整组合 M0 CI Run #43551881352](https://github.com/tanxinz/dsh-superagent/actions/runs/43551881352) 5/5 SUCCESS，docs-review #43551881399 SUCCESS。这里的 patched baseline PASS 不改变未修改 baseline 的历史 FAIL，也不代表本次新增文档变更的 GitHub CI 已执行或通过。
+> 最终授权接续（2026-11-13）：同一PR #13个人分支在e1bd28a后推进，贯穿管理请求的模型/账户检查、Source命令与落库、文件发布和延迟重启的原上下文复查；撤权后的配置恢复仅允许新的管理授权，工具/后台不能代为恢复。完整68文件/1278测试、类型检查/构建和三个真实无模型profile通过，四轮复审的问题已修复，最终复审无可操作回归；新提交CI另核验。M0仍0/14整项，M0-14/M1 BLOCKED，实际Worker隔离/子会话/全部Gateway仍待完成。详见[本批验收](acceptance/M0-final-authorization-20261113.md)。
+
+> Mac 接续（2026-11-13）：从PR #12实际head1475ffa创建个人分支；归档其全部成功CI。新增受信根Session绑定投放/撤权/恢复及原请求上下文撤权复核；完整67文件/1263测试、类型检查/构建通过，真实无模型profile绑定重载/持久撤权通过。实际Worker隔离、子会话投放及全部Gateway仍未完成；M0-01—13 IN_PROGRESS、M0-14 BLOCKED、0/14整项，M1未准出。详见[本批验收](acceptance/M0-local-bindings-20261113.md)。
+
 PR #12 已建立，20c576d的首轮CI43361201100中review、SuperAgent完整检查及三个真实profile全PASS；OS夹具命令PASS但证据目录归root导致审计FAIL。已读完整日志并修复记录器权限边界，待新CI；旧失败原件保留。两版Harness当时仍运行，不算本批全量已通过；M0仍0/14整项，M0-14 BLOCKED。
 
 最新接续（2026-11-13，北京时间）：个人分支 `feat/m0-trust-and-permission-baseline-20261113` 从 PR #11 的130a766建立。实际产品补丁完成管理认证、持久安全最小表、只读 Session、权限最终拒绝及自动执行安全门禁；最新完整 pnpm check 65文件1252测试/类型检查/构建 PASS，三个真实临时 profile 模式各两次启停 PASS。配置账户是明确的 CLI Fixture；无模型/业务 Worker 运行。PR #11 CI 最终 failure（两版 Harness 完整通过、依赖探针误判失败）；本批新CI待取。M0-01—13 均 IN_PROGRESS、M0-14 BLOCKED，0/14整项完成。详细证据、历史失败、代码分工及仍待实现部分见 [验收接续](acceptance/M0-trust-permissions-20261113.md)。以下为历史批次，不能据旧表判断当前能力。
 
 更新日期：2026-11-12（北京时间）。本批继续执行 M0；阶段状态 BLOCKED，M0-14 未通过。
+
+> **2026-11-14 V1.2 设计补丁交接（独立文档分支，不计入 M0 实施）**：针对 DeepSeek 2026-11-13 应用 API 与 Harness `dsh-v0.2.2-rc.3` 的复用能力，仅修订 Markdown 设计、开发清单与上游/兼容矩阵；固定当前 SuperAgent/Harness 源码、依赖锁和历史 CI 日志，未运行新版或业务 Worker。新增 V12-01—V12-10 全部 `NOT_RUN`。截至本分支从 PR #13 `bc99a8d` 创建的快照，**M0-01—13 IN_PROGRESS、M0-14 BLOCKED、0/14 整项完成、M1 未准出**。相关版本可用性仅属官方公开资料静态核对，详见 [V1.2 设计](SuperAgent_Harness_Design_Final.md)、[新增开发清单 §14](SuperAgent_Harness_Development_Checklist_V1.0_20261112.md)、[上游能力核验](upstream-capabilities.md)、[兼容矩阵](compatibility-matrix.md)。**本条为从 PR #13 分叉时的状态快照，不代替其后任何新 PR/CI 状态**。
+
+> **2026-11-14 V1.2 第三轮设计复审交接**：PR #14 在外部反馈后继续仅修订文档，补充 Stagehand 独立模型出站默认禁止、Web 冻结配置隔离执行域/候选最终派发 Gate、Schedule 手动 `manualExecutionRequestId` 与 M 阶段/可选能力双门禁。新增 V12-01B/03C/08C/09B/10B/GATE 等回归子例全部 `NOT_RUN`，没有安装/运行 rc.3、改变 DSH gitlink、调整 M0 原 100 项任务或修改 PR #13 的源码。M0-01—13 `IN_PROGRESS`、M0-14 `BLOCKED`、0/14 完成，M1 仍未准出。见 [设计 §5.1.3 / §10.6 / §13.6 / §16.7](SuperAgent_Harness_Design_Final.md) 和 [三轮复审记录](reviews/V1.2-DeepSeek-Harness-Static-Review-20261114.md)。
 
 ## 当前接手：原生 profile 依赖卸载/恢复（2026-11-13）
 

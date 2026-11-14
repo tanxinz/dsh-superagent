@@ -23,7 +23,7 @@ export function health(state: Health['state'], code: HealthCode, values: Record<
 export interface SourceHost {
   readonly sources: SourceRegistry
   /** Returns the context for one Source kind; its `report` writes only the health entries declared by the kind. */
-  context(kind: { kind: string; health: readonly string[] }): SourceContext
+  context(kind: { kind: string; health: readonly string[] }, authorize?: () => void): SourceContext
 }
 /** Display label, URL, and facts (`null` removes a fact) that a Source publishes on a Thread. */
 export interface ThreadDescription { label?: string; url?: string; facts?: Record<string, ThreadFact | null> }

@@ -297,6 +297,7 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `src/extensions/mesh/security-store.ts` | Native Store-transaction security migration, identity/policy facts and persistent denial audit |
 | `src/extensions/mesh/restricted-session.ts` | Verifies effective read-only permissions for managed Sessions and refuses overrides |
 | `src/extensions/mesh/safety.ts` | Final synchronous allow-intersection/deny-union guard; refuses missing or stale persistent bindings; business execution stays blocked pending OS integration. |
+| `src/extensions/mesh/session-bindings.ts` | Runtime-owned Session targets and scopes, authenticated issuance, bounded durable recovery and irreversible per-Session revocation; never enables OS execution. |
 | `src/client/management-auth.tsx` | Page-memory-only management credential login; no URL or browser-storage token. |
 | `src/extensions/mesh/service.ts` | Native CognitiveMeshService; dependency and lifetime refusal before startup and admission |
 | `src/deployment.ts` | The plugin `Config` and `Machine`; `resolveDeployment` and `resolveFeishuBot` read the repository and the accounts from the Source settings, each CLI run as Executor shells run it; `SETUP_FIELDS` lists the Source fields setup reads. The code names no person, account or organization |
@@ -426,6 +427,9 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `tests/mesh-m0.spec.ts` | M0 原生 Store/Effects 联合事务、真实 SIGKILL 恢复、重新入队及在途重复执行边界；`tests/fixtures/mesh-crash.ts` 提供独立进程故障点 |
 | `tests/mesh-security.spec.ts` | Forged/expired/cross-tenant contexts, persistent safety facts, migration rollback and schema drift |
 | `tests/mesh-safety.spec.ts` | Allow/deny intersections, durable Session bindings, direct gateway refusal and real native ToolRuntime final-guard negatives. |
+| `tests/session-bindings.spec.ts` | Trusted issuance, expiry and parent narrowing, cross-tenant collisions, durable revocation/reopen, corruption and fail-closed audit. |
+| `tests/management-security.spec.ts` | Native Mesh service plus original Store/HTTP authorization: server-selected binding inputs and original-context revocation across startup/body awaits. |
+| `tests/management-final-auth.spec.ts` | Original HTTP/Store/Mesh authority across late model/account checks, Source policy/label persistence, retained command dispatch, response disclosure and deferred restart; CLI/agent dependencies are explicit fixtures. |
 | `tests/restricted-session.spec.ts` | Effective read-only permissions, unsafe labels, overrides and owner disposal |
 | `tests/mesh-service.spec.ts` | Native Cordis service registration, real injected consumption, dependency loss/restoration and retained-handle refusal |
 | `tests/mesh-bridge.spec.ts` | 真实 Cordis fiber 的单次安装、重复调用、重启、独立生命周期及销毁后拒绝；不等同真实 DSH profile 启动 |

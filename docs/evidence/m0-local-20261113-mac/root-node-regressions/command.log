@@ -1,0 +1,17 @@
+✔ exact prerelease peer rejects a newer stable provider (0.611708ms)
+✔ matching exact versions do not imply range verification (0.060167ms)
+✔ missing or malformed package versions fail closed (0.093875ms)
+✔ type stripping alone does not satisfy the locked Harness Node engine (0.131542ms)
+✔ unknown engine expressions or prerelease runtimes remain untested (0.43275ms)
+✔ missing, mismatching or unknown engine checks block preflight (0.081542ms)
+✔ even successful preflight never declares a build or M0 passed (0.037541ms)
+✔ each environmental prerequisite and unverified declaration blocks readiness (0.049458ms)
+✔ manifest reader checks package identity and fingerprints actual input bytes (2.467875ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 39.191792

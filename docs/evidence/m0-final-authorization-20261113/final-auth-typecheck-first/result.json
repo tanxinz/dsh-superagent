@@ -1,0 +1,24 @@
+{
+  "schema_version": 2,
+  "check_id": "final-auth-typecheck-first",
+  "mode": "OFFLINE_BUILD_OR_TEST",
+  "started_at": "2026-11-13T08:32:09.048776+00:00",
+  "finished_at": "2026-11-13T08:32:12.300608+00:00",
+  "duration_seconds": 3.251,
+  "command": [
+    "pnpm",
+    "typecheck"
+  ],
+  "source_commit": "e1bd28add66e95784feaa2b66fa81ddd75a5184a",
+  "exit_code": 0,
+  "timed_out": false,
+  "launch_error": null,
+  "interrupted_signal": null,
+  "status": "PASS",
+  "log": "command.log",
+  "log_sha256": "8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92",
+  "lockfile_sha256": "ba6b997c448984a04b28eeb5b620c14c7cfeff5eb170e1abd6e0734007405c39",
+  "online_sdk": "NOT_RUN",
+  "real_session": "NOT_RUN",
+  "m0_exit": "BLOCKED"
+}

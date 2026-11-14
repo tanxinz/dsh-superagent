@@ -1,5 +1,6 @@
 /** Lifecycle, prompt/tool/skill decoration, message delivery, and budget retry tracking for orchestrator and worker DSH sessions. */
 import { RestrictedSessions } from '../extensions/mesh/restricted-session.ts'
+import type { ManagedSessionTarget } from '../extensions/mesh/session-bindings.ts'
 import type { Context } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import type { MessageId } from '@deepseek-ai/dsh-llm'
@@ -100,6 +101,14 @@ export class Sessions {
   private readonly bindings = new Map<Agent, SessionBinding>()
   private readonly retryHealth = new RetryHealth()
   private readonly ctx: Context
+  /** Only already-decorated root Sessions are eligible; child admission remains blocked pending scope integration. */
+  safetyTarget(sessionId: string): ManagedSessionTarget | undefined {
+    const agent = this.ctx.agents.get(sessionId as SessionId)
+    if (!agent || !this.bindings.has(agent) || agent.session.header.parentSession !== undefined) return undefined
+    this.permissions.assert(agent)
+    return { permissions: { tools: { allow: ['read', 'read_image', 'glob', 'grep'], deny: [] },
+      resources: { allow: [`session:${sessionId}`], deny: [] }, environments: { allow: ['SANDBOX'], deny: [] } } }
+  }
   /** Registers ordered `relay` and `notice` effect handlers that deliver to the main Session. */
   constructor(private readonly host: SessionsHost) {
     this.ctx = host.context
@@ -170,7 +179,11 @@ export class Sessions {
     if (!this.host.executionReady()) throw new Error('Mesh execution boundary is not ready')
     const result = await this.ctx.sessionController.resolveAgent(sessionId as SessionId)
     if ('error' in result) throw result.error
-    await this.agentDelivery.send(result.agent, key(requestId), text, mode, this.host.lifetime, authorize, accepted)
+    await this.agentDelivery.send(result.agent, key(requestId), text, mode, this.host.lifetime, () => {
+      if (!this.host.executionReady()) throw new Error('Mesh execution boundary is not ready')
+      this.permissions.assert(result.agent)
+      authorize?.()
+    }, accepted)
   }
   /** The id of the message `prompt` delivers under `requestId`, which DSH's inbox events name it by. */
   promptedId(requestId: string): MessageId { return messageId(key(requestId)) }
@@ -189,7 +202,10 @@ export class Sessions {
     if ('error' in resolved) return
     // Deduplicate by notice name and payload hash so retries are idempotent while updated payloads still deliver.
     const text = JSON.stringify(value)
-    await this.agentDelivery.send(resolved.agent, `notice:${name}:${key(text)}`, text, { inject: summary }, this.host.lifetime)
+    await this.agentDelivery.send(resolved.agent, `notice:${name}:${key(text)}`, text, { inject: summary }, this.host.lifetime, () => {
+      if (!this.host.executionReady()) throw new Error('Mesh execution boundary is not ready')
+      this.permissions.assert(resolved.agent)
+    })
   }
   /** Returns the current prompt revision, the active prompt revision of each loaded Session, and whether the main Session still has a pending `'prompts'` notice. */
   status() {

@@ -68,7 +68,7 @@ export interface SettingsHost {
   /** Source host passed to source kinds' policy syncs and label refreshes. */
   readonly sourceHost: SourceHost
   /** Setup state, account/command checks, and restart trigger when setup-read fields change. */
-  readonly setup: Pick<Setup, 'configured' | 'checkAccounts' | 'blockCommands' | 'restart'>
+  readonly setup: Pick<Setup, 'configured' | 'checkAccounts' | 'blockCommands' | 'restart' | 'needsRestart'>
   /** Triggers an immediate pass so work newly allowed by a settings save runs right away. */
   requestPass(): void
 }
@@ -86,6 +86,22 @@ export class Settings {
   private readonly retries = new Map<string, { timer: ReturnType<typeof setTimeout>; wait: number }>()
   constructor(private readonly host: SettingsHost) {
     host.lifetime.addEventListener('abort', () => { for (const { timer } of this.retries.values()) clearTimeout(timer) }, { once: true })
+  }
+  private check(authorize?: () => void): void { this.host.lifetime.throwIfAborted(); authorize?.() }
+  private async applyCommands(blocked: readonly string[], authorize: () => void): Promise<void> {
+    const revision = this.host.store.blockRevision('executor')
+    const check = () => {
+      authorize()
+      if (revision !== this.host.store.blockRevision('executor')) throw new SettingsConflict('Executor settings changed during environment application. Retry with the current settings.')
+    }
+    await this.host.setup.blockCommands(blocked, check)
+    check()
+  }
+  /** Bind Source callbacks and their retained contexts to this operation's original authority. */
+  private sourceHost(authorize?: () => void): SourceHost {
+    const host = this.host.sourceHost, check = () => this.check(authorize)
+    return { get sources() { check(); return host.sources },
+      context: (kind, additional) => host.context(kind, () => { check(); additional?.() }) }
   }
   /** Schedule exponential backoff retries (1 minute up to 1 hour) after a failed source sync, or clear pending retries on success. */
   private retrySync(id: string, failed: boolean): void {
@@ -145,7 +161,10 @@ export class Settings {
    * @throws SettingsConflict when `block`'s revision changed before or during validation checks.
    * @throws UserError | z.ZodError when `block` is unknown, the source is not installed, `value` is invalid (such as an `executor` block carrying `paused`, which only `pause` sets), a non-panel `origin` changes panel-only fields, or a role-model or account check fails.
    */
-  async save(block: SettingsBlock, value: unknown, revision: number, origin: SettingsOrigin) {
+  async save(block: SettingsBlock, value: unknown, revision: number, origin: SettingsOrigin, authorize?: () => void) {
+    const check = () => this.check(authorize)
+    const managementRecovery = origin === 'panel' && authorize !== undefined
+    check()
     const { store, sources, engine, sessions } = this.host
     const stale = () => revision !== store.blockRevision(block)
     if (stale()) throw new SettingsConflict('Settings changed. Reload before saving.')
@@ -161,25 +180,40 @@ export class Settings {
     const previous = block === 'eval' ? current.eval.model : block === 'executor' ? current.executor.model : null
     if (model && JSON.stringify(model) !== JSON.stringify(previous)) {
       try { await resolveRoleModel(this.host.context, model) }
-      catch (error) { throw new UserError('modelUnavailable', { block, error: error instanceof Error ? error.message : String(error) }) }
+      catch (error) { check(); throw new UserError('modelUnavailable', { block, error: error instanceof Error ? error.message : String(error) }) }
+      check()
     }
     rules.guard?.(current, candidate, origin)
-    if (setupChanged(current, candidate)) await this.host.setup.checkAccounts(block, candidate)
+    if (setupChanged(current, candidate)) {
+      try { await this.host.setup.checkAccounts(block, candidate, check) } catch (error) { check(); throw error }
+      check()
+    }
     if (stale()) throw new SettingsConflict('Settings changed during the checks. Reload before saving.')
     // Re-read current settings after async checks in case unrelated blocks were saved concurrently.
     const old = store.settings()
     const settings = rules.merge(old, parsed, id)
     if (JSON.stringify(SettingsSchema.parse(settings)) === JSON.stringify(old)) {
-      const delivery = await sessions.delivery(`settings:${block}`)
-      return { saved: true, revision: store.blockRevision(block), policy_changed: false, restarting: false, context_delivery: delivery }
+      // A prior request may have committed before revocation stopped its file application or deferred restart.
+      // Reconcile only under this new request's authority; never resume the revoked operation in the background.
+      if (block === 'executor' && managementRecovery) await this.applyCommands(old.executor.blockedCommands, check)
+      const restarting = managementRecovery && this.host.setup.needsRestart(old)
+      const delivery = restarting ? 'pending' : await sessions.delivery(`settings:${block}`)
+      check()
+      if (restarting) this.host.setup.restart(check, old)
+      return { saved: true, revision: store.blockRevision(block), policy_changed: false, restarting, context_delivery: delivery }
     }
-    const restarting = setupChanged(old, settings) || !this.host.setup.configured()
+    const pendingRestart = this.host.setup.needsRestart(old)
+    const restarting = setupChanged(old, settings)
+      || (!this.host.setup.configured() && !pendingRestart)
+      || (managementRecovery && this.host.setup.needsRestart(settings))
     const before = policyVersion(old), after = policyVersion(settings)
     const scope = (version: SettingsValue) => ({
       scope: (input: { source: string; meta: Record<string, unknown> }) => this.host.sources.scope(input, version) })
     const effects = before === after ? new Map() : policyEffects(store.tickets.open(), old, SettingsSchema.parse(settings), scope)
     const notified = [...effects.keys()]
+    check() // Persist a denial outside the save transaction as well as checking at its commit boundary.
     store.atomic(() => {
+      check()
       store.saveSettings(SettingsSchema.parse(settings), { source: origin, block, policyVersion: after, policyChanged: before !== after, notified })
       if (origin !== 'tool') sessions.notify(...settingsNotice(block, changedPaths(old, settings)))
       if (before !== after) engine.policyChanged(before, after, effects)
@@ -187,10 +221,11 @@ export class Settings {
     // Rewrite worker command shims immediately when `blockedCommands` changes.
     const blocked = settings.executor.blockedCommands
     const changed = blocked.join(' ') !== old.executor.blockedCommands.join(' ')
-    if (changed) await this.host.setup.blockCommands(blocked)
+    if (changed || (block === 'executor' && managementRecovery)) await this.applyCommands(blocked, check)
     // When restarting, the notice stays pending until after the restart; `setup.restart()` defers until this call returns.
     const delivery = restarting ? 'pending' : await sessions.delivery(`settings:${block}`)
-    if (restarting) this.host.setup.restart()
+    check()
+    if (restarting) this.host.setup.restart(check, settings)
     else this.host.requestPass()
     return { saved: true, revision: store.blockRevision(block), policy_changed: before !== after, restarting, context_delivery: delivery }
   }
@@ -199,16 +234,21 @@ export class Settings {
    * Triggers); saved in its own `'pause'` block so concurrent `executor` edits remain valid across it.
    * @returns Whether processing is now paused (`{ paused }`).
    */
-  async pause(paused: boolean, origin: SettingsOrigin): Promise<{ paused: boolean }> {
+  async pause(paused: boolean, origin: SettingsOrigin, authorize?: () => void): Promise<{ paused: boolean }> {
+    const check = () => this.check(authorize)
+    check()
     const { store, sessions } = this.host
     const old = store.settings()
     if (old.paused === paused) return { paused }
+    check()
     store.atomic(() => {
+      check()
       const record = { source: origin, block: 'pause' as const, policyVersion: policyVersion(old), policyChanged: false, notified: [] }
       store.saveSettings({ ...old, paused }, record)
       if (origin !== 'tool') sessions.notify(...settingsNotice('pause', ['paused']))
     })
     await sessions.delivery('settings:pause')
+    check()
     this.host.requestPass()
     return { paused }
   }
@@ -228,25 +268,31 @@ export class Settings {
    * @returns The synchronized policy section for `id`.
    * @throws UserError (`nothingToSync`) when `id` cannot sync now, `SettingsConflict` if the `'policy'` block changed during synchronization, or the underlying sync error on failure.
    */
-  async sync(id: string) {
+  async sync(id: string, authorize?: () => void) {
+    const check = () => this.check(authorize)
+    check()
     const { store, sources } = this.host
     if (!this.syncable().includes(id)) throw new UserError('nothingToSync', { source: id })
     const health = this.syncHealth(id)
     try {
       const revision = store.blockRevision('policy')
-      const part = await sources.kind(id)!.policy!.sync!.run(this.host.sourceHost, sources.policyPart(id)!, this.host.lifetime)
+      const part = await sources.kind(id)!.policy!.sync!.run(this.sourceHost(authorize), sources.policyPart(id)!, this.host.lifetime)
+      check()
       if (revision !== store.blockRevision('policy')) throw new SettingsConflict('Policy changed during synchronization. Retry with the current settings.')
       const policy = store.settings().policy
       // Skip saving a new revision when the synced list is unchanged.
       if (JSON.stringify(part) !== JSON.stringify(policy.sources[id])) {
-        await this.save('policy', { ...policy, sources: { ...policy.sources, [id]: part } }, revision, 'sync')
+        await this.save('policy', { ...policy, sources: { ...policy.sources, [id]: part } }, revision, 'sync', check)
       }
+      check()
       health.set({ state: 'ready', detail: `${part.allowed.length} allowed`, at: now() })
       this.retrySync(id, false)
       return part
     } catch (error) {
       health.set({ state: 'error', detail: String(error), at: now() })
-      this.retrySync(id, true)
+      // A failed management request must never be retried later under the Runtime's system authority.
+      if (!authorize) this.retrySync(id, true)
+      check()
       throw error
     }
   }
@@ -255,13 +301,15 @@ export class Settings {
    * @returns Sorted display names (`{ added }`) that were not present in the stored label map before this read.
    * @throws UserError (`noLabels`) when the Source has no label refresh; rethrows a failed read, keeping the stored list.
    */
-  async refreshLabels(id: string): Promise<{ added: string[] }> {
+  async refreshLabels(id: string, authorize?: () => void): Promise<{ added: string[] }> {
+    this.check(authorize)
     const { store, sources } = this.host
     const instance = sources.instance(id)
     const kind = instance && sources.kind(instance.kind)
     if (!kind?.refreshLabels) throw new UserError('noLabels')
     const before = store.get(KV.sources.labels(id)) ?? {}
-    const after = await kind.refreshLabels(this.host.sourceHost)
+    const after = await kind.refreshLabels(this.sourceHost(authorize), this.host.lifetime)
+    this.check(authorize)
     return { added: Object.entries(after).filter(([key]) => !(key in before)).map(([, name]) => name).sort((a, b) => a.localeCompare(b)) }
   }
 }

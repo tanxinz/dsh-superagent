@@ -4,7 +4,16 @@
 
 仓库属于 GitHub 个人账户 tanxinz，目前公开。直接推送需要仓库协作者权限，由所有者在 Settings → Collaborators 添加具体 GitHub 账户，成员接受邀请；也可 fork 后提交 PR。ChatGPT 项目成员名单不作为 GitHub 授权名单。
 
-PR 合并前以 chore/team-handoff-20261112 为当前开发基线，合并后使用 main。先拉取最新代码，再从基线建立个人任务分支。一项任务一个 PR，由另一名成员复审，避免同时修改同一核心文件。
+PR 合并前以当前任务链明确指定的基线为准（现阶段 PR #14、#18、#19 均以 `feat/m0-local-20261113-mac` 为目标）；正式进入 main 前仍须单独核对上游分支依赖和 M0 准出条件。先拉取最新代码，再从正确基线建立个人任务分支；一项任务一个 PR，避免同时修改同一核心文件。
+
+## PR 审核与合并决策：tanxinz 责任制
+
+- **统一审核人和合并责任人：GitHub 账户 `tanxinz`。** 本仓库不再要求必须由另一名协作者提交 `APPROVE` 才能合并；其他成员审核可自愿邀请，但不是项目级强制前置条件。
+- **GitHub 不允许 PR 作者批准自己创建的 PR。** `tanxinz` 对自己的 PR 通过 GitHub Conversation 评论或 `COMMENTED` Review 记录 `OWNER_REVIEW: READY_TO_MERGE` 或 `OWNER_REVIEW: BLOCKED`，不能自称已取得独立 `APPROVE`、不能伪造审阅账户。此记录只代表项目内部责任人批准，不等于 GitHub 原生 `APPROVED` 状态。
+- 每次 Owner Review 必须对应**当前 head SHA**，记录：变更文件与范围、测试命令和对应 CI Run/Artifact、PASS/FAIL/NOT_RUN/UNKNOWN 的真实状态、安全/凭据/数据影响、遗留风险、上游锁版与 gitlink 是否变化，以及最终“允许合并/阻止合并”的明确决定；head、依赖分支或运行配置变更后必须重新核对。
+- **真实门禁不降低**：源码/CI/依赖变更必须完成对应的定向与完整验证、留存原始失败证据；文档变更仍需文档/静态审查及适用的设计验收。不能用通过的定向测试替代完整测试，不能用补丁版 Harness PASS 冒充未修改 baseline PASS。M0-14 仍为 `BLOCKED`，M1 运行集成未准出，V12 未运行的可选能力继续禁用。
+- 当 PR 涉及跨团队授权、安全边界、真实生产凭据、删除证据或高风险合并冲突时，`tanxinz` 必须将风险写明并停留在 `BLOCKED` 直至有足够的客观验证；可主动邀请其他成员，但不自动改变上述审核责任人。
+- **GitHub 分支保护是另一层规则**：如 Settings → Rules → Branch protection / Rulesets 存在“Require approvals”且要求他人批准，GitHub 可能仍阻止作者合并；由仓库所有者在相应目标分支把强制他人批准改为不要求，同时**保留适用的 CI/status checks**。仅修改本文件不会自动修改 GitHub 仓库设置，不得绕过仍生效的服务器侧保护。
 
 ## 代码位置
 

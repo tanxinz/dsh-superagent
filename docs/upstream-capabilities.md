@@ -1,5 +1,9 @@
 # M0 上游能力核验
 
+> 最终授权接续（2026-11-13）：同一PR #13个人分支在e1bd28a后推进，贯穿管理请求的模型/账户检查、Source命令与落库、文件发布和延迟重启的原上下文复查；撤权后的配置恢复仅允许新的管理授权，工具/后台不能代为恢复。完整68文件/1278测试、类型检查/构建和三个真实无模型profile通过，四轮复审的问题已修复，最终复审无可操作回归；新提交CI另核验。M0仍0/14整项，M0-14/M1 BLOCKED，实际Worker隔离/子会话/全部Gateway仍待完成。详见[本批验收](acceptance/M0-final-authorization-20261113.md)。
+
+> Mac 接续（2026-11-13）：从PR #12实际head1475ffa创建个人分支；归档其全部成功CI。新增受信根Session绑定投放/撤权/恢复及原请求上下文撤权复核；完整67文件/1263测试、类型检查/构建通过，真实无模型profile绑定重载/持久撤权通过。实际Worker隔离、子会话投放及全部Gateway仍未完成；M0-01—13 IN_PROGRESS、M0-14 BLOCKED、0/14整项，M1未准出。详见[本批验收](acceptance/M0-local-bindings-20261113.md)。
+
 基线与版本见 UPSTREAM_BASELINE.md。源码路径相对 upstream/superagent。公共 DSH 类型来自原型 lockfile 安装的 0.2.1-alpha.2 包，尚未将它们与 Harness 0.2.2-rc.2 源码混用。
 
 | 符号 / 扩展点 | 真实落点 | 核验结果 | 尚待验证 |
@@ -64,3 +68,39 @@ contracts.ts 的 11 项依赖与 Bundle inject 共享。此处只验证服务可
 - Registry fibers 可跨 isolation scope；重复注册检查必须限定 `Context.isolate` 的服务 scope，并验证活 provider。CLI0.2.1-alpha.2 / Cordis4.0.5-alpha.1 实验已通过。
 
 详见 [本批验收](acceptance/M0-trust-permissions-20261113.md)；未证实的 API/在线能力继续保留缺口。
+
+## 2026-11-14 V1.2 公开上游功能核验（静态；不覆盖 M0 实测）
+
+> 本节锁定公开 `dsh-v0.2.2-rc.3` 进行源码/文档核验。**不是**当前产品 `DSH 0.2.1-alpha.2` 与新版本的真实组合证明，仍不修改 Harness gitlink。2026-11-13 M0 权限、Service/主 Session 证据保持原判定；Worker/子 Session/全部 Gateway/网络密钥隔离未完成。
+
+| 能力 | rc.3 已公开事实 | 易误判之处 | SuperAgent 适配职责 |
+| --- | --- | --- | --- |
+| Search / Fetch | `@deepseek-ai/dsh-web-deepseek-api` 注册 `deepseek-search-api`、`deepseek-fetch-api`，经 `ctx.web` 提供 Web 能力；`dsh-tool-web` 暴露模型工具 | 默认 `searchProvider=deepseek-search-api`，但 `fetchProvider=http`；默认 HTTP Fetch 不阻断 loopback/私网/云元数据；Messages 搜索另属独立提供方 | 先检查选中 provider、费用与出站网络，再做薄层 EvidenceCapture；不重复实现 Search/Fetch 网络栈 |
+| 服务端深度搜索 | `deepseek_web_search / deepseek_read_url` 在 DeepSeek 服务端执行 | 无法假定逐工具经过 Harness `ToolGuard`，模型/服务器搜索结果不构成原件或业务授权 | 拆成显式允许研究路由与受控本地审计路由；敏感内容禁止外送 |
+| AgentTeam | 原生具名多级 SubAgent，按根 Session 保存 Team mode、任务板及 CAS；Root/descendants 共享 checkout | 默认 Team mode off；`writeScopes` 仅警告写入冲突；不能跨进程协调，失联任务不自动解除占有 | 只做业务 TeamRun/Assignment/Mandate 与证据映射；Verifier 只读隔离 |
+| Browser Use | `ctx.browserUse.register(name)` 管理唯一提供方；实验性 Playwright MCP、CDP、Stagehand | 没有统一 `ctx.browserUse.click()`；浏览器状态不是 Session 重启持久事实，取消不能撤回已执行动作 | 工具级授权、网络隔离、操作证据、UNKNOWN_RECONCILE；不自建 Browser Agent Loop |
+| Schedule | Host 持久 Schedule 触发向 Session inbox 发送 follow-up | Receipt 只证明入箱，不证明模型/业务成功；不提供业务级 exactly-once 效果保证 | 由 Engine/Effects 继续校验稳定业务键、授权和恢复 |
+| 通用 ToolGuard | `ctx.tools.guard()` 能最终拒绝 Harness 本地工具 | 并不涵盖模型服务端工具、旁路直接 API 或 OS/network；工具预设不是系统级隔离 | 将非 Tool Gateway、受限容器/网络、凭据和撤权作为独立验收 |
+
+**V1.2 必须新验证**：provider 选择与查询次数、敏感出站/SSRF、证据可信级别与哈希、Team CAS/持久不确定/Verifier 隔离、浏览器真实负向动作与未知结果、Schedule 重复触发/Engine 去重、API 错误分类与预算。参见 [详细设计 §16.6](SuperAgent_Harness_Design_Final.md) 的 V12-01—V12-10；所有用例均保持 `NOT_RUN`。
+
+公开依据：[Web](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.2-rc.3/docs/subsystems/web.md)、[DeepSeek Web API Provider](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.2-rc.3/packages/web/web-deepseek-api/README.md)、[AgentTeam](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.2-rc.3/packages/team/agent-team/README.md)、[Browser Use](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.2-rc.3/docs/subsystems/browser-use.md)、[Schedule](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.2-rc.3/docs/subsystems/schedule.md)。
+
+### V1.2 第二轮静态发现：配置与错误语义补充
+
+- **默认隐私字段**：rc.3 `dsh-web-deepseek-api` 的 `sendOriginalQuestion` 默认 `true`，会将最近人工问题（最多128字符）作为 `ori_question` 发送；企业路径须显式设 `false` 并验证实际 HTTP 请求体。
+- **三条调用链**：Harness 模型 `web_search/web_fetch` 进入 ToolRuntime；服务插件直接 `ctx.web.search/fetch` 不自动经 ToolGuard，须额外受信业务校验；DeepSeek 模型服务端 Web Tools 独立执行，也不经本地逐次 Guard。
+- **Fetch 错误**：本地 HTTP Fetch 可返回 `WebFetchResult.statusCode=404/500` 而不抛错，且会遵循其网络策略；远端 DeepSeek Fetch API 的非成功抓取是 Provider 错误，响应不提供最终重定向 URL。二者不能以同一成功规则或“原站字节”处理。
+- **凭据与预算**：`searchBilling/fetchBilling=auto` 随当前会话模型路由及账户/API Key 选择而变；插件实例 QPS 并非账户级全局限流；授权与派发应核验真实 endpoint/凭据引用/预算。
+- **Schedule**：Host 先保存 Session inbox 后保存 receipt，中间崩溃可能重复投递；必须由业务稳定周期标识及 Engine 幂等处理。Browser MCP 进程在 Session 启动目录启动，后续目录改变不会迁移，不能替代 OS/网络隔离。
+
+本轮只完成公开官方源码核查及设计问题登记；相关运行负例依旧 `NOT_RUN`。参见 [复审记录](reviews/V1.2-DeepSeek-Harness-Static-Review-20261114.md)。
+
+### 第三轮外部反馈：上游限制（2026-11-14）
+
+- **Stagehand Native**：使用独立模型与 API Key，推理和费用不纳入 DSH Session 统计；取消不保证本次推理终止，rc.3 不支持 DeepSeek endpoint/baseURL。业务默认禁用。
+- **Web 最终派发**：WebRuntime 在调用时选择 Provider，DeepSeek Transport 内异步解析凭据/endpoint；当前公共接口无原子业务许可入参。需固定配置的隔离执行域与实际网络出口控制，或经独立验证的最终派发 Gate；不能用预检查代替实际发网验证。
+- **Schedule 手动执行**：runNow() 每次重新生成 occurrenceAt，没有业务 manualExecutionRequestId 参数。必须先持久化人工请求身份，再由 Engine/Effects 去重；未实测时禁止手动调度触发可写业务。
+- **阶段与功能门禁**：可选能力的实际启用需对应 V12-01B、V12-03C、V12-08C、V12-09B、V12-10B、V12-GATE 安全恢复验收，全部 NOT_RUN。
+
+官方源码：[Stagehand Native](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.2-rc.3/packages/experimental/browser-use-stagehand-native/README.md)、[WebRuntime](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.2-rc.3/packages/web/web/src/index.ts)、[Web Transport](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.2-rc.3/packages/web/web-deepseek-api/src/transport.ts)、[Schedule Runtime](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.2-rc.3/packages/schedule/schedule/src/runtime.ts)。

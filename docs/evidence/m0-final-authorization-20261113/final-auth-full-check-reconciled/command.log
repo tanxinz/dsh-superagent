@@ -1,0 +1,66 @@
+$ pnpm typecheck && pnpm test && pnpm build
+$ tsc --noEmit
+$ vitest run
+
+ RUN  v4.1.8 <cwd>
+
+ ❯ tests/runtime.spec.ts (99 tests | 2 failed) 3269ms
+   × waits for setup without the agent's GitHub CLI: the panel works, and nothing is polled, assessed or dispatched 40ms
+   × checks a changed account CLI before saving it, restarts after the save, and lets only the panel change it 70ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/runtime.spec.ts > waits for setup without the agent's GitHub CLI: the panel works, and nothing is polled, assessed or dispatched
+AssertionError: expected { saved: true, revision: +0, …(3) } to match object { saved: true, restarting: false }
+(3 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "restarting": false,
++   "restarting": true,
+    "saved": true,
+  }
+
+ ❯ tests/runtime.spec.ts:855:121
+    853|   // check after a fix outside dsh-superagent.
+    854|   const revision = next.store.get<number>('settings-revision')
+    855|   expect(await next.settings.save('policy', next.store.settings().poli…
+       |                                                                                                                         ^
+    856|   expect(next.store.get<number>('settings-revision')).toBe(revision)
+    857|   expect(await next.settings.save('policy', { ...next.store.settings()…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/runtime.spec.ts > checks a changed account CLI before saving it, restarts after the save, and lets only the panel change it
+AssertionError: expected { saved: true, revision: 2, …(3) } to match object { saved: true, restarting: false }
+(3 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "restarting": false,
++   "restarting": true,
+    "saved": true,
+  }
+
+ ❯ tests/runtime.spec.ts:940:44
+    938|   await vi.waitFor(() => expect(restarts).toHaveBeenCalledTimes(1))
+    939|   // Other fields of the Source take effect without a restart.
+    940|   expect(await save({ pollSeconds: 120 })).toMatchObject({ saved: true…
+       |                                            ^
+    941|   expect(restarts).toHaveBeenCalledTimes(1)
+    942|   expect((await runtime.settings.save('executor', { ...runtime.store.s…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed | 67 passed (68)
+      Tests  2 failed | 1274 passed (1276)
+   Start at  16:39:36
+   Duration  16.41s (transform 2.54s, setup 0ms, import 7.55s, tests 58.11s, environment 3.28s)
+
+[ELIFECYCLE] Test failed. See above for more details.
+[ELIFECYCLE] Command failed with exit code 1.

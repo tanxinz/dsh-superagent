@@ -23,6 +23,10 @@ export const setupChanged = (before: Settings, after: Settings): boolean => setu
  */
 export class Setup {
   private resolved?: Deployment
+  private loadedSetupFields?: string
+  private dispatchedSetupFields?: string
+  /** Mutual exclusion for existing environment file I/O, not a work queue or persistent scheduler. */
+  private environmentWrite?: Promise<void>
   problem?: SetupProblem
   feishuProblem?: SetupProblem
   /** PATH with the worker shim directory removed so the host's own CLI calls invoke the real binaries. */
@@ -41,8 +45,14 @@ export class Setup {
     return this.resolved
   }
   configured(): boolean { return this.resolved !== undefined }
+  /** A cancelled restart remains pending; an already dispatched restart need not be scheduled again. */
+  needsRestart(settings: Settings): boolean {
+    const seen = this.dispatchedSetupFields ?? this.loadedSetupFields
+    return seen !== undefined && seen !== setupFields(settings)
+  }
   /** Resolve deployment accounts and apply the worker environment, recording `SetupError` failures in `problem`/`feishuProblem` and rethrowing unexpected errors. */
   async run(settings: Settings): Promise<boolean> {
+    this.loadedSetupFields = setupFields(settings)
     try { this.resolved = await this.resolve(settings); return true }
     catch (error) {
       if (!(error instanceof SetupError)) throw error
@@ -51,27 +61,47 @@ export class Setup {
     }
   }
   /** Trigger a restart to re-run setup, refusing if setup and Feishu are already healthy so running assignments are not interrupted. */
-  check(): void {
+  check(authorize?: () => void): void {
+    this.host.lifetime.throwIfAborted(); authorize?.()
     if (this.configured() && !this.feishuProblem) throw new UserError('setupComplete')
-    this.restart()
+    this.restart(authorize)
   }
   /** Defer the restart to the next macrotask so the current HTTP or tool caller receives its response first. */
-  restart(): void { setTimeout(this.host.restart, 0) }
+  restart(authorize?: () => void, settings?: Settings): void {
+    this.host.lifetime.throwIfAborted(); authorize?.()
+    const fields = settings && setupFields(settings)
+    setTimeout(() => {
+      try { this.host.lifetime.throwIfAborted(); authorize?.() }
+      catch { return } // Revoked/dead requests cannot restart the Runtime after returning a response.
+      this.host.restart()
+      if (fields !== undefined) this.dispatchedSetupFields = fields
+    }, 0)
+  }
   /** Verify account CLIs for a modified source block before saving, ignoring setup errors belonging to other blocks. */
-  async checkAccounts(block: SettingsBlock, settings: Settings): Promise<void> {
+  async checkAccounts(block: SettingsBlock, settings: Settings, authorize?: () => void): Promise<void> {
     const { machine } = this.host
-    const check = block === 'source:feishu' ? resolveFeishuBot(machine, settings.sources.feishu?.config, this.probe())
-      : resolveDeployment(machine, settings.sources.github?.config, this.probe())
+    const check = block === 'source:feishu' ? resolveFeishuBot(machine, settings.sources.feishu?.config, this.probe(authorize))
+      : resolveDeployment(machine, settings.sources.github?.config, this.probe(authorize))
     await check.catch((error: unknown) => { if (!(error instanceof SetupError) || error.place === block.slice(7)) throw error })
   }
-  async blockCommands(blocked: readonly string[]): Promise<void> {
-    if (this.resolved) await writeEnvironment(this.resolved, blocked)
+  async blockCommands(blocked: readonly string[], authorize?: () => void): Promise<void> {
+    const check = () => { this.host.lifetime.throwIfAborted(); authorize?.() }
+    check()
+    while (this.environmentWrite) { await this.environmentWrite.catch(() => {}); check() }
+    check()
+    if (!this.resolved) return
+    const writing = writeEnvironment(this.resolved, blocked, check)
+    this.environmentWrite = writing
+    try { await writing } finally { if (this.environmentWrite === writing) this.environmentWrite = undefined }
   }
+  /** Drain admitted file I/O before the Runtime closes its Store and releases the state-directory lock. */
+  async idle(): Promise<void> { while (this.environmentWrite) await this.environmentWrite.catch(() => {}) }
   restore(): void { this.restoreEnvironment?.(); this.restoreEnvironment = undefined }
   /** Probes CLIs the way worker shells run them, using `stateDir` as `cwd` since it exists even before the repository clone is valid. */
-  private probe() {
+  private probe(authorize?: () => void) {
     const { context, machine, lifetime } = this.host
-    return workerProbe(context.subprocess, machine.stateDir, machine.stateDir, lifetime)
+    const probe = workerProbe(context.subprocess, machine.stateDir, machine.stateDir, lifetime)
+    return (argv: string[]) => { lifetime.throwIfAborted(); authorize?.(); return probe(argv) }
   }
   private async resolve(settings: Settings): Promise<Deployment> {
     const { context, machine, lifetime } = this.host
@@ -88,7 +118,7 @@ export class Setup {
       if (error instanceof SetupError) throw error
       throw new SetupError('environmentFailed', { output: error instanceof Error ? error.message : String(error) })
     }
-    await writeEnvironment(resolved, settings.executor.blockedCommands).catch(machineProblem)
+    await writeEnvironment(resolved, settings.executor.blockedCommands, () => lifetime.throwIfAborted()).catch(machineProblem)
     this.restoreEnvironment = applyEnvironment(this.variables, machine.stateDir, this.path)
     await verifyEnvironment(resolved, context.subprocess, lifetime).catch((error: unknown) => {
       this.restore()

@@ -1,0 +1,110 @@
+{
+  "index": 2,
+  "state": {
+    "setup": {
+      "machine": {
+        "stateDir": "/var/folders/_j/x6wlg74j4nz51xcf6bt5y3ch0000gn/T/m0-dsh-profile-3416Bw/state",
+        "promptMaxChars": 100000,
+        "admissionContextMaxPages": 10,
+        "admissionContextTimeoutMs": 15000
+      },
+      "problem": null,
+      "feishuProblem": null,
+      "accounts": {
+        "repository": "fixture/m0",
+        "agent": "m0-fixture",
+        "feishu": null
+      }
+    },
+    "load": {
+      "running": 0,
+      "queued": 0,
+      "maxWorkers": 3
+    },
+    "masterId": "orchestrator-d15963a50056d9dda00cd627814cab55",
+    "paused": true,
+    "health": {
+      "runtime": {
+        "state": "paused",
+        "detail": "Mesh execution blocked: OS/network isolation and trusted Session bindings are not validated",
+        "at": "2026-11-13T08:47:33.465Z"
+      },
+      "relay": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T08:47:33.404Z"
+      },
+      "notice": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T08:47:33.404Z"
+      },
+      "launch": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T08:47:33.404Z"
+      },
+      "delivery": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T08:47:33.404Z"
+      },
+      "assessment": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T08:47:33.404Z"
+      },
+      "reply": {
+        "state": "ready",
+        "detail": "Nothing waiting",
+        "at": "2026-11-13T08:47:33.404Z"
+      },
+      "evals": {
+        "state": "ready",
+        "detail": "No unavailable Eval in the last hour"
+      },
+      "models": {
+        "state": "ready",
+        "detail": "No managed Session is waiting on a model budget retry"
+      }
+    }
+  },
+  "dependencyCycle": {
+    "status": "PASS",
+    "provider": "@deepseek-ai/dsh-permission-presets",
+    "retainedRefused": true,
+    "intakeRefused": true,
+    "staleRefused": true,
+    "staleRuntimeRefused": true,
+    "providerCount": 1,
+    "globalProviderCount": 2,
+    "presetsUnchanged": true,
+    "lifetimeAborted": true,
+    "reloaded": true,
+    "configuredProfile": true,
+    "configuredSession": {
+      "id": "orchestrator-d15963a50056d9dda00cd627814cab55",
+      "preset": "read-only",
+      "sameId": true,
+      "roleSwitchRestricted": true,
+      "overrideRefused": true,
+      "toolBodyEntries": 0,
+      "nativeToolDenied": true,
+      "bindingIssued": false,
+      "revokedBindingSurvivedProcessRestart": true,
+      "modelRequest": "NOT_RUN",
+      "restoredRestricted": true,
+      "persistedEffectRetained": true,
+      "automaticProcessing": "BLOCKED_ISOLATION"
+    },
+    "account": "FIXTURE_CLI_NOT_REAL_GITHUB",
+    "businessWorker": "NOT_RUN",
+    "realModelSession": "NOT_RUN"
+  },
+  "forced": false,
+  "exit_code": 0,
+  "signal": null,
+  "installed": 2,
+  "disposed": 2,
+  "log_sha256": "c4870df0c131b80e898ffaed8ca68b4f6bb9cb7c29315ca2496cbaed87116109"
+}

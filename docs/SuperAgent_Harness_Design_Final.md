@@ -6,6 +6,8 @@
 
 **本次框架核验修订（2026-11-11）**：保留已有 18 章、5 层、17 模块、S1/S2/S3 与学习版 M0—M5。基于官方仓库的公开代码结构，明确 **TypeScript + Node.js + Cordis + SuperAgent 原生 Bundle** 为第一版工程路线；新增兼容版本矩阵、fork-first 接线、同步领域命令边界、最小生命周期样例与真实 M0 验收。**公开源码说明不等于本项目已完成编译**：所有 `mesh_*`、`CognitiveMeshService`、ActionPlan、Jev 适配均属拟新增工程，须以锁定 Commit 和实际编译/测试确证。Notion 版不随本地 Markdown 自动同步。
 
+> **V1.2 设计修订（2026-11-14；仅 Markdown 静态修订）**：在 V1.1 五层/17 模块与 M0—M5、G0—G5 双门禁不变的前提下，收敛 DeepSeek 全家桶 API 与 Harness v0.2.2-rc.3 的复用边界；记录 P0-01—06、P1-01—05、P2-01—02 对应修订和验收。项目当前基线**不切换**到 rc.3；本轮不修改 Harness gitlink、依赖锁、产品源码或历史证据。官方功能存在不等于本项目组合已验证；新能力均保持 `CANDIDATE/UNTESTED`。
+
 ## 1. 项目目标、范围与不可突破的边界
 
 ### 1.1 最终目标
@@ -59,6 +61,31 @@
 
 > 这些是 Harness 公开的扩展能力。具体事件签名、Scope 和注册方法必须通过所锁定的发行版本 TypeScript 类型确认，禁止把设计伪代码直接视作可安装实现。
 
+### 2.1.1 新发布能力的最小复用矩阵（V1.2 候选，不代表当前锁版可用）
+
+| 能力 | 上游实际落点 | 本项目应负责 | 验证状态 |
+| --- | --- | --- | --- |
+| DeepSeek 独立 Search / Fetch | `@deepseek-ai/dsh-web` 的 `ctx.web.search/fetch`，`@deepseek-ai/dsh-web-deepseek-api` 注册 `deepseek-search-api/deepseek-fetch-api` | 查询授权、来源限制、EvidenceCapture 与业务审计；**不自建搜索 HTTP 客户端** | rc.3 源码核实，组合未测 |
+| 普通 Web 工具 | `@deepseek-ai/dsh-tool-web`、原生 HTTP Fetch、旧 Messages 搜索提供方 | 显式选择 `searchProvider/fetchProvider`；防止默认本地获取泄露内网 | rc.3 源码核实，组合未测 |
+| AgentTeam / 具名子 Agent | `@deepseek-ai/dsh-agent-team` 与 `dsh-tool-agent-team`；子代理组件负责消息与恢复 | 保留业务 `TeamRun/Assignment/Mandate`；不复制任务板 | rc.3 源码核实，组合未测 |
+| Browser Use | `dsh-browser-use` + Playwright MCP / Chrome DevTools MCP / Stagehand（实验性） | 授权、URL/身份边界、证据与效果对账；不假造统一 `click()` API | 官方实验性，组合未测 |
+| Host Schedule | `ctx.schedule` / `dsh-tool-schedule` | 仅时间触发；业务工作仍经原 Engine + Effects | rc.3 源码核实，组合未测 |
+| OCR / 文件 / 深度搜索 | DeepSeek 独立识别 API 与模型服务端工具 | 按业务需要做输入适配；服务端工具不视为本地 ToolGuard 已审计 | 官方已发布，项目未测 |
+
+**默认配置及出站风险**：rc.3 基础 profile 默认 `searchProvider: deepseek-search-api`、`fetchProvider: http`；DeepSeek 独立 Fetch 需显式选择 `deepseek-fetch-api`。上游原生 HTTP Fetch **不限制环回、私网和云元数据地址**，不允许将其直接暴露给不可信 URL 或不受限 Agent；必须有目标验证、网络隔离及负向测试。
+
+**两种工具信任域**：`deepseek_web_search` 与 `deepseek_read_url` 在 DeepSeek 模型服务端执行，不能假定请求逐次经过本地 `ctx.tools.guard()`。必须逐次审批、留存原文或受限出站的任务应使用经受信控制的 `ctx.web` 本地工具路径；服务端自动搜索只用于被明确允许的低敏研究型会话。上游能力文档不等于组合 TypeScript/API/Session 验证通过。
+
+资料：[DeepSeek Search / Fetch](https://api-docs.deepseek.com/guides/search/)、[Web Tools](https://api-docs.deepseek.com/guides/web_tools/)、[Harness Web API Provider](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.2-rc.3/packages/web/web-deepseek-api/README.md)、[Browser Use](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.2-rc.3/docs/subsystems/browser-use.md)、[AgentTeam](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.2-rc.3/packages/team/agent-team/README.md)。
+
+### 2.1.2 第二轮复审：Web 的三条执行路径与默认隐性数据外送
+
+1. **Harness 模型 Web 工具**：通过 `web_search/web_fetch` 进入 ToolRuntime，可使用 `ctx.tools.guard()` 作为最终工具拒绝；模型工具仍需要网络目的地限制。
+2. **业务代码直接调用 `ctx.web.search()/fetch()`**：直接 Service 调用不得假设自动经过 ToolRuntime/ToolGuard。必须先经过受信 `EvidenceGateway` 的身份、外送范围与预算准入；但 **rc.3 的 `ctx.web` 服务接口不接受不可变的 provider/endpoint/credential 授权凭据，也不证明业务预检查与内部派发使用同一快照**。因此新增能力在满足 §5.1.3 的受控静态运行域或可证明最终拦截前，保持 `DISABLED/FIXTURE_ONLY`，绝不能把调用前配置检查当作已解决竞态。`EvidenceGateway` 为现有 Runtime 的逻辑步骤，不是新 HTTP 客户端、Engine、队列或数据库。
+3. **DeepSeek 服务端 `deepseek_web_search/deepseek_read_url`**：执行发生在模型服务端，不经本地 ToolRuntime；只能按显式模型路由允许低敏研究，不能视为已经完成本地逐工具审批。
+
+**新增 P0 风险**：rc.3 `@deepseek-ai/dsh-web-deepseek-api` 的 `sendOriginalQuestion` **默认 `true`**，会把最近人工提问前 128 字符作为 `ori_question` 发往 Search API；仅脱敏 `query` 仍会泄露原问题。企业受控路线必须显式设置 `sendOriginalQuestion: false`，并以 HTTP 夹具检查真实请求体缺失 `ori_question`。`searchBilling/fetchBilling: auto` 会随会话模型路由、账号/API Key 解析，必须依照 §5.1.3 证明**实际派发**的 provider、endpoint、凭据/计费来源属于批准范围；不能只凭派发前的配置读取作出该结论。
+
 ### 2.2 SuperAgent：业务领域核心与扩展位置
 
 | 组件 / 公开文件 | 保留的职责 | 需要补足的能力 |
@@ -79,6 +106,8 @@
 | `src/sources/kind.ts`、`registry.ts` | SourceKind 注册、Channel、ThreadContext | 企业事件 Source 类型 |
 
 基础运行约束：Engine 是唯一原生领域聚合写入者；事务扩展通过受控领域命令同步写入新表，不允许旁挂插件另起第二个领域事务。`Store.atomic()` 负责提交原生聚合与扩展表，`Effects.enqueue()` 必须在该事务内持久入队；外部副作用在提交后由 Effects 执行。`afterCommit()` 仅适用于无需崩溃恢复的进程内回调，**不能代替持久 Effects**。Store 只有一个 SQLite 文件及目录进程锁；首期只支持单实例单写入者。
+
+**历史基线说明（V1.2）**：下段描述的是原始上游 `Sessions.ensure()` 的风险，并非当前 PR #13 开发分支仍未修改。2026-11-13 的 M0 记录已覆盖主 Session 的只读预设/撤权回归，但 Worker/子 Session 的真实 OS/网络/密钥隔离仍未完成；以 `docs/DEVELOPMENT_STATUS.md` 和该批验收为当前状态，不改写历史核验记录。
 
 **已由公开源码确认**上游 `Sessions.ensure()` 在解析/创建 Session、初始化角色模型之后调用 `ctx.permissionPresets.set(result.agent.session, 'danger-full-access')`，与学习版最小权限目标**直接冲突**。M0 必须在 fork 的 `src/app/sessions.ts` 删除/替换这条无条件放宽权限的逻辑，并用受限角色策略与锁版 Harness API 核实**新建、恢复、同 ID 重新解析以及子 Session** 不再被重新提升；配置受限不等于 OS 隔离，仍须独立测试容器、最小挂载/凭据/出网和执行前 ToolGuard。测试应使用无害的禁止目标模拟（例如对隔离只读 Fixture 的写入尝试），检查目标文件哈希未变化与审计拒绝，避免真的触碰生产数据。任何路径回落 `danger-full-access`、守卫未加载、容器隔离失败时立即停止 Worker 分配；首期保持 `SANDBOX`。**未取得实际运行日志前，不得声明漏洞已在源码层修复。**
 
@@ -153,6 +182,14 @@ DeepSeek Harness (Cordis 插件树 / Session / Tools / Sandbox / Logs)
 - I-14：原生 Ticket/Assignment、扩展 ActionPlan/ActionRun、持久 Effects 在一个 SQLite 事务中完成关联的合法提交；提交后回调不能作为持久队列替代品。
 - I-15：Session 的角色权限与运行环境必须实际受限；主 Session、Worker、Team 子 Agent 不得被上游 `danger-full-access` 预设重新放宽。
 - I-16：正常 Policy 变更不默认撤销已签发 Mandate；实时安全禁止/紧急撤权通过独立的安全策略版本强制生效。
+
+### 3.2 V1.2 外部能力分流与信任边界
+
+- **受信事实流**：Source 验证后的事件进入原生 Engine / Store / Effects；搜索结果、模型总结、网页截图只能作为带来源的 `Evidence/Proposal`，不能直接改写 Ticket 或签发 Mandate。
+- **只读证据流**：Engine/受信请求指定允许的查询、目标与数据等级；经 `ctx.web` 中选定提供方获取结果，由 `EvidenceCapture` 归档摘要、来源及可复核范围。不能以只读工具名称推定本地 HTTP Fetch 的网络目的地安全。
+- **模型服务端研究流**：独立选择允许自动搜索的模型路由；此路径产生服务端工具记录，但本地逐工具 Guard 不可覆盖，严格限制外送的数据等级，不将模型回答视为原始证据。
+- **可写执行流**：浏览器提交、MCP 写操作、RPC、Shell、Git 等进入现有受信授权、一次性许可和最终执行守卫；外部已发生或结果未知时按既有对账协议处理。浏览器工具不新增第 18 个业务模块。
+- **宿主调度流**：Harness Schedule 负责定时投递，不授予业务身份或执行资格；后续由 Engine 按逻辑键去重并复核授权。
 
 ## 4. 17 个功能模块与最小实现矩阵
 
@@ -344,6 +381,36 @@ function commitPlanSync(input: VerifiedPlanInput): CommitPlanResult {
 
 **实施约束**：伪代码中的 `engineExtension`、`prepareExternalEvidence`、`writeNativeAggregateAndExtensionPlan` 均须项目实现并用 M0/M2 编译测试；`saved.createdActions`/`saved.reusedActions` 为项目拟新增的同步提交结果，不代表原生返回类型。每个新动作必须在**同一事务中**各自入队；任意一个 Effect 入队失败时整个 Plan/ActionRun/Effects 回滚，已复用的动作只添加引用不入队。真实 `Effects.enqueue` 的 kind/Key/Handler 注册按 §13.2 校验。`Store.atomic()` 的任何回调都不得返回 Promise、`await` Jev/LLM/RPC 或启动不受持久 Effects 跟踪的副作用。M0 先验证原生 `Store.atomic + mesh_m0_probe + Effects` 的提交/回滚，M2 才补真实 ActionPlan/Run 单事务提交；两者不得混淆。
 
+### 5.1.2 EvidenceCapture：只实现业务证据契约，不复制 Web 网络层
+
+本项目建议提供轻量 `EvidenceCapturePort`（拟新增项目类型，**不是**声称 Harness 存在该导出）：
+
+| 输入 | 输出 | 不变量 |
+| --- | --- | --- |
+| 来自受信 HTTP/Service 入口的 `TrustedRequestContext`（§14.4）及只读外送许可、实际 provider/endpoint、批准查询或 URL、数据等级 | `evidenceRef`、`captureStatus`、`sourceUri`、`retrievedAt`、`capturedContentHash`、`artifactRef`（可空）、实际 `model/tool/usage` 引用 | 先授权/校验目的地再网络调用；项目只存必要脱敏快照和来源，不建第二数据真相库 |
+| 原生搜索结果 / 网页 Markdown / OCR 提取 / API 错误 | `SOURCE_METADATA_ONLY / NORMALIZED_TEXT / VERIFIED_ORIGINAL` 等可复核级别及失败原因 | 搜索摘要≠抓取原文；Markdown 哈希≠原始 HTML 字节哈希；不将模型生成回答标为外部原文 |
+
+权限检查由受信业务边界和工具/网络限制共同执行；`EvidenceCapture` 不可自带直连隐藏后门或伪造 `TrustedCommandContext`。在 M0 仅完成静态契约和离线 Fixture，正式接入以该阶段上游公共接口、费用和审计证据实测为前提。禁止在 `Store.atomic()` 回调内执行 Web / 模型 / OCR 网络请求。
+
+**只读与写入身份不能混用（V1.2 复审）**：`TrustedRequestContext` 在 §14.4 定义为只读请求的受信身份契约；§5.1 的 `TrustedCommandContext` 是 Engine 写入命令的独立受信输入。二者都须服务端验证并绑定同一真实租户/actor，不能从 LLM/HTTP Body 自报构造。`TrustedRequestContext` **不足以写入** ActionRun；`EvidenceCapture` 直调 `ctx.web` 必须经显式 `EvidenceGateway` 校验而不是假设 ToolGuard 自动覆盖。
+
+### 5.1.3 Web 网络派发的可实施绑定与故障关闭（V1.2 第三轮复审）
+
+**上游限制（源码已核对，组合未测）**：rc.3 `WebRuntime.search()/fetch()` 在调用时才通过 `selectSearchProvider()/selectFetchProvider()` 读取当前可变配置；DeepSeek Provider 的 `dispatchDeepSeekWeb()` 又异步解析密钥和最终 endpoint 后才发出 `fetch()`。公开 `ctx.web` 接口没有“业务审批决定 + 不可变最终 endpoint/凭据绑定”的入参，也没有可由 SuperAgent 完全证明的统一 pre-dispatch Gate。Transport 内部 `waitToSend/recordRequest` 不是已公开的领域授权接口，不能当作所有 Provider 的通用安全钩子。
+
+**优先实现的方案 A（锁版隔离静态执行域，不改上游网络栈）**：
+
+1. 在单独受限容器/进程的固定 profile 中，**只装配一个经批准的 Web Provider**，锁定 Search 与 Fetch 的 Provider ID、最终 base URL、固定计费方式/凭据来源，禁止运行中改配置、热替换或账号路由回退。实际配置及启动环境由部署者控制；不为不可信 Worker 开放 Provider 设置 API、修改环境、读取凭据或任意直接网络出口。
+2. 业务请求首先取得受信 `EvidenceGateway` 只读批准，记录 `authorizationRef/actor/tenant/dataClass/providerId/endpointOrigin/credentialIdentityRef/egressPolicyVersion/budgetRef/revocationEpoch`。此处的身份引用**不是明文 API Key**；业务批准与供应商请求计费、出站审计分别留证。
+3. 通过**不可绕过的出站网络策略/固定代理**将该执行域限制在被批准的目标端点和目的地；验证 HTTPS、重定向、DNS/IP、代理通道及进程级旁路阻断。对于直接 `ctx.web` 与模型侧 `web_search/web_fetch` 均应走同一受限执行域，或分别证明每条真实出口受同等约束。
+4. 安全策略和凭据轮换期间应先暂停接纳新请求/排空或终止旧执行域，再创建经新审批的执行域；中途被撤权的在途网络请求不能声称可自动撤回，须审计并对账。不能证明配置不可变、凭据来源固定及网络边界有效时，**关闭该 Provider 的真实调用**，仅允许离线 Fixture。
+
+**方案 B（仅在需要动态 Provider 时另立隔离验证分支）**：通过锁版最小扩展让 WebRuntime/Provider 向受信最终派发策略传入**已选 Provider ID、请求/数据级别、真实 endpoint origin、凭据引用/类型（不含明文）、预算与撤权 epoch**，在真正发网之前执行原子一致性校验，拒绝未经批准的变化；还须对任何其他 Provider / API / 网络旁路设置隔离。它是**拟新增接口，不是现成 Harness 公共 API**；没有编译、竞态探针、网络阻断和多 Provider 回归证据前禁止使用。不得为实现方案 B 新建第二业务队列/Engine，也不得提前升级 Harness gitlink。
+
+**必测竞态与不可推定能力**：在 Gate 通过后、Provider 选择前切换配置；在凭据异步解析时更换账号或同一 `credentialRef` 内容；在 Provider 已选后改变 endpoint；在取消/撤权与实际发出间制造竞争；绕过 `ctx.web` 直接调用底层 HTTP；模型工具独立路径。记录发网次数、捕获 endpoint/凭据**类型及引用**、策略版本和拒绝证明，**不记录密钥内容**。若任一可写/敏感数据路径无法证明最终出站等同批准值，则 fail-closed。
+
+**结论**：用户界面、Markdown 配置、业务“发出前检查”都不是实际网络策略的证明。只有静态隔离执行域 + 实际出口验证，或经过单独审查与真实运行验证的最终派发拦截，才能使 Web 能力从 `FIXTURE_ONLY` 申请 `READY_READONLY`。只读 ≠ 可无约束外送；任何真实外送都须先通过本功能准入。
+
 ### 5.2 Cordis 服务与扩展领域桥接
 
 统一服务入口命名为 `CognitiveMeshService`，作为 Cordis 服务供 Source、Assessor 与治理插件共享。服务对外暴露 `acceptSourceEvent()`、`proposeTicketLink()`、`evaluateAdmission()`、`proposeActionPlan()`、`enqueueAction()`、`publishContextPatch()`、`inspectAssignment()`、`evaluateExit()` 等类型化方法；其中所有会修改 Ticket、Mandate、Assignment 的请求必须经过 SuperAgent Engine 领域命令，不允许调用方直接写 Store。
@@ -416,7 +483,7 @@ export function installMeshM0(ctx: Context): void {
 | `mesh_plan_action_ref` | `tenant_id, plan_id, action_id, ref_kind` (`CREATED/REUSED`) | `(tenant_id,plan_id,action_id)`；引用已完成动作不重新执行 |
 | `mesh_action_attempt` | `tenant_id, action_id, attempt_no, execution_attempt_id, assignment_id, budget_id, budget_charge_ref, effect_key, effect_payload_fingerprint, remote_request_ref, remote_operation_ref, remote_idempotency_key, call_started_at, ended_at, result_ref, error_class, reconcile_status, last_reconcile_evidence_ref, permit_state, permit_token_digest, permit_issued_at, permit_expires_at, permit_consumed_at, permit_safety_epoch_seen, permit_version, gateway_verdict_ref` | `(tenant_id,action_id,attempt_no)` 及 `(tenant_id,execution_attempt_id)` 唯一；`assignment_id` 可空；外部请求标识与不确定结果证据保留，缺失远端回执不得伪造 |
 | `mesh_execution_budget` | `tenant_id, budget_id, owner_kind, owner_id, mandate_ref, root_budget_id, parent_budget_id, first_started_at, start_admission_ref, deadline_at, max_attempts_total, attempts_used, budget_version` | `(tenant_id,owner_kind,owner_id)` 唯一；M2 根预算固定为同 Ticket/Mandate 的 `MANDATE_ROOT`，所有 ActionRun/Assignment/Session/Team 共享根截止时间和总尝试次数；可选受信子预算只能收紧 |
-| `mesh_context_patch` | `tenant_id, patch_id, ticket_id, session_id, patch_version, payload_hash, status, enqueued_at, injected_at, model_request_ref, evidence_status, consumed_observed_at, model_request_occurred_at, expires_at` | `(tenant_id,ticket_id,session_id,patch_version)`；`EXPIRED` 不复活，迟到可信模型请求只补 `evidence_status=HISTORICALLY_CONSUMED` 与时间证据 |
+| `mesh_context_patch` | `tenant_id, patch_id, ticket_id, ticket_version, session_id, binding_version, mandate_ref, patch_version, payload_ref, payload_bytes, payload_format, payload_hash, evidence_refs, status, enqueued_at, injected_at, model_request_ref, evidence_status, consumed_observed_at, model_request_occurred_at, expires_at` | `(tenant_id,ticket_id,session_id,patch_version)`；`payload_bytes` 与创建/队列事实同 SQLite 事务落地，`payload_ref` 指向受限不可变内容；`EXPIRED` 不复活 |
 | `mesh_context_patch_evidence` | `tenant_id, evidence_id, patch_id, model_request_ref, request_occurred_at, observed_at, session_id, source_event_ref, evidence_fingerprint, verdict` | `UNIQUE(tenant_id,patch_id,evidence_fingerprint)`；核验通过的请求引用另设条件唯一索引；不可变证据明细是权威来源，Patch 主表仅为兼容投影；M3 |
 | `mesh_ontology_proposal` | `tenant_id, proposal_id, domain, schema_version, proposal_fingerprint, candidate_diff, evidence_refs, review_status` | `(tenant_id,domain,schema_version,proposal_fingerprint)`；OntologySideRouter |
 | `mesh_trend_finding` | `tenant_id, finding_id, cluster_key, observation_window_id, evidence_fingerprint, event_ids, hypothesis, confidence, decision` | `(tenant_id,finding_id)`；另有 `(tenant_id,cluster_key,observation_window_id,evidence_fingerprint)` 唯一，保留窗口新证据 |
@@ -436,6 +503,8 @@ export function installMeshM0(ctx: Context): void {
 **业务幂等身份**：`businessIntentId` 由 Engine 在验证受信业务请求或已绑定的 `IncidentEpisode` 后确定性创建/复用，MainRouter 只能建议动作而不能自行签发新意图；在重新评估、告警修订、重新规划时复用；`businessEffectKey = SHA256(UTF8(JCS(["v1",tenantId,businessIntentId,actionKind,canonicalTarget,normalizedArgsHash])))`，**不得包含 `planVersion`、`attemptNo`、随机 Action ID**。只有独立且获授权的新业务意图才可以创建新的 `businessIntentId`。不同计划重复请求相同 `businessEffectKey` 时，只引用已有 ActionRun 或已确认结果，绝不再创建执行项；`mesh_plan_action_ref` 记录复用关系，原 ActionRun 仍只属于其原始 primary plan。
 
 **规范化哈希版本**：`JCS` 表示 RFC 8785 规范 JSON 序列化，采用 UTF-8 字节、无歧义 JSON 数组与固定字段顺序；`v1` 是本项目业务键规范版本，不能与业务 Plan 版本混用。所有字符串需先按 actionKind 的受信规则进行身份/目标规范化；任何算法升级必须有兼容迁移与旧键复用策略，不能重新执行已存在的业务效果。
+
+**ContextPatch 不可变载荷与恢复来源（M3）**：`payload_bytes` 是在同一 SQLite Store 中保存的、受大小限制且经过脱敏的规范 UTF-8/JSON 字节（`payload_format` 指定编码/规范化版本）；`payload_ref` 是同租户、同 `patch_id` 的受限行内载荷引用，不是 Session/模型自由提交的外部 URL。由受信 Engine 在事务外准备原始内容，然后在一个 `Store.atomic()` 中保存 `ticket_version/mandate_ref/binding_version/evidence_refs`、原始 `payload_bytes`、`SHA256(payload_bytes)` 和唯一持久投递 Effect；任一环节失败整体回滚。**仅保存哈希、无法取回原始内容，不满足 M3 可靠恢复要求**。恢复时从该行获取精确字节并重新计算哈希；不得让模型重新生成替代内容，不得接受客户端自报的 payload 引用。内容丢失、哈希不匹配、租户/授权/会话版本不合法时返回 `PATCH_PAYLOAD_UNAVAILABLE` 或 `PATCH_PAYLOAD_MISMATCH`，拒绝投递并保留审计。敏感载荷需实施最小访问、大小上限、保留期、删除后引用可验证性和日志脱敏。原表增字段，不新增并行业务队列或第二事实库。
 
 **ContextPatch 双轴证据枚举**：`status` 是唯一投递生命周期，`evidence_status` 为单独只读证据投影，取 `NO_REQUEST_EVIDENCE / ACTIVE_REQUEST_VERIFIED / HISTORICALLY_CONSUMED / INVALID_EVIDENCE`；初始 `NO_REQUEST_EVIDENCE`，正常在有效期内合法 `CONSUMED` 对应 `ACTIVE_REQUEST_VERIFIED`，`EXPIRED` 后才发现原有效期内模型请求只能为 `HISTORICALLY_CONSUMED`，不可转回 `CONSUMED`。不可信证据可记 `INVALID_EVIDENCE`，不得覆盖已经核实的有效证据。补录须由受信 Adapter 追加不可变请求证据引用并以版本/CAS 更新投影，防止乱序重复回执改变历史事实。
 
@@ -502,7 +571,7 @@ WHERE active = 1;
 | 聚合 | 合法状态与关键迁移 | 不变量 |
 |---|---|---|
 | `ActionPlan` | **命令暂态**：`PROPOSED → VALIDATED`（仅 `commitPlan` 内存）；**持久态**：`COMMITTED → DISPATCHED → FINISHED / FAILED`；`COMMITTED/DISPATCHED → SUPERSEDED`；无动作合法 No-op 时可 `COMMITTED → FINISHED` | 正常 `FINISHED` 必须检查该 Plan 的**全部** `mesh_plan_action_ref(CREATED/REUSED)`，非仅已派发子集；`PENDING/CLAIMED/RUNNING/PAUSED/RETRY_WAIT/RECOVERING/UNKNOWN_RECONCILE/AWAITING_APPROVAL` 任一存在均不能结清；`SUPERSEDED` 仅停止旧 Plan 的新派发，保留 `settlement_state=OPEN` 直到全部引用动作终态，随后独立记录 `SETTLED/outcome`；不得伪称所有外部效果停止。原子取消必须证明未执行且无其他有效引用，健康 `RUNNING` 不被强行转恢复 |
-| `ActionRun` | `PENDING → CLAIMED / PAUSED / AWAITING_APPROVAL / BLOCKED / CANCELLED`；`CLAIMED → RUNNING / PENDING / PAUSED / BLOCKED / CANCELLED`（离开 CLAIMED 前须确认尚未产生副作用，否则先转 `UNKNOWN_RECONCILE`）；`RUNNING → SUCCEEDED / RETRY_WAIT / PAUSED / RECOVERING / UNKNOWN_RECONCILE / FAILED / BLOCKED`（转 PAUSED 必须证实尚无外部副作用）；`RETRY_WAIT → CLAIMED / PAUSED / BLOCKED / FAILED`；`PAUSED → PENDING / BLOCKED / CANCELLED`；`AWAITING_APPROVAL → PENDING / BLOCKED / CANCELLED`；`RECOVERING → RUNNING / PAUSED / UNKNOWN_RECONCILE / FAILED / BLOCKED`；`UNKNOWN_RECONCILE → SUCCEEDED / FAILED / BLOCKED / PENDING / PAUSED`（恢复排队仅在受信对账证明远端未执行后） | `PAUSED` 用于临时资源占用或可恢复授权等待，`RETRY_WAIT` 用于有界重试，均不是终态；`SUCCEEDED/FAILED/BLOCKED/CANCELLED` 是**不可被普通重放恢复的终态**。终态后的真实新业务请求必须重新授权、分配新的 BusinessIntent 并关联旧失败/取消事实，禁止为重试伪造新身份。`RESOURCE_BUSY` 对应 `PAUSED`、`TRANSIENT_EXECUTION_FAILURE` 对应 `RETRY_WAIT`；`BLOCKED_CONFLICT` 仅用于确定不可解决的冲突 |
+| `ActionRun` | `PENDING → CLAIMED / PAUSED / AWAITING_APPROVAL / BLOCKED / CANCELLED`；`CLAIMED → RUNNING / PENDING / PAUSED / UNKNOWN_RECONCILE / BLOCKED / CANCELLED`（仅受信证据无法排除外部副作用时才允许 `CLAIMED → UNKNOWN_RECONCILE`；确认未调用外部资源才可退回 PENDING/PAUSED）；`RUNNING → SUCCEEDED / RETRY_WAIT / PAUSED / RECOVERING / UNKNOWN_RECONCILE / FAILED / BLOCKED`（转 PAUSED 必须证实尚无外部副作用）；`RETRY_WAIT → CLAIMED / PAUSED / BLOCKED / FAILED`；`PAUSED → PENDING / BLOCKED / CANCELLED`；`AWAITING_APPROVAL → PENDING / BLOCKED / CANCELLED`；`RECOVERING → RUNNING / PAUSED / UNKNOWN_RECONCILE / FAILED / BLOCKED`；`UNKNOWN_RECONCILE → SUCCEEDED / FAILED / BLOCKED / PENDING / PAUSED`（恢复排队仅在受信对账证明远端未执行后） | `PAUSED` 用于临时资源占用或可恢复授权等待，`RETRY_WAIT` 用于有界重试，均不是终态；`SUCCEEDED/FAILED/BLOCKED/CANCELLED` 是**不可被普通重放恢复的终态**。终态后的真实新业务请求必须重新授权、分配新的 BusinessIntent 并关联旧失败/取消事实，禁止为重试伪造新身份。`RESOURCE_BUSY` 对应 `PAUSED`、`TRANSIENT_EXECUTION_FAILURE` 对应 `RETRY_WAIT`；`CLAIMED → UNKNOWN_RECONCILE` 必须有外发可能性/崩溃窗口的受信证据、保存原 Effect 与 Attempt 关联并拒绝盲重试；`BLOCKED_CONFLICT` 仅用于确定不可解决的冲突 |
 | `TicketAssociationProposal` | `PROPOSED → CONFIRMED / REJECTED / AMBIGUOUS`；终态不原地重开；新受信证据产生新 `proposal_version` 和 `evidence_fingerprint` | 同证据指纹重复请求只复用原记录，不得靠新版本重复授权；`CONFIRMED` 需 Engine 重验身份、唯一候选、Policy、Mandate 和预期 Ticket 版本，`AMBIGUOUS` 不授权 Subscription |
 | `ContextPatch` | `CREATED → QUEUED / REJECTED / EXPIRED`；`QUEUED → INJECTED / REJECTED / EXPIRED`；`INJECTED → CONSUMED / DELIVERED_UNVERIFIED / EXPIRED`；`DELIVERED_UNVERIFIED → CONSUMED / EXPIRED`；`EXPIRED` 为投递生命周期终态 | `INJECTED` 不等于模型消费。若 `EXPIRED` 后才收到受信模型请求证据，**状态仍为 `EXPIRED`**，仅追加/核准独立的 `evidence_status=HISTORICALLY_CONSUMED`、`model_request_ref`、`model_request_occurred_at` 与 `consumed_observed_at`；请求必须发生在原 Session 有效授权且 Patch 未过期的时间内，否则记 `INVALID_EVIDENCE`，不得追认授权、重新注入或宣称当前会话仍在处理 |
 | `ExitReport` | `PREPARED → SUPPRESSED`（静默保留、不排 Outbox，但必须处理的人类待办不消失）；`PREPARED → OUTBOX_PENDING → SENDING`；`SENDING → CHANNEL_ACCEPTED / SENT_UNCONFIRMED / FAILED`；`SENT_UNCONFIRMED → RECONCILING / CHANNEL_ACCEPTED / DELIVERY_CONFIRMED`；`RECONCILING → CHANNEL_ACCEPTED / DELIVERY_CONFIRMED / FAILED / MANUAL_REVIEW`；`CHANNEL_ACCEPTED → DELIVERY_CONFIRMED`（须有终端回执）；`MANUAL_REVIEW → RECONCILING / FAILED`（仅受信人工处置，不盲重发） | `SUPPRESSED` 是静默报告终态；无终端回执时 `CHANNEL_ACCEPTED` 为稳定可接受状态，不假装送达；进入人工处理要保留原因与证据 |
@@ -576,7 +645,7 @@ interface TicketAssociationProposal {
 
 ### 6.6 扩展状态转换的持久化语义
 
-`ActionPlan` 在 `commitPlan()` 命令内先经过**暂态** `PROPOSED → VALIDATED` 校验，校验通过才在一次事务中首次以 `COMMITTED` 落库；`ActionRun` 一旦 `SUCCEEDED`，后续计划只能引用该成功结果，不能重新执行。收到超时、连接断开或未知远端回执时置为 `UNKNOWN_RECONCILE`，禁止直接判失败或盲重试。已证明确实未发生副作用且仍获授权，**仅非终态** `UNKNOWN_RECONCILE/PAUSED` 才可经受信 CAS 转回 `PENDING`；普通重试使用 `RETRY_WAIT` 和同一业务幂等键。`FAILED/BLOCKED/CANCELLED` 终态不得因旧事件重投、同一意图重规划或换 Assignment 而复活。可恢复的资源占用必须预先归类 `PAUSED`，瞬时失败归类 `RETRY_WAIT`；真正终态后的独立新请求应重新验证授权、外部状态与需求真实性，签发新 BusinessIntent，并在审计中关联旧 ActionRun，禁止仅为重试而换 ID。
+`ActionPlan` 在 `commitPlan()` 命令内先经过**暂态** `PROPOSED → VALIDATED` 校验，校验通过才在一次事务中首次以 `COMMITTED` 落库；`ActionRun` 一旦 `SUCCEEDED`，后续计划只能引用该成功结果，不能重新执行。收到超时、连接断开或未知远端回执时置为 `UNKNOWN_RECONCILE`，禁止直接判失败或盲重试。已证明确实未发生副作用且仍获授权，**仅非终态** `UNKNOWN_RECONCILE/PAUSED` 才可经受信 CAS 转回 `PENDING`；普通重试使用 `RETRY_WAIT` 和同一业务幂等键。`FAILED/BLOCKED/CANCELLED` 终态不得因旧事件重投、同一意图重规划或换 Assignment 而复活。**CLAIMED 的外发不确定窗口**：执行器应先持久提交合法 `RUNNING`/Attempt 再外发；若恢复时权威状态仍为 `CLAIMED`，而已知远端可能执行且无法证明绝未外发，只允许经 §6.4 所列的受信 CAS 转为 `UNKNOWN_RECONCILE`，保存原业务键、Effect/Attempt 和远端请求引用，不得直接转 PENDING/PAUSED/FAILED 或重发。能证明未外发时方可按表中合法路径退回队列。可恢复的资源占用必须预先归类 `PAUSED`，瞬时失败归类 `RETRY_WAIT`；真正终态后的独立新请求应重新验证授权、外部状态与需求真实性，签发新 BusinessIntent，并在审计中关联旧 ActionRun，禁止仅为重试而换 ID。
 
 `ContextPatch` 仅在一次**可归因的模型请求实际包含 Patch**时标记 `CONSUMED`；`agent.inject()` 返回、`agent/inbox/inserted` 或 `agent/inbox/claimed` 均不单独满足条件。若锁版 Harness 无法提供可靠请求证据，保持 `DELIVERED_UNVERIFIED` 直到过期。**未过期时**迟到的可靠证据可以 `DELIVERED_UNVERIFIED → CONSUMED`；**已经 `EXPIRED`** 则不发生状态逆转，只以受信补录写入 `evidence_status=HISTORICALLY_CONSUMED` 及原请求时间、观察时间和模型请求引用，须核对原有效授权窗口，且 UI 分开展示“投递已结束/历史确曾进入模型请求”。无法确定请求发生时间或无法验证身份、会话、租户、授权的证据不能补录为消费。
 
@@ -747,6 +816,12 @@ Jev 的 `Noul` 是肯定概率，不是工具许可；`Score` 的等级和 `Choi
 
 **学习版 2B 验收**：至少一次真实 Jev SDK 请求返回可解析结果且映射进原生 Eval；用 Mock Jev 适配器验证失败路径，不可把纯假结果计为“已接通 Jev”。对没有配置 API 凭据的开发机，应明确报告本项尚未通过，不进行模拟式成功标记。
 
+### 8.3 服务端工具与 API 结果规范化（V1.2）
+
+DeepSeek 2026-11-13 已提供 Messages / Responses / Chat Completions 的模型服务端网页工具及独立 Search/Fetch/OCR 等 API，但**不同协议和工具组合并不完全等价**。`deepseek_web_search/deepseek_read_url` 无法由 `tool_choice` 强制调用；某些其他工具类型不能与其组合。不得设计成“本地 ToolGuard 必定收到每一次服务端搜索事件”。
+
+原始 HTTP 状态、协议事件、SDK 异常、工具执行/网页获取结果应分别保留。尤其在流式/非流式生成中 HTTP `200` 仍可能对应失败，安全校验也可能导致最终拒答；禁止以 HTTP 200 或已流出的部分文本直接创建已验证决策。规范化适配器至少区分 `COMPLETED`、`INCOMPLETE`、`FAILED`、`REFUSED`、`UNKNOWN`，再依据原生 Eval/Decision 语义保守映射。内容安全检查仅辅助风控，不代替受信身份/策略/业务安全守卫。
+
 ## 9. L3 主旁双轨与认知状态（3A / 3B / 3C1 / 3C2 / 3D）
 
 ### 9.1 3A：主路快速路由（MainRouter）
@@ -794,11 +869,13 @@ Jev 的 `Noul` 是肯定概率，不是工具许可；`Score` 的等级和 `Choi
 从跨来源、跨天的可靠证据召回候选（默认近 7 天，可配置），按实体、症状、版本及时间共现形成 Cluster。Jev `Score` 仅提供疑似同因线索，不代表已验证根因；输出 `TrendFinding` 与 `RECORD / CONTEXT_PATCH / CREATE_SYSTEMIC_TICKET` 建议，后一项需重新走 Engine 授权链。
 
 **ContextPatch 持久递送协议**：
-1. 事务内生成 `mesh_context_patch(CREATED)`，附 `evidenceRefs, patchVersion, payloadHash, ticketVersion, sessionId`；以受信 Session 绑定和 Mandate 限定上下文，不能把提示词当作新指令授权。
+1. 在事务外形成规范、脱敏的精确 Patch 字节；**同一 SQLite 事务**生成 `mesh_context_patch(CREATED)`，保存 `payload_bytes/payload_ref/payload_hash/payload_format`、`evidence_refs/ticket_version/mandate_ref/binding_version/session_id` 并登记稳定唯一投递 Effect。`payload_hash=SHA256(payload_bytes)`；不能只保存哈希、在恢复时调用模型重写原内容，也不能把提示词当作新指令授权。
 2. Effects 将其置 `QUEUED` 并调用 Harness `agent.inject()` 或受控 AgentDelivery，返回成功时记 `INJECTED`，**仅代表已提交注入请求**。不假设空闲 Agent 自动唤醒，不以此认定模型已经看到内容。
 3. `agent/inbox/inserted` 只能证实入 Inbox；`agent/inbox/claimed` 只能证实被消费流水线领取，二者均不足以证明输入确实进入模型。只有实际构造并发送的模型请求有可归因的 `patchId/modelRequestRef`、且锁定 Harness 确实提供该证据时，才允许记 `CONSUMED`（定义为**模型请求包含补丁**，不宣称模型已理解、采纳或完成动作）。
 4. 仅有注入/领取证据时记 `DELIVERED_UNVERIFIED`；到期前收到可信请求证据时才允许 `DELIVERED_UNVERIFIED → CONSUMED`，生命周期结束则 `EXPIRED`。**`EXPIRED` 后迟到的可信消费证据只更新独立证据字段，不恢复 `CONSUMED` 或再次注入**；证据必须含可核实的原请求发生时间、patchId、受信 Session/租户/授权版本，且原请求在有效期内。若无请求证据则如实保留未证实状态。G0 若无法暴露可靠模型请求关联，不得把该状态写成 `CONSUMED`。
-5. 重复 `tenantId + ticketId + sessionId + patchVersion` 或同证据哈希不重复投递；崩溃恢复核对 Session、版本和模型请求记录。Session 已结束、取消、强制撤权或过期时，不重新唤醒无权 Worker：**尚未投递**（`CREATED/QUEUED`）的 Patch 可转 `REJECTED` 或 `EXPIRED`，**已经注入**（`INJECTED/DELIVERED_UNVERIFIED`）的依状态机转 `EXPIRED` 或在有效期内用可信请求证据转 `CONSUMED`；过期后补录历史证据不改变终态，不能抹掉曾经注入的事实。线索可作为后续合法 Ticket Input 留存。
+5. 重复 `tenantId + ticketId + sessionId + patchVersion` 或同证据哈希不重复投递；崩溃恢复先从同库取得**原始不可变载荷**，复验 `payload_hash`、原 Ticket 版本、Mandate、Session 绑定、撤权与过期状态，再查可信 Inbox/模型请求证据。`CREATED/QUEUED` 只有能证明未投递或存在可验证 Inbox 幂等映射时，才按原 Patch ID/Effect Key 重投原字节；`INJECTED/DELIVERED_UNVERIFIED` 已可能被模型看到，无法证明去重/对账时不得盲目重复注入，保持不确定态供人工处置。Session 已结束、取消、强制撤权或过期时，不重新唤醒无权 Worker：**尚未投递**（`CREATED/QUEUED`）的 Patch 可转 `REJECTED` 或 `EXPIRED`，**已经注入**（`INJECTED/DELIVERED_UNVERIFIED`）的依状态机转 `EXPIRED` 或在有效期内用可信请求证据转 `CONSUMED`；过期后补录历史证据不改变终态，不能抹掉曾经注入的事实。线索可作为后续合法 Ticket Input 留存。
+
+**M3 崩溃与未知回执验证**：在数据库提交前、提交后 Inbox 接收前、Inbox 已接受但回执丢失三处注入故障，证明精确载荷可重取、哈希不变、Session/权限不越界、重复事件不创建第二条未经授权的输入。不能证明 Inbox 幂等与原请求身份关联时，保守留在未知投递态，不得自动二次注入。
 
 **双路隔离**：已合法订阅 Thread 的主路 Input/Subscription 和旁路发现的 ContextPatch 是不同语义来源，但对相同证据的副作用不得放大；统一 `businessEffectKey` 保证两路消息不会再次执行已完成动作。
 
@@ -815,6 +892,14 @@ Jev 的 `Noul` 是肯定概率，不是工具许可；`Score` 的等级和 `Choi
 **结案报告的惰性生成**：ExitGate 仅在有**与准出原因相匹配的可追溯事实**时，请求 `LazySynthesizer.renderExitReport({ticketId, evidenceRefs, exitReason, notificationIntent})`：`DELIVERABLE_VERIFIED` 要求独立交付验证，`HUMAN_DECISION_REQUIRED` 要求真实待决问题和选项，`HARD_BLOCKER` 要求可证实的阻碍事实；后两者不要求已有成功交付物。生成结果必须通过结构校验，不得凭空宣称 PR/CI 已通过；模型失败时可使用确定性模板降级。`notificationIntent` 仅控制**正常通知的候选意图**，不能抹掉必须人工处理的业务责任：`HUMAN_DECISION_REQUIRED/HARD_BLOCKER` 无论普通通知是否静默，Engine 都在事务内创建或复用一个可查询的 `mesh_human_work_item(OPEN)`，携明确问题/阻碍证据、受信处理人或值班责任域和到期检查；静默时 ExitReport 可为 `SUPPRESSED` 且**不排 Outbox**，但 WorkItem 仍保持 OPEN/ESCALATED，不等于事项已解决。正常通知被允许时才排 Outbox，发送及回执由原生 Outbox 推进。没有获授权的外部渠道时保留持久队列与本地运维提醒，**不得擅自绕过安全静默策略外发**。
 
 继续保留 SuperAgent `stop/ignore/unavailable/accept` 领域语义与 MasterAssessor 兼容路径；Jev 适配器仅提供评估建议，不能创建平行 Ticket。
+
+### 9.6 外部证据与深度研究旁路（V1.2）
+
+优先使用已安装/已验收 Harness `ctx.web` 提供方开展确定性 Search/Fetch；资料检索、PDF/OCR 及深度思考搜索只生成不授予权限的 `Evidence/ContextPatch/Proposal`。查询和内容必须保留 `providerId、requestedAt、capturedAt、sourceUri、status、contentEncoding、capturedContentHash、sourceRevision(可空)、artifactRef(可空)、usage(可空)、requestRef`；按证据级别声明可重放/可比对的范围。对于 GitHub 源码与 CI 使用固定 SHA、原始日志/工件及真实退出码，不能由网页摘要或模型自述替代。
+
+执行端在发送查询前进行数据等级、目的地、权限和预算校验；外部返回的 URL、网页、文档及 OCR 文本一律是**不可信内容**，只可作为引用数据，不允许提升权限、修改策略或要求 Agent 执行其中的“系统提示”。敏感内容需脱敏或拒绝外送。当前 `ctx.web.fetchProvider: http` 不提供内网阻断，必须通过 URL/解析后 IP/重定向复核及容器网络阻断实现 SSRF 防护，或在安全验收前禁止模型触达该提供方。
+
+**Fetch 差异与 SSRF 责任**：本地 HTTP Fetch 对网页 HTTP 404/500 也可能返回正常 `WebFetchResult`，必须检查 `statusCode`、`body.kind`、`truncated` 及业务预期；远端 DeepSeek Fetch Provider 遇到抓取失败可能返回 Provider 错误，并不提供可证明的最终重定向 URL/IP。Fetch Markdown 不能视为原站原始字节，未知 `WebError.code` 必须保留并安全降级。对本地 HTTP Fetch，可信域名字符串/单次 IP 校验不足以防 DNS 重绑定，必须有不可绕过的网络出口限制、受控代理和逐重定向校验；对远端 Fetch，只能在提交 URL 前约束披露范围，不能声称本地验证了远端最终落点。
 
 ## 10. L4 四级异构执行光谱（4A / 4B / 4C / 4D）
 
@@ -891,7 +976,21 @@ Worker 默认运行在独立 OS/容器隔离中，不挂载生产 DB 凭据、�
 
 执行顺序 `Plan → Parallel Work → Verify → Consolidate`；Planner 仅拆解授权工作，Coder 在受限沙盒操作，Ontology Modeler 只能提出 Schema Change，Verifier 独立核验证据与测试。资源冲突由稳定目标锁和 CAS 处理，合并结果保留子任务 lineage。失败限制重试次数，模型不能另造 businessIntentId 来重复副作用；无验证证据不能标记 `COMPLETED`。
 
+**V1.2 原生 Team 优先复用**：`TeamExecutor` 仅映射业务 `Assignment/TeamRun/ExecutionScope/根预算/验证结果` 到 Harness 具名 SubAgent/AgentTeam，不自建成员通信、通用共享任务板和第二调度器。Team 模式默认关闭，启用及恢复需锁版验证；其 `expectedRevision` 只提供 Agent 任务板 CAS，不是业务外部副作用的执行许可。`writeScopes` 为冲突提示而非强制文件锁；独立 Verifier 必须取得不可变工件哈希和隔离的只读工作树或等效隔离，禁止接触有权篡改被审查产物的工具。任务持久写入为 `PERSISTENCE_UNCONFIRMED` 时先读回状态再恢复，不可盲目创建重复业务 ActionRun。AgentTeam 不跨进程协调，也不会自动释放失联任务所有权。
+
 **学习版 Tier4 范围**：M5 至少产生两个不同的 Harness Agent Session ID：第一个承担 `Planner/Worker`（在隔离 Fixtures 中产出具体、可验证的工件，如诊断记录或测试结果），第二个承担 `Verifier`（读取并核验该工件和独立证据）；两者均有独立 SessionEvent、受限权限绑定并向同一个原生 Assignment 回写结果。允许固定串行交接，不要求并行调度、四角色齐全或自动跨域修复。**两个普通函数或仅两段 Prompt 文本不算已实现 TeamExecutor**。
+
+### 10.6 受控 Browser Use 与 Schedule（不是新增业务模块）
+
+`BrowserTaskAdapter` 是业务授权和结果映射的逻辑名称，**不是** `ctx.browserUse.navigate/click` 等假定存在的统一接口。Harness `ctx.browserUse` 当前只注册唯一提供方；操作接口属于被启用的 Playwright MCP / Chrome DevTools MCP / Stagehand 具体工具。浏览器由精确 Agent + Session 拥有，重载或 fork 不恢复登录状态，已执行网页动作无法撤销；外部附着浏览器的 Session 独占仅在同提供方实例内有效，不构成跨进程全局锁。
+
+M2 可先做无凭据、只读截图与导航 Fixture；表单提交、删除、发布、登录态修改及可能产生效果的浏览器操作必须归入具体 `ActionRun`，受末端授权/撤权/预算/效果键控制，返回未知时进入 `UNKNOWN_RECONCILE`，不能根据断线盲目再点击。M5 才按批准范围完善浏览器交互体验。Harness Schedule 只负责 Host 持久定时投递，其 Receipt 证明写入 Session inbox 而**不是**模型完成、业务成功或恰好一次执行；真正业务处理必须通过 Engine/Effects 的幂等入口。
+
+**浏览器隔离补充**：实验性 Playwright MCP 的 Browser 进程在 Session 验证的工作目录启动，后续切换 Session 目录不迁移进程；恢复 Session 不恢复页面/登录态。Browser 必须使用专用容器/用户、无生产密钥、最小挂载与出网约束。工具 schema 随提供方版本变化，Provider 断连、初始化失败、取消已发动作与外部附着跨进程竞争均需负向验证。
+
+**Stagehand Native 的单独模型出站（本轮新增 P1-1）**：rc.3 `@deepseek-ai/dsh-experimental-browser-use-stagehand-native` 的 `stagehand_act/observe/extract` 由 Stagehand 浏览器扩展调用**独立配置的模型、API Key、可选 headers**；这些 Token/请求不进入 Harness 主 Session 模型路由、原生凭据复用或使用量统计，且当前 Stagehand Native 不支持 DeepSeek endpoint/baseURL 自定义。取消不保证原生模型推理停止，配置中的模型在导航-only 模式也必填。为避免第二隐性外送通道，**Stagehand 默认不装配，能力状态为 `DISABLED`**；M2/M5 演示优先选择不含独立推理的隔离 Playwright MCP Fixture。
+
+如以后确需 Stagehand，必须单独完成：固定上游原生模型 provider/model/endpoint/凭据归属和审批、网页/DOM/截图/输入传给模型的最小化与密级验证、独立 API 请求数量/时限/费用预算和费用核对、受控代理与密钥隔离、模型取消后仍可能继续出站或操作的故障对账；保留独立的推理请求/响应与使用量审计（脱敏）。未完成全部证明只能在无敏感数据、专用临时账户的隔离 Fixture 中探索，不能标记为业务 `READY_READONLY` 或 `READY_WRITE`。
 
 ## 11. L5 治理、Watchdog 与准出（5A / 5B / 5C）
 
@@ -935,6 +1034,16 @@ SuperAgent Outbox 仍是唯一渠道消息发起者。`DELIVERABLE_VERIFIED` 在
 `mesh_human_work_item` 是业务待处理事项而非第二套 Outbox：`OPEN/ACKNOWLEDGED/ESCALATED/RESOLVED` 的转移只能通过受信 Engine 命令、CAS 和人工证据；M4 至少提供租户受限的只读待办列表与人工确认/解决入口（可为管理 CLI，不强制做 UI），未配置可靠提醒渠道时必须能被本地巡检与告警发现，不能因为 `ExitReport.SUPPRESSED` 视作完成。`ExitReport` 中 `transport_state` 与 `delivery_state` 分开存储；§6.4 的状态名为规范的聚合流程阶段，可由两字段及受信回执派生，不允许将原生 Outbox 的 `sent` 直接映射为 `DELIVERY_CONFIRMED`。非必要的中途进展仅保存在 Ticket/Session；`RECORD_ONLY` 不等于不保留事实。
 
 **学习版 Exit 范围与独立验证者**：M2 的 Mock 账户冻结用执行器之外的确定性后置检查器比较受信前后快照、业务状态和 ActionAttempt；M4 的危险工具阻断用独立负向测试、隔离目标文件哈希和 GuardAudit 验证。两阶段的独立验证无需提前建设 M5 的第二个 Agent Session；不得把动作执行器自己的“我成功了”字符串作为验证证据。M5 再以独立 Harness Verifier Session 扩展验证能力。M2 使用 Mock Channel/Mock Outbox 留存报告、状态、引用，不向真实飞书或 GitHub 发送消息。M4 增加三类准出判断和 **`mesh_human_work_item`**：普通 `notificationIntent` 必须按来源和阶段分别聚合，`SILENT` 只禁止普通外部通知；待人工处理或硬阻碍无论静默与否都保留可查询待办和明确的受信责任人/值班域；超时未处理要触发本地运维检查，不得伪造人工处理成功。模拟出站只能证明“进入 Mock Channel”，不能写成真实收件方 `DELIVERY_CONFIRMED`。
+
+### 11.4 新增外部工具的治理控制点（V1.2）
+
+1. **模型服务端调用**：只有经过部署策略批准的模型路由可声明 `deepseek_web_search/deepseek_read_url`；本地 `ToolGuard` 不能逐次接管这些服务端工具。禁止携带生产密钥、客户资料、私有源码或非公开 URL 到服务端自动搜索；无法限制或验证时关闭该能力。
+2. **本地 Web/文件输入**：执行前校验用户/租户/授权 Scope、内容密级、允许主机/解析 IP/最终重定向、协议和响应大小。阻断 localhost、私网、链路本地、云元数据及不受信文件资源，单靠提示词或工具名“只读”不合格。
+3. **Browser/MCP**：以每个具体工具调用及真实目标资源判定读/写权限；执行前和派发点复核撤权 epoch，隔离 Session、进程、凭据及网络；已发出动作只能记录并对账，不能称为撤销成功。
+4. **输入可信度与审计**：工具响应、页面、OCR、MCP server instructions 均标记不可信，不能生成 TrustedContext/Mandate；结果日志脱敏并记录拒绝原因和版本，不存明文 API Key。
+5. **失败关闭**：Guard/网络/证据服务缺失时拒绝可写执行；安全 API `safety_check` 仅作为附加审核，不取代确定性权限及业务策略。
+
+**三路径最终拒绝证明不可互借**：模型 `web_search/web_fetch` 经过 Harness ToolRuntime；业务直调 `ctx.web.search/fetch` 由受信 EvidenceGateway 单独校验；DeepSeek 服务端 `deepseek_web_search/deepseek_read_url` 由路由/数据出站策略限制。任一路通过不能证明其余两路安全；服务端执行不能宣称逐调用受本地 ToolGuard 拦截。
 
 ## 12. 三个业务场景的详细端到端时序
 
@@ -1007,13 +1116,15 @@ SuperAgent Outbox 仍是唯一渠道消息发起者。`DELIVERABLE_VERIFIED` 在
 | Watchdog 巡检/干预 | 扩展 `watchdog`，若原生已有可复用计划作业则保持原生 kind | `watchdog:${assignmentId}:${observationWindowId}` | `mesh_watchdog_observation`；M4 |
 | ExitReport/Outbox | **优先复用原生 Outbox/回复 Effect**，不另建第二套 `exit-report` 队列 | `outbox:${ticketId}:${reportKind}:${reportVersion}` 是本项目业务去重键；实际 Effect Key 按原生协议映射 | `mesh_exit_report`、Outbox accepted/receipt；M2/M4 |
 | 固定 Tier2 SOP Step | M5 需可靠逐步执行时注册扩展 `sop-step`，否则复用经验证的原生后台递送 | `sop:${sopRunId}:${stepId}:${stepVersion}` 为步骤调度 Key，**不是**新的业务副作用 Key；RPC 仍复用稳定 ActionRun/`businessEffectKey` | `mesh_sop_step`、`retry_of_step_version`；M5 |
-| Tier4 子任务 | 扩展 `team`，复用已有 Agent Session/Assignment，不创建第二套 Agent Loop | `team:${teamId}:${subtaskId}:${workVersion}` | `mesh_team_subtask` 与 SessionEvent；M5 |
+| Tier4 子任务 | 优先复用原生 AgentTeam 任务板与子代理；只有在 M5 证实业务持久派发缺口且单独审核批准时才扩展原生 `team` Effect，不复制协作调度器 | `team:${teamId}:${subtaskId}:${workVersion}` 仅为候选业务逻辑键 | TeamRun 与原生 task/SessionEvent 映射；M5 |
 
 **约束**：表中冒号插值是项目规定的**逻辑 Key 模板**，不是声称原生 Effects 已支持全部 kind。若经 M0 证实原生 Key 需要其他结构，适配层必须保存“逻辑 Key ↔ 原生 Key”一一映射和稳定内容指纹，保证重启/重试不变。对同 Key 不同内容拒绝覆盖的检查必须发生在**唯一**入队封装中；业务插件不能绕过该封装直接调用可能覆盖 payload 的底层入队入口。
 
 **Attempt/一次性许可/预算/远端对账的原 Effect 绑定**：每次外部写之前，用 §6.2 的 `execution_attempt_id` 授权令牌在同步 Engine 事务中完成根预算计次、Attempt 行和不可变 Effect 指纹登记；Effect 领取不等于已计一次有副作用尝试。`remote_request_ref` 在外发前由本地受信生成，`remote_operation_ref` 可为空，`remote_idempotency_key=businessEffectKey` 不随 Attempt/Plan 变化。结果未知时以远端流水/幂等查询和原始证据对账；没有可靠查询或外部幂等保证，不新增同业务键的 RPC，也不能把 `UNKNOWN_RECONCILE` 当成 `FAILED`。M0/M2 先验锁版 Handler 可否安全以**原逻辑 Effect Key**协调恢复；不支持则保留人工对账/单进程 Mock，不能另造任务队列。
 
 **令牌状态与原生 Effects 的界线**：许可状态只存于 `mesh_action_attempt`，不替代原生 Effects claim/lease。`ISSUED` 是有时限、一次性的执行资格，并非已完成外部写；`CONSUMED` 是本地最终 Gateway 已放行且可能开始发送，**也不是远端成功证据**。`REVOKED/EXPIRED/ABORTED` 的未消费许可不得重新消费；已 `CONSUMED` 且进程在网络调用窗口崩溃只能保持未决并对账。Gateway 必须与 Engine 撤权 epoch 的持久化 CAS 串行判定；跨数据库/远端系统并不存在恰好一次跨域提交，真实远端写的撤权截止点需要远端共同执行检查，否则仅承诺最末端本地拦截。
+
+**原生 Effects 的真实能力与实施前置**：已核对锁版 SuperAgent `src/app/effects.ts`：`EffectPayloads` 的原生 kind 联合不包含计划中的 `action/side-route/context-patch/watchdog/sop-step/team`，任何启用必须经最小类型扩展和 Handler 注册，并通过完整编译与失败回归。`Effects.enqueue()` 对相同 `(kind,key)` 的待处理工作项采用 `ON CONFLICT DO UPDATE`，会覆盖载荷并递增 `generation`；必须在**同一 Store 事务**由唯一受信封装计算不可变载荷哈希，重复且同哈希只引用原工作项，不同哈希拒绝并写 `EFFECT_PAYLOAD_CONFLICT`，不可直接调用裸 enqueue 造成隐性覆盖。原生 `tasks` 集合提供**进程内**正在运行项去重，但当前 Effect 表没有可直接证明跨进程互斥的持久 `lease/claim_token/owner`；单进程崩溃重启可再次派发旧 Effect，必须以持久 Attempt + 远端幂等/对账防重，在 M2 故障注入证明前只允许隔离单进程 Mock，不宣称多 Worker 并发安全或可写自动恢复已实现。
 
 **认领字段来源**：`ActionRun.CLAIMED` 不代表 ActionRun 自带租约。`claimed_by/lease_until/claim_token`（名称以锁版源码实际暴露为准）属于原生 Effects 处理器或其受控 Adapter 的工作项状态；业务层通过 `action:${actionId}` 的真实 Effect 键追溯认领和重试。M0 必须实证此能力，M2 必须在进程退出、超时和重复入队时证明认领不造成并发重复执行；否则仅允许单进程 Mock，并将可靠租约能力标记未实现，**不要在 `mesh_action_run` 再造一套独立调度器**。
 
@@ -1055,6 +1166,15 @@ Session 绑定启用部分唯一约束，父 Session 结束/撤权时对所有�
 - **Outbox Transport**：`CHANNEL_ACCEPTED` 表示渠道服务接受发送，`DELIVERY_CONFIRMED` 仅由支持该能力的渠道收件回执证明；原生 Outbox `sent` 不直接等同于送达。未知结果先对账，无解时进入 `MANUAL_REVIEW`。
 - **紧急撤权**：安全拒绝版本先写入可信存储并即时传播到守卫缓存，停止新派发和已有 Session 后续工具；普通 Policy 改版不默认删除活跃 Mandate。
 - **Exactly Once**：不承诺跨非幂等外部系统的无条件恰好一次；源端、Action、Outbox 以稳定业务 ID、可信回执和异常对账建立可核验的最终一致性。
+
+### 13.6 上游工具状态与业务持久结果不得混同（V1.2）
+
+- `AgentTeam team/task` 日志与 CAS 仅描述协作任务；根 Session 重启、失联认领、持久写入结果不确定时读取原任务板再尝试恢复。业务 `ActionRun/Effect/ExecutionAttempt` 继续由单一 Engine/Store 掌握，不以原生 Team Task 完成替代业务验证或结清。
+- Browser Session / Cookie 不属于可重放业务事实。取消、断网、崩溃或重试后，任何可能已触发外部效果的操作记录为 `UNKNOWN_RECONCILE`；通过远端可验证状态、幂等接口或人工核查结清，不自动重复提交。
+- Schedule 到期投递仅表示 Session inbox 有持久消息；若需业务执行，必须用稳定来源/周期键经 Engine 去重、检查 Mandate 和当前安全版本。Schedule 既不是业务队列，也不提供跨业务系统的恰好一次执行保证。
+- DeepSeek 服务端工具的搜索结果/引用、Fetch Markdown、OCR 文本与模型最终回答必须分别归档证据等级；HTTP `200`、流式片段或 `safety_check` 非拒绝不能作为“任务成功”或“执行许可”。
+
+**Schedule 定时与手动执行需要不同的恢复身份**：Host 先完成 Session inbox 持久写入，后写 Schedule receipt，中途崩溃可能重复投递。**自动定时**仅在权威计划周期稳定且可由受信入口核验时，使用 `scheduleTaskId + authoritativeOccurrenceAt`（结合租户/来源）作业务去重；不能用本次 `messageId` 冒充周期身份。**人工 `runNow()`** 在每次实际调用时生成新的 `occurrenceAt = Date.now()`，重试的时间不同，因此不得使用 `scheduleTaskId + scheduledAt` 判定同一人工业务操作。人工请求须先由受信入口**持久化** `manualExecutionRequestId` 与业务范围，再使用同一 ID 通过 Engine/Effects 处理可写 ActionRun；原生 Schedule `runNow()` 当前不接收该 ID，也不保证可靠关联传给 inbox，**禁止直接通过它派发可写业务**。如以后接入受信关联 Envelope，需分别验证创建、持久 Inbox、receipt 失败、重启后识别同一 ID 及新的真实人工请求不得混同；未经实现/验证仍保持只读通知与人工处理。
 
 ## 14. 插件生命周期、配置与可运维性
 
@@ -1180,7 +1300,7 @@ prototype:
 
 这些 API 可通过 Harness 内的服务插件/管理路由暴露；不是替代 `Engine` 的独立业务后端。接口名称属于项目标准，具体 HTTP 绑定在实现阶段由管理插件确定。
 
-**所有接口的共同强制输入（不是客户端字段）**：HTTP/Service 入口必须认证生成只读 `TrustedRequestContext={tenantId, actorRef, requestId, roles/scopes}`，下表每行的“受信 ctx”均指**服务端注入**，不得读取客户端 Body/Query/Path 自报的 `tenantId` 作为权限身份。每次查询、关联聚合、写入及资源反查必须以 `tenant_id=ctx.tenantId` 过滤并校验相同租户及授权作用域；跨租户对象返回不泄露存在性的拒绝/NotFound，管理员也须显式授权，不使用无租户过滤的全局查询。M0 实施通用鉴权与拒绝缺失 ctx 的测试；M1–M5 每新增 API 均自动继承此规则。
+**所有接口的共同强制输入（不是客户端字段）**：HTTP/Service 入口必须认证生成只读 `TrustedRequestContext={tenantId, actorRef, requestId, roles/scopes}`，下表每行的“受信 ctx”均指**服务端注入**，不得读取客户端 Body/Query/Path 自报的 `tenantId` 作为权限身份。每次查询、关联聚合及资源反查必须以 `tenant_id=ctx.tenantId` 过滤并校验授权作用域；**任何领域写入还必须由受信适配层生成 §5.1 的 `TrustedCommandContext`，并由 Engine 重新验证，不能仅凭只读 `TrustedRequestContext` 写入**；跨租户对象返回不泄露存在性的拒绝/NotFound，管理员也须显式授权，不使用无租户过滤的全局查询。M0 实施通用鉴权与拒绝缺失 ctx 的测试；M1–M5 每新增 API 均自动继承此规则。
 
 | 接口 | 输入 | 输出 | 权限/一致性要求 |
 |---|---|---|---|
@@ -1233,6 +1353,14 @@ interface DemoRunTrace {
 
 可由管理插件只读暴露 `GET /mesh/demo/runs/{runId}`（快照）及 `GET /mesh/demo/runs/{runId}/events?afterSeq=`（轮询增量），仅在测试环境启用。模块高亮从持久化事实/SessionEvent/ActionRun 转换的轨迹驱动；无结果时显示 `UNVERIFIED`，不可自动填充“80ms 成功”“已阻断”“已消费”。页面不应成为写入 Engine 状态的第二个入口，服务端要做最小身份校验和脱敏。
 
+### 14.6 提供方选择、数据出站与调用预算（V1.2）
+
+新增**配置约束而不是第二套配置服务**：显式登记 `providerId、searchProvider、fetchProvider、selectedModelRoute、serverWebToolsEnabled` 和选用的认证来源；敏感凭据仅经 Harness 已验证的受信凭据服务解析，绝不写入仓库、Session 明文日志或证据工件。`ctx.web` 当前默认本地 HTTP Fetch 不限制目的地，未通过 SSRF 与网络隔离验证前不可给不可信网页或 Agent 暴露。
+
+按每一受信 Ticket/Session 及根预算限制最大外部查询次数、Fetched 页面数、OCR 页数、模型 Token、并发数、墙钟时间与重试次数；单独记账模型推理与 DeepSeek Search/Fetch 的计费请求，避免误以为工具调用包含在 Token 费用中。异常按服务端明确的可重试类别和幂等条件退避；对可写浏览器/RPC 不自动盲目重试。日志记录目标域和用量摘要但须脱敏；预算未知时采取保守限制或拒绝新的收费调用。
+
+**新增配置与测试要求**：将 `sendOriginalQuestion: false`（真实出站没有 `ori_question`）、`searchBilling/fetchBilling` 的实际账户/API Key 和 endpoint、provider 动态变更后的授权重核，作为新 Web 能力准入条件。插件 `searchRequestsPerSecond` 仅限制当前插件实例，不能替代跨实例/账号限速与根业务预算；模型工具、业务直调、服务端 Web Tools 三条路径须分别测试，不以 ToolGuard 单路通过推断全部安全。
+
 ## 15. 分阶段实施计划（学习版 M0—M5 与完整目标 G0—G5）
 
 ### 15.1 完整目标的 G0—G5 工程准出门槛
@@ -1283,6 +1411,18 @@ interface DemoRunTrace {
 **补充契约的阶段归属**：M1 检验 `telemetry-watch` 规范值的 TypeScript 联合类型但遥测 Fixture 到 M5 才启用；M2 必须实现 ActionAttempt 与原生 Assignment 的可空受信关联、Plan 版本唯一与 ActionRun.reasonCode，并验证重启可反查；M3 交付 TrendFinding 窗口/证据指纹去重与 Proposal 操作人；M4 交付 Watchdog 稳定窗口去重；M5 验证可信 `incidentId` 与严重度升级复用原 BusinessIntent。
 
 **依赖硬顺序**：M0 验证原生桥接、安全与事务 → M1 原生 Eval/Ticket → M2 合法一源多 ActionRun → M3 受信关联与 Patch → M4 Watchdog/Exit → M5 固定 SOP/Team/遥测/UI。若 M0 发现所需上游 Port 不存在，先补**最小可回归桥接**，不要开发平行的 Engine；若 M2 的 ActionPlan 不能同原生 Store/Effects 一起提交，必须停止伪多动作实现并返回修正接线。
+
+### 15.2.1 V1.2 升级评估与实施顺序（不改变原阶段出口）
+
+| 时点 | 允许的工作 | 不得宣称 |
+| --- | --- | --- |
+| **M0 正在进行** | 静态能力核验、独立只读/无凭据 Fixture、候选 rc.3 隔离分支编译/构建/全量测试、接口负向验证 | 不得更换主开发分支 Harness gitlink 或解锁 `executionReady` |
+| **M0-14 正式通过后** | 在已冻结的兼容组合上选择 `ctx.web` Provider，按 M1 Source/Eval 前置接线只读证据 | 不得将外部搜索摘要直接视为决策或完整原件 |
+| **M2 依赖满足时** | 履行 ActionRun/许可/根预算后做只读浏览器探针；敏感浏览器写操作仍保持 Fixture/Mock | 不得把一次会话点击当成持久成功 |
+| **M3—M4** | 引入 Schema/趋势研究证据，完成工具出站、来源可信与撤权负例 | 不得用安全模型评分代替最终拒绝 |
+| **M5** | 复用具名 SubAgent/AgentTeam 完成两真实受限 Session 的独立验证，以及按需的浏览器/Schedule 演示 | 不得以共享工作目录或任务板状态冒充独立审查 |
+
+当前固定组合与 `dsh-v0.2.2-rc.3` 是两份**独立候选**，升级评审必须留存两仓库准确 SHA、pnpm/Node/锁文件、Cordis/Schemastery/DSH 解析版本、原生 Bundle/Session/Tool/Store/Effects/Outbox 回归、全量测试与跳过/失败清单。版本升级与 M0 功能验收独立投票，不能互相抵扣。
 
 ### 15.3 最小接口与状态实现优先级
 
@@ -1384,11 +1524,61 @@ interface DemoRunTrace {
 | R24 | M3 | 同一 ContextPatch 先后包含在两个不同可信模型请求中，第二条迟到于 `EXPIRED`；另有重放、错误 Session、缺失发生时间的证明 | `mesh_context_patch_evidence` 留存各合法请求的独立不可变事实；重复去重、无效拒绝；主表取确定性代表性请求，状态不逆转、不丢历史、不重复投递 |
 | R25 | M5 | `sourceEpoch=A, seq=99` 后上游序号归零进入未验证 epoch，旧事件重放；再提供受信 `sourceEpoch=B` 和跨 epoch CLOSE→OPEN 因果证据 | 未验证时 `ORDER_UNVERIFIED`、不自动重开也不签发新意图；有效 epoch 隔离重用的 nativeEventId/窗口；只有经证实跨 epoch 因果后合法生成新 episode；旧 epoch 延迟事件不覆盖新水位线 |
 
+**本轮补充子场景，原 R01—R25 编号不变**：`R18-A`（M2）模拟持久 `CLAIMED` 后可能调用远端、尚未持久 `RUNNING` 即强杀或超时，必须合法进入 `UNKNOWN_RECONCILE`、保存原业务键/Attempt/远端查询引用且零盲重发；仅受信证明从未外发时才允许退回合法的 `PENDING/PAUSED`。`R24-C`（M3）模拟补丁载荷与 Effect 原子提交前后崩溃、Inbox 已接受但回执丢失；恢复使用原始持久字节并核验哈希，缺失、篡改、跨 Session、过期或撤权必须 fail-closed，不具备可靠 Inbox 去重时禁止盲重投。两者分别归属 R18/R24，不新增顶层测试编号。
+
 **实现边界**：R01–R25 是设计要求，不代表源码已通过。M2 的自动重启/延迟调度能力须先用锁版原生 Effects 的 lease/CAS/重调度接口实测；缺失时只验收状态正确、原工作项不可重复及人工恢复入口，不能写作“自动恢复通过”。
 
 ### 16.5 学习版与完整工程验收的界限
 
 M0—M5 不要求大规模吞吐、复杂审批、生产渠道送达、正式环境的高危自动止损、多租户共享隔离或自动本体发布；**这些能力不能被标成已实现**。但无论阶段如何划分，真实生产写未启用、Sandbox 受限、Jev 不授予权限、Engine 受信提交、稳定幂等、外部结果不伪造，是学习原型的硬约束。若未来需要切换 `ACTIVE`，必须返回执行第 15.1 节所规定的独立 G0—G5 验收。
+
+### 16.6 DeepSeek API / Harness 原生能力增量验收（V1.2）
+
+以下为**新增待执行用例**，不表示测试已通过；用例应分别记录 `PASS/FAIL/BLOCKED/NOT_RUN`、准确源码 SHA、命令、退出码、真实日志、Fixture/真实对象及 SHA-256。
+
+| 验收 ID | 必须验证的现象 |
+| --- | --- |
+| V12-01 | `ctx.web` 使用明确的 Search/Fetch provider；一次逻辑查询不因重复注册而多次调用/计费 |
+| V12-02 | 不可信 URL 的 localhost/私网/元数据、DNS 重绑定与重定向均被拦截，隔离目标无变化 |
+| V12-03 | 关闭服务端自动搜索后模型不能绕过本地 Guard 发出联网查询；受允许的模型路由不得外送敏感上下文 |
+| V12-04 | Search 摘要/Fetch Markdown/OCR 文本/原始 GitHub 工件按证据等级分开；哈希指向被实际捕获的字节 |
+| V12-05 | Messages/Responses/Chat Completions 的 `400/401/402/403/404/429/5xx`、HTTP 200 内部生成失败/流式不完整/拒答被保守分类 |
+| V12-06 | AgentTeam CAS 冲突、持久写入结果不明确、任务失联、权限撤销不创建重复业务 ActionRun |
+| V12-07 | 两真实 Team Session 的 Verifier 只读且不能篡改 Worker 的工件；共享 checkout 冲突提示不当作文件锁 |
+| V12-08 | Browser Session 重载丢失状态、提交后断线、撤权竞态只产生可核查未知结果，不盲目重放 |
+| V12-09 | Schedule 投递回执与 Engine 业务完成分离；同周期重复触发不产生重复副作用 |
+| V12-10 | 模型/查询/网页/OCR 用量预算、异常退避、取消与日志脱敏生效，且不把测试 Mock 冒称真实在线服务 |
+
+**V1.2 新增关键子例与功能准入验证（正式定义，当前均 `NOT_RUN`）**：以下是 §16.7 所引用子例的正式验收契约。每次测试须提供准确 upstream/project SHA、执行模式、配置摘要、命令及退出码、原始脱敏日志、HTTP/网络/存储证据和负例结论。静态通过不代表功能验收。
+
+| 子例 ID | 必须验证的正/负行为 | 最低证据要求 | 结果 |
+| --- | --- | --- | --- |
+| `V12-01B` | 准入后切换 Provider/endpoint/凭据；最终派发不得越过已批准出站与身份边界 | 真实代理/网络请求记录、provider/endpoint/凭据引用与阻断证据 | `NOT_RUN` |
+| `V12-03C` | 模型 Web 工具、`ctx.web` 直调、DeepSeek 服务端联网分别拒绝越权；HTTP 绕过亦受限 | 三条真实路径分别记录请求数、敏感数据外送与失败关闭 | `NOT_RUN` |
+| `V12-08B` | Playwright Browser 隔离挂载/凭据/出网，断线和撤权后不重写未知远端事实 | 容器/进程/网络负例、Session 与远端对账凭证 | `NOT_RUN` |
+| `V12-08C` | Stagehand 独立模型 Provider/Key、页面外送内容与取消后在途调用受控 | 脱敏模型请求、模型端点、实际出站、独立凭据与取消证据 | `NOT_RUN` |
+| `V12-09B` | 自动周期与人工 `runNow` 身份分离；同一个已持久 `manualExecutionRequestId` 重试不重复写 | Engine/Effects/Inbox/receipt 关联、唯一业务效果计数 | `NOT_RUN` |
+| `V12-10B` | Stagehand 独立调用量、Token/费用、墙钟预算、取消后请求均受审计/阻断 | 独立费用与调用记录、越预算和取消的负向用例 | `NOT_RUN` |
+| `V12-GATE` | 可选能力与 M/G 项目阶段分离；代码、Provider 配置、执行模式和出站策略改变则旧许可失效 | `capabilityId + executionMode + upstreamCommit + providerConfigDigest + egressPolicyVersion + requiredCaseRefs + reviewedEvidenceRefs` 不可变引用及降级证据 | `NOT_RUN` |
+
+### 16.7 两级准出：项目阶段与可选功能的独立启用许可（V1.2 第三轮复审）
+
+**两套状态不可互相推导**：
+
+- **项目阶段状态**：维持 M0—M5 / G0—G5 的原有依赖、必须完成任务与退出条件；未通过 M0-14 仍禁止 M1 运行集成。
+- **功能准入状态**（拟新增设计状态，非已存在代码）：`DISABLED`（默认无真实调用）、`FIXTURE_ONLY`（隔离无敏感数据）、`READY_READONLY`（仅批准的可审计只读/外送）、`READY_WRITE`（另经业务 Effect/Attempt/授权/对账实测的副作用）。状态必须绑定 `capabilityId + executionMode + upstreamCommit + providerConfigDigest + egressPolicyVersion + requiredCaseRefs + reviewedEvidenceRefs`；配置、版本、路由、隔离边界发生变化须重新评审并降级，不能继续沿用旧 PASS。
+
+**准出规则**：某 M 阶段通过，只代表该阶段规定的必选能力通过。新增的 Web、Stagehand、Browser、AgentTeam、Schedule 功能在其首次真实启用**之前**，必须通过与其模式相关的 V12 子例、静态配置审核、动态安全/恢复测试及可追溯的技术证据复核；不是“全部 V12 项必须在 M0 通过”。这里的技术证据复核可以由受信负责人组织，并不等于 GitHub 必须由另一位协作者提交 `APPROVE`，详见 §17.12。不满足时保持 `DISABLED/FIXTURE_ONLY`，禁止仅因 M2 或 M5 完成就自动晋级。阶段任务如显式依赖某功能才能达到该阶段真实出口，则须在**该能力真正启用的同一模式**完成其子例；无法完成则保留该阶段对应任务未完成，不可用 Mock 结果冒充真实模式。
+
+| 能力/模式 | 默认 | 首次业务使用前的最低对应 V12 子例 | 验证未完成时 |
+| --- | --- | --- | --- |
+| Web Search/Fetch 本地模型工具或 `ctx.web` 直调 | `DISABLED`（离线 Fixture 除外） | V12-01/01B、02、03/03C、04/05、10：Provider 配置绑定、最终网络出口、异常/来源/预算 | 只允许离线 Fixture；不可向真实外网发敏感请求 |
+| DeepSeek 服务端自动 Web Tools | `DISABLED` | V12-03/03C 与模型路由出站负例及来源/隐私测试 | 禁止该模型路由启用服务端联网 |
+| Playwright MCP Browser（无独立模型） | `FIXTURE_ONLY`（仍需安全隔离） | V12-02、08/08B、10；如可写再加 M2 Effect/Permit 及恢复门禁 | 不允许有凭据/外部副作用 |
+| Stagehand Native（独立模型） | **`DISABLED`** | V12-08C、10B，独立模型出站与调用后预算/取消、凭据与内容审计；可写另验 ActionRun | 仅专用无敏感数据 Fixture 且有显式试验批准 |
+| Schedule 自动 / 手动 | `DISABLED`（可单独开只读通知） | V12-09/09B，自动周期 / 手动受信请求身份与 inbox/receipt 崩溃重试 | 只读提醒；手动 `runNow()` 不得派发可写 |
+
+**两处判定不能混淆**：文档评审或 GitHub PR 合并通过，不等于上述功能准入已 PASS；PR #14 的 CI 即使通过，也仅属于其实际执行的测试和提交，不自动满足 V12。现有 100 项任务和原阶段出口保持不变，本节只是启用**可选**能力之前的强制条件。仓库合并审批责任见 §17.12，M0/M1 与可选能力状态不随该审批自动提升。
 
 ## 17. 工程依赖、风险控制与交付门槛
 
@@ -1517,6 +1707,69 @@ M0—M5 不要求大规模吞吐、复杂审批、生产渠道送达、正式环
 
 **需保留的边界**：① 每个 M2 ActionRun 只代表一个语义外部业务效果，多个不同 RPC 不得共用同一远端幂等键；② 已消费执行许可不证明远端成功，效果不明必须对账；③ 已撤权后未消费许可必须拒绝，但在途外部执行无法仅凭本地 DB 事务撤销；④ `beginAuthorizedWork` 许可与可写执行许可不同，所有只读 Worker 也必须先启动根时钟；⑤ 与既有 §17.4–§17.7 的 `CODE_PENDING` 不冲突，不新增平行 Engine/Effects 队列。
 
+### 17.9 V1.2 审核问题收敛记录（仅设计闭合，执行层保持待验）
+
+| 审核项 | 本次设计修订落点 | 仍需的工程验证 |
+| --- | --- | --- |
+| P0-01 重复搜索层 | §2.1.1、§5.1.2 | `ctx.web` 提供方真实装配/计费 |
+| P0-02 服务端搜索越过本地 Guard | §3.2、§8.3、§11.4 | 不同模型路由的数据出站负例 |
+| P0-03 TeamRun 与 AgentTeam 混同 | §10.5、§13.6 | CAS、失联、独立 Verifier |
+| P0-04 浏览器统一接口假设 | §10.6、§13.6 | 实际提供方工具、恢复、撤权 |
+| P0-05 外送数据/注入/SSRF | §9.6、§11.4、§14.6 | URL/DNS/重定向/密钥/提示注入 |
+| P0-06 版本与 M0 准出混同 | §15.2.1、§16.6 | 独立兼容矩阵/全量 CI |
+| P1-01—05 证据等级、协议异常、安全校验、调度与预算 | §8.3、§9.6、§10.6、§13.6、§14.6 | V12-04/05/09/10 |
+| P2-01—02 OCR 图文精度和浏览器/Team UI | §15.2.1、§16.6 | 分阶段再立真实验收任务 |
+
+**审核声明**：上述“设计修订”只修正文义、职责和测试契约，不代表源码问题已修复、用例已运行、依赖已升级或 M0/M1 已准出。保持五层 17 模块、原 100 项清单、受信 Engine 单写、SQLite + 原生 Effects、Jev 不签发权限及 M0—M5/G0—G5 双门槛。
+
+### 17.10 V1.2 第二轮独立复审修订（2026-11-14）
+
+新增修正：① `ori_question` 默认原始问题外送；② `ctx.web` 直调不自动经过本地 ToolRuntime；③ 已有 §14.4 的只读 `TrustedRequestContext` 与 §5.1 写入 `TrustedCommandContext` 必须分别校验；④ 动态 Provider/计费/凭据选择造成的审授权与执行偏差；⑤ 本地 HTTP Fetch 与 DeepSeek 远端 Fetch 错误、重定向证明能力不同；⑥ Browser 进程/Session 状态不等于安全隔离；⑦ Schedule receipt 故障重复入站。均为 **DESIGN_CORRECTED/CODE_UNTESTED**；新增验收仍属于 V12-01—V12-10，见 `docs/reviews/V1.2-DeepSeek-Harness-Static-Review-20261114.md`，没有更改 M0 与 gitlink。
+
+### 17.11 V1.2 第三轮外部反馈处理（2026-11-14；文档层）
+
+外部审查反馈 P1-1 Stagehand 独立模型出站、P1-2 Web 实际派发点缺少可实施绑定、P1-3 Schedule 手动 `runNow()` 周期键变化，以及 P2 阶段/功能门禁不分，分别修订于 §10.6、§5.1.3、§13.6、§16.7 并在 §14.6/开发清单新增验收子例。所有项当前为 `DESIGN_CORRECTED / IMPLEMENTATION_NOT_RUN`，本 PR 不更改产品代码、M0 状态与 Harness gitlink。原独立设计复审记录追加第三轮评估，不冒充不同成员的运行代码审核。
+
+### 17.12 GitHub 审核责任、Harness 基线证据与 CI 分流交接（2026-11-14）
+
+本节是**仓库工程交付和治理记录**，不新增 L1—L5 业务模块、Engine、Effects、队列或可运行产品能力。以下 CI 状态是对应链接所指 **2026-11-14 当次查询时的快照**；以后必须以准确 PR head SHA、GitHub Actions 最新 Job、原始 Artifact 和退出码重新判定，不得将历史快照自动延用为当前通过。
+
+#### 17.12.1 审核责任制与真实授权边界
+
+- 本仓库 `CONTRIBUTING.md` 已在目标分支 `feat/m0-local-20261113-mac` 的提交 `ff0ed0b1fe8deba73673c1a2d4a28ec9b3a78cec` 中改为 **`tanxinz` 统一审核和合并决策**，项目内部不再强制第二位 GitHub 协作者 `APPROVE`。这只改变 GitHub 仓库维护流程，不修改产品中 `Mandate/Policy/ToolGuard/ActionGateway` 对工具和业务副作用的授权条件。
+- GitHub 不允许作者自行对其 PR 提交原生 `APPROVE`。因此由 `tanxinz` 在 PR 评论或 `COMMENTED` Review 记录 `OWNER_REVIEW: READY_TO_MERGE` 或 `OWNER_REVIEW: BLOCKED`；**此为项目责任人审核，不伪称独立成员已批准**。
+- 有效 Owner Review 至少包括：`head SHA`、目标分支 SHA、变更范围及敏感信息排查、适用的 CI Run/Artifact、实际完整与定向测试区分、`PASS/FAIL/NOT_RUN/UNKNOWN`、锁版/依赖/数据安全影响、遗留风险与明确合并决定。HEAD、策略或执行环境变化必须重新评估。
+- 项目不再要求协作者审阅 **≠** 可以跳过源码、CI、权限边界和失败恢复的客观证据；若 GitHub Branch Protection/Rulesets 在服务器端另有必选审批或状态检查，仍应由所有者检查并合法配置，不能仅凭改写 Markdown 绕过。不同于本项目代码审阅，§10—§16 中的 Verifier 证据隔离和业务权限拒绝仍须独立于模型建议与外部输入，不能合并成“本人认为安全”。
+- 学习版的 GitHub/生产配置变更和真正 PR 合并仍属于 §1 所禁用的**模型驱动业务副作用**；这里的 `tanxinz` 维护者行为不授权运行态 Agent 自主合并真实 PR。
+
+#### 17.12.2 Harness 已知固定日期失效与两种不能混写的全量测试
+
+| 项目 | 锁定事实与证据 | 允许的审计结论 |
+| --- | --- | --- |
+| 未修改 Harness baseline | `e8f7b93a344964de3dca1ace9e72b6e4d6de87cb`；[原始 Run #43544511314](https://github.com/tanxinz/dsh-superagent/actions/runs/43544511314) 的 LiveShare `owner-credential-horizon.host.spec.ts` 两个用例各超时 90 秒；`LIVE` 固定截止 `2026-11-14T00:00:00Z`，运行时已过期 | **原始全量 FAIL，必须永久保留**，不能由后续重跑或补丁 PASS 覆盖 |
+| 日期测试夹具修复 | [PR #18](https://github.com/tanxinz/dsh-superagent/pull/18) 的 `patches/harness-baseline-liveshare-horizon-relative-dates.patch` 将 `PAST/LIVE` 改为测试时刻 ±30 天；只修改 LiveShare 测试，不动上游产品判断、锁文件、Harness gitlink | 可独立测试，**不等于主仓已升级 Harness 版本** |
+| 已完成的修订夹具全量 | [独立 Run #43548225798](https://github.com/tanxinz/dsh-superagent/actions/runs/43548225798) 完成并成功，覆盖该专用工作流实际执行的构建、定向和完整测试 | 仅称 **patched pinned baseline full PASS**，不称 unmodified baseline PASS |
+| 默认 M0 的正式验证 | [PR #18 默认 Run #43551553456](https://github.com/tanxinz/dsh-superagent/actions/runs/43551553456) 使用 `baseline-fixture-patched/harness-test-patched`，另一矩阵 `matching-release-candidate` 仍跑未修改的 `pnpm test` | 查询时 candidate full **PASS**、patched baseline full **IN_PROGRESS**；默认 M0 总结论仍非 FULL PASS |
+| 与文档分流组合验证 | [PR #19 组合 Run #43551881352](https://github.com/tanxinz/dsh-superagent/actions/runs/43551881352) 同时含正确的补丁与原 M0 矩阵 | 查询时两版 Harness 全量仍 **IN_PROGRESS**，不得由 docs-review 成功代替 |
+
+固定 `e8f7b93` 和候选 `d743267388641bc76f17c45ce8b4c231aed1d32c` 的测试身份必须记录在每个命令 `result.json`、CI Job 名和证据目录中；`harness-test-patched` 与原始 `harness-test` 不得合并统计。原失败 ZIP、完整 `command.log` 和 SHA-256 记录见 [Issue #17](https://github.com/tanxinz/dsh-superagent/issues/17) 及 PR #18 RCA 文档。
+
+#### 17.12.3 Markdown 变更与 M0 全量 CI 的分流边界
+
+- [PR #19](https://github.com/tanxinz/dsh-superagent/pull/19) 的拟合入规则：仅修改 `**/*.md` 的 PR 由 `docs-review.yml` 检查本地相对链接、代码围栏、冲突标记及相关回归、preflight 和证据审计；只改源码/配置/测试/CI 的 PR 仍跑完整 `m0-offline.yml`；**同时改 Markdown 和非 Markdown 的 PR 两条流程都运行**。`workflow_dispatch` 保留人工执行完整 M0 的能力。
+- 真正纯 Markdown 的 [临时 PR #20](https://github.com/tanxinz/dsh-superagent/pull/20) 触发 [Run #43551618865](https://github.com/tanxinz/dsh-superagent/actions/runs/43551618865) 的 docs-only SUCCESS，未触发完整 M0，已关闭未合并。PR #19 当前版本 [docs-review Run #43551881399](https://github.com/tanxinz/dsh-superagent/actions/runs/43551881399) SUCCESS，仍不能冒充实际业务设计审查或两版 Harness 全量。
+- 该分流在 **PR #19 合并前不自动回溯改变 PR #14 历史红色 CI**。GitHub Rulesets/Branch Protection 中的 Required Checks 若要求在 docs-only PR 上报告未触发的 Harness Job，可能出现 `Expected/Pending`；必须由仓库所有者核对并保证代码 PR 原有状态门禁有效。
+- 合并依赖顺序保持 [PR #18](https://github.com/tanxinz/dsh-superagent/pull/18) → [PR #19](https://github.com/tanxinz/dsh-superagent/pull/19) → [PR #14](https://github.com/tanxinz/dsh-superagent/pull/14)。PR #19 当前验证分支包含与 #18 同一字节补丁以便组合测试；**#18 先合入目标分支后**须重新比较 #19 的新增差异及测试状态，不得作为重复改动再次引入。最终合并后的目标分支并不自动等于 `main`。
+- GitHub 合并与应用运行态验收必须分别记录：此段只明确当前工程证据和审核职责；**M0-14 仍为 `BLOCKED`、M0 整体验收 0/14、M1 不允许运行集成，§16.7 的新 V12 动态用例仍 `NOT_RUN`**，可选 Web/Stagehand/Schedule 等能力未经许可保持 `DISABLED/FIXTURE_ONLY`。
+
+### 17.13 静态复核修复与正式文档状态说明（2026-11-14）
+
+本节补充 §17.12 的**历史快照**，不重写其当时的 CI 状态，也不替代任何原始日志或 ZIP。2026-11-14 核验：PR [#18](https://github.com/tanxinz/dsh-superagent/pull/18) 已合并，默认 M0 [Run #43551553456](https://github.com/tanxinz/dsh-superagent/actions/runs/43551553456) 的 patched baseline 与未修改 matching candidate **各自全量 SUCCESS**；[PR #14](https://github.com/tanxinz/dsh-superagent/pull/14) 已合并到 `feat/m0-local-20261113-mac`，主设计正文又单独发布到 `main`；PR [#19](https://github.com/tanxinz/dsh-superagent/pull/19) 在本次查询时仍为 Open，文档分流未进入 `main`，其 [Run #43551881352](https://github.com/tanxinz/dsh-superagent/actions/runs/43551881352) 的 patched baseline 仍未完成。上述变化只证明特定提交/测试矩阵，不代表未补丁原 baseline 历史 FAIL 被修复为 PASS。
+
+`main` 目前是**设计发布分支**，不能推定其中有可运行的 M0 源码、CI 工作流或 `CONTRIBUTING.md` 责任制文件；运行态源码和受控验收资料仍以 [M0 开发分支](https://github.com/tanxinz/dsh-superagent/tree/feat/m0-local-20261113-mac) 固定提交为准。正式 [V1.2 开发清单](SuperAgent_Harness_Development_Checklist_V1.0_20261112.md) 和本文 §16.6 共同定义新子例，其 `NOT_RUN` 不能推断为缺失功能已通过。相关 [兼容矩阵](compatibility-matrix.md)、[上游能力核验](upstream-capabilities.md) 和 [静态审核记录](reviews/V1.2-DeepSeek-Harness-Static-Review-20261114.md) 只作为标注分支/SHA 的历史技术证据。
+
+本次修复范围：§6.4 将可能已外发的 `CLAIMED → UNKNOWN_RECONCILE` 纳入合法状态机并严格限证；§6.2/§9.4 在同库同事务保留 ContextPatch 精确不可变载荷且恢复时再次核验；§13.2 明确原生 Effects 的 kind、覆盖及无持久租约约束；§16.4.1 增加 R18-A/R24-C；§16.6 补齐 V12 子例。**均为 `DESIGN_CORRECTED / CODE_UNTESTED`**。M0-01—13 保持 IN_PROGRESS、M0-14 BLOCKED、0/14 完成、M1 未准出；真实网络/Stagehand/调度能力在其启用门禁通过前仍 DISABLED/FIXTURE_ONLY。
+
 ## 18. 设计依据和技术参考
 
 1. 功能蓝图：`superagent_x_jev(2).html`（5 层、17 个模块、3 个动态仿真场景；其动画是展示定义，不是运行时业务记录）。
@@ -1539,3 +1792,11 @@ M0—M5 不要求大规模吞吐、复杂审批、生产渠道送达、正式环
 17. SuperAgent 原生 Cordis 主插件入口（name/inject/apply）：https://github.com/deepseek-ai/dsh-superagent-prototype/blob/main/src/index.ts
 18. SuperAgent Bundle patch/preset 装配示例：https://github.com/deepseek-ai/dsh-superagent-prototype/blob/main/cordis.patch.yml
 19. Harness Cordis 插件开发说明：https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/user/develop/basic/index.md
+
+### 18.1 V1.2 新增官方参考（静态来源，不代表组合已验证）
+
+- DeepSeek 2026-11-13 应用 API 更新：https://api-docs.deepseek.com/updates/
+- DeepSeek 独立 Search / Fetch：https://api-docs.deepseek.com/guides/search/
+- DeepSeek 服务端 Web Tools / 失败规则：https://api-docs.deepseek.com/guides/web_tools/
+- Harness v0.2.2-rc.3 release：https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.2-rc.3
+- Harness Web/AgentTeam/Browser/Schedule 官方源码：参见 §2.1.1 所列版本锁定链接。

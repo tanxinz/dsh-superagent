@@ -1,0 +1,403 @@
+diff --git a/scripts/fixtures/m0-profile-runtime/mesh-dependency-observer.mjs b/scripts/fixtures/m0-profile-runtime/mesh-dependency-observer.mjs
+index bd7a93a..49c8d4e 100644
+--- a/scripts/fixtures/m0-profile-runtime/mesh-dependency-observer.mjs
++++ b/scripts/fixtures/m0-profile-runtime/mesh-dependency-observer.mjs
+@@ -1,5 +1,6 @@
+ // Test-only observer for temporary native profiles. Optional account replies are an owned CLI Fixture, never real credentials.
+ import { setTimeout as delay } from 'node:timers/promises';
++import { readFileSync } from 'node:fs';
+ 
+ const canonical = value => JSON.stringify(value, (_key, item) => item && typeof item === 'object' && !Array.isArray(item)
+   ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b))) : item);
+@@ -38,6 +39,8 @@ export async function apply(ctx, config) {
+   async function cycle(previous, runtime) {
+     previous.assertReady();
+     let configuredSession;
++    let binding, bindingAlreadyRevoked = false;
++    const credential = config.fixtureCli ? readFileSync(config.credentialFile, 'utf8') : undefined;
+     if (config.fixtureCli) {
+       if (!runtime.configured() || runtime.health.runtime.state !== 'paused') throw new Error('Configured fixture did not enter its safety hold');
+       const id = runtime.masterId;
+@@ -45,6 +48,19 @@ export async function apply(ctx, config) {
+       const second = await runtime.sessions.ensure(id, runtime.machine.stateDir, 'M0 fixture role switch', 'worker');
+       const service = ctx.get('permissionPresets');
+       if (first !== second || service.current(first.session) !== 'read-only') throw new Error('Real Session permissions or same-ID resolution changed');
++      const row = runtime.store.db.prepare('SELECT binding FROM mesh_session_security WHERE session_id=?').get(id);
++      bindingAlreadyRevoked = !!row && JSON.parse(row.binding).revoked === true;
++      if (bindingAlreadyRevoked) {
++        for (const operation of ['issue', 'restore']) {
++          let refused = false;
++          try { previous.sessionBinding(credential, id, operation); } catch { refused = true; }
++          if (!refused) throw new Error('A revoked native Session binding became usable after process restart');
++        }
++      } else {
++        binding = previous.sessionBinding(credential, id, 'issue');
++        const restored = previous.sessionBinding(credential, id, 'restore');
++        if (canonical(binding) !== canonical(restored)) throw new Error('Native Session binding changed on restore');
++      }
+       let entered = 0;
+       const release = first.ctx.tools.register({ name: 'm0_owned_probe', description: 'Harmless owned counter', parameters: {type:'object',properties:{}},
+         output:{schema:{type:'number'},render:()=>[]}, execute:async()=>++entered });
+@@ -58,7 +74,8 @@ export async function apply(ctx, config) {
+       if (!overrideRefused) throw new Error('Broad Session override was accepted');
+       runtime.effects.enqueue('m0-owned-fixture','persisted',{fixture:true});
+       await ctx.get('sessionPersistence').flush();
+-      configuredSession = { id, preset:service.current(first.session), sameId:true, roleSwitchRestricted:true, overrideRefused, toolBodyEntries:entered, nativeToolDenied:result.isError, modelRequest:first.session.requestHeader() ? 'UNEXPECTED' : 'NOT_RUN' };
++      configuredSession = { id, preset:service.current(first.session), sameId:true, roleSwitchRestricted:true, overrideRefused, toolBodyEntries:entered, nativeToolDenied:result.isError,
++        bindingIssued: !!binding, revokedBindingSurvivedProcessRestart: bindingAlreadyRevoked, modelRequest:first.session.requestHeader() ? 'UNEXPECTED' : 'NOT_RUN' };
+       if (configuredSession.modelRequest !== 'NOT_RUN') throw new Error('Unexpected model request');
+     }
+     const owned = providers();
+@@ -92,6 +109,15 @@ export async function apply(ctx, config) {
+       const next = ctx.get('orchestrator'); await next.ready;
+       const agent = await next.sessions.ensure(next.masterId,next.machine.stateDir,'M0 restored fixture','orchestrator');
+       if (next.masterId !== configuredSession.id || ctx.get('permissionPresets').current(agent.session) !== 'read-only') throw new Error('Restored native Session lost its restriction');
++      if (binding) {
++        const recovered = restored.sessionBinding(credential, agent.id, 'restore');
++        if (canonical(recovered) !== canonical(binding)) throw new Error('Native binding changed across dependency restoration');
++        restored.sessionBinding(credential, agent.id, 'revoke');
++        let revokedRefused = false;
++        try { restored.sessionBinding(credential, agent.id, 'restore'); } catch { revokedRefused = true; }
++        if (!revokedRefused) throw new Error('Revoked native binding was accepted');
++        configuredSession = { ...configuredSession, bindingRecoveredUnchanged:true, bindingRevoked:true };
++      }
+       const row = next.store.db.prepare("SELECT kind,key FROM effect WHERE kind='m0-owned-fixture' AND key='persisted'").get();
+       if (!row) throw new Error('Durable fixture Effect was lost on dependency reload');
+       configuredSession = {...configuredSession, restoredRestricted:true, persistedEffectRetained:true, automaticProcessing:'BLOCKED_ISOLATION'};
+diff --git a/scripts/m0-profile-probe.mjs b/scripts/m0-profile-probe.mjs
+index 78f0063..7c5b8b6 100644
+--- a/scripts/m0-profile-probe.mjs
++++ b/scripts/m0-profile-probe.mjs
+@@ -133,11 +133,15 @@ try {
+     writeFileSync(join(observer, 'index.js'), `export { apply } from ${JSON.stringify(helper)};\n`);
+     let fixtureConfig = '';
+     if (configuredMode) {
++      // Owned, ephemeral management credential for the native lifecycle observer; never copied to output artifacts.
++      const credentialFile = join(home, 'fixture-management-credential');
++      writeFileSync(credentialFile, env.DSH_MESH_ADMIN_TOKEN, { mode: 0o600 });
+       const fixtureCli = join(home, 'fixture-gh');
+       writeFileSync(fixtureCli, '#!' + process.execPath + '\nconst args=process.argv.slice(2);\nif(args.join(" ")==="api user") console.log(JSON.stringify({login:"m0-fixture",id:7}));\nelse if(args[0]==="api"&&args[1]==="repos/fixture/m0") console.log(JSON.stringify({name:"fixture/m0",push:true}));\nelse process.exit(70);\n', {mode:0o755});
+       report.configured_account = 'FIXTURE_CLI_NOT_REAL_GITHUB';
+       report.fixture_cli_sha256 = hash(fixtureCli);
+-      fixtureConfig = '        fixtureCli: ' + JSON.stringify(fixtureCli) + '\n';
++      fixtureConfig = '        fixtureCli: ' + JSON.stringify(fixtureCli) + '\n'
++        + '        credentialFile: ' + JSON.stringify(credentialFile) + '\n';
+     }
+     writeFileSync(join(observer, 'cordis.patch.yml'), '- insert:\n    - id: m0-probe-log\n      name: m0-probe-log\n      config:\n        providerModule: ' + JSON.stringify(providerModule) + '\n        cordisModule: ' + JSON.stringify(cordisModule) + '\n' + fixtureConfig);
+   }
+diff --git a/upstream/superagent/docs/007-architecture.md b/upstream/superagent/docs/007-architecture.md
+index 63c5275..aef87a6 100644
+--- a/upstream/superagent/docs/007-architecture.md
++++ b/upstream/superagent/docs/007-architecture.md
+@@ -297,6 +297,7 @@ Some generic modules still refer directly to GitHub or Feishu:
+ | `src/extensions/mesh/security-store.ts` | Native Store-transaction security migration, identity/policy facts and persistent denial audit |
+ | `src/extensions/mesh/restricted-session.ts` | Verifies effective read-only permissions for managed Sessions and refuses overrides |
+ | `src/extensions/mesh/safety.ts` | Final synchronous allow-intersection/deny-union guard; refuses missing or stale persistent bindings; business execution stays blocked pending OS integration. |
++| `src/extensions/mesh/session-bindings.ts` | Runtime-owned Session targets and scopes, authenticated issuance, bounded durable recovery and irreversible per-Session revocation; never enables OS execution. |
+ | `src/client/management-auth.tsx` | Page-memory-only management credential login; no URL or browser-storage token. |
+ | `src/extensions/mesh/service.ts` | Native CognitiveMeshService; dependency and lifetime refusal before startup and admission |
+ | `src/deployment.ts` | The plugin `Config` and `Machine`; `resolveDeployment` and `resolveFeishuBot` read the repository and the accounts from the Source settings, each CLI run as Executor shells run it; `SETUP_FIELDS` lists the Source fields setup reads. The code names no person, account or organization |
+@@ -426,6 +427,8 @@ Some generic modules still refer directly to GitHub or Feishu:
+ | `tests/mesh-m0.spec.ts` | M0 原生 Store/Effects 联合事务、真实 SIGKILL 恢复、重新入队及在途重复执行边界；`tests/fixtures/mesh-crash.ts` 提供独立进程故障点 |
+ | `tests/mesh-security.spec.ts` | Forged/expired/cross-tenant contexts, persistent safety facts, migration rollback and schema drift |
+ | `tests/mesh-safety.spec.ts` | Allow/deny intersections, durable Session bindings, direct gateway refusal and real native ToolRuntime final-guard negatives. |
++| `tests/session-bindings.spec.ts` | Trusted issuance, expiry and parent narrowing, cross-tenant collisions, durable revocation/reopen, corruption and fail-closed audit. |
++| `tests/management-security.spec.ts` | Native Mesh service plus original Store/HTTP authorization: server-selected binding inputs and original-context revocation across startup/body awaits. |
+ | `tests/restricted-session.spec.ts` | Effective read-only permissions, unsafe labels, overrides and owner disposal |
+ | `tests/mesh-service.spec.ts` | Native Cordis service registration, real injected consumption, dependency loss/restoration and retained-handle refusal |
+ | `tests/mesh-bridge.spec.ts` | 真实 Cordis fiber 的单次安装、重复调用、重启、独立生命周期及销毁后拒绝；不等同真实 DSH profile 启动 |
+diff --git a/upstream/superagent/src/app/http.ts b/upstream/superagent/src/app/http.ts
+index be2a956..cc9af81 100644
+--- a/upstream/superagent/src/app/http.ts
++++ b/upstream/superagent/src/app/http.ts
+@@ -248,17 +248,27 @@ export function registerHttp(ctx: Context, runtime: HttpHost): () => void {
+         const hasClaims = IDENTITY_CLAIMS.some(key => url.searchParams.has(key))
+           || ['x-tenant-id', 'x-actor-ref', 'x-roles', 'x-request-id'].some(key => req.headers[key] !== undefined)
+         // Authenticate before parsing IDs, bodies or route names. Body/query claims confer no authority.
+-        mesh.securityStatus(credential ?? '', hasClaims)
++        const authorization = mesh.authorizeRequest(credential ?? '', hasClaims)
+         await runtime.ready
+-        const trusted = mesh.securityStatus(credential ?? '', hasClaims)
++        const trusted = authorization.check(hasClaims)
+         if (url.pathname === '/orchestrator/api/mesh/security' && req.method === 'GET') {
+           json(res, 200, trusted)
+           return
+         }
++        const bindingRoute = /^\/orchestrator\/api\/mesh\/sessions\/([^/]+)\/(issue|restore|revoke)$/.exec(url.pathname)
++        if (bindingRoute && req.method === 'POST') {
++          // No caller-selected scope, role, identity or expiry; the Runtime owns all binding inputs.
++          const body = await readBody(req, 1024)
++          authorization.check(hasClaims || bodyClaims(body))
++          if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).length) throw new RouteError(400, 'Expected an empty object')
++          const result = authorization.sessionBinding(decoded(bindingRoute[1]!), bindingRoute[2] as 'issue' | 'restore' | 'revoke')
++          json(res, 200, result)
++          return
++        }
+         const route = match(table, req.method ?? 'GET', url.pathname.slice('/orchestrator/api/'.length).split('/'))
+         if (!route) throw new RouteError(404, 'Unknown operation')
+         const query = Object.fromEntries(url.searchParams)
+-        json(res, 200, await route.run({ params: route.params as never, query, body: async maxBytes => { const value = await readBody(req, maxBytes); mesh.securityStatus(credential ?? '', hasClaims || bodyClaims(value)); return value } }))
++        json(res, 200, await route.run({ params: route.params as never, query, body: async maxBytes => { const value = await readBody(req, maxBytes); authorization.check(hasClaims || bodyClaims(value)); return value } }))
+       } catch (error) { json(res, ...failure(error)) }
+     } })]
+   return () => { for (const dispose of disposers) dispose() }
+diff --git a/upstream/superagent/src/app/runtime.ts b/upstream/superagent/src/app/runtime.ts
+index 0557e32..ff0fff4 100644
+--- a/upstream/superagent/src/app/runtime.ts
++++ b/upstream/superagent/src/app/runtime.ts
+@@ -4,6 +4,7 @@ import { createHash, randomUUID, timingSafeEqual } from 'node:crypto'
+ import { TrustedIdentityAuthority } from '../extensions/mesh/auth.ts'
+ import { LocalSafetyGate } from '../extensions/mesh/safety.ts'
+ import { MeshSecurityStore } from '../extensions/mesh/security-store.ts'
++import { SessionBindingAuthority } from '../extensions/mesh/session-bindings.ts'
+ import { CognitiveMeshService } from '../extensions/mesh/service.ts'
+ import type { Agent } from '@deepseek-ai/dsh-agent'
+ import type { SessionId } from '@deepseek-ai/dsh-session'
+@@ -100,7 +101,7 @@ export class Runtime extends Service implements SourceHost {
+     this.releaseLock = async () => { release() }
+     let opened: Store | undefined
+     try {
+-      const meshConfig: { lifetime: AbortSignal; authority?: TrustedIdentityAuthority } = { lifetime: this.lifetime }
++      const meshConfig: { lifetime: AbortSignal; authority?: TrustedIdentityAuthority; bindings?: SessionBindingAuthority } = { lifetime: this.lifetime }
+       const mesh = new CognitiveMeshService(ctx, meshConfig)
+       mesh.assertReady()
+       const report = (error: unknown) => { ctx.logger.warn('dsh-superagent: %s', String(error)) }
+@@ -153,9 +154,11 @@ export class Runtime extends Service implements SourceHost {
+         feishuPageSize: () => feishuSettings(sources).readPageSize, sourceLink: link }
+       const sessions = this.sessions = new Sessions({ context: ctx, store, prompts, effects, health: board.claim('models'), masterId,
+         lifetime: this.lifetime, executionReady: () => this.safetyGate.executionReady(),
+-        toolRefusal: (agent, name) => this.safetyGate.refusal(agent.id, name, `session:${agent.id}`, 'SANDBOX'),
++        toolRefusal: (agent, name) => !this.safetyGate.executionReady() ? 'Mesh safety denied'
++          : this.safetyGate.refusal(agent.id, name, `session:${agent.id}`, 'SANDBOX'),
+         closing: () => this.closing(), environment,
+         tools: (agent, ticket) => ticket ? executorTools(this.toolHost, ticket) : mainTools(this.toolHost, agent) })
++      meshConfig.bindings = new SessionBindingAuthority(authority, safety, this.safetyGate, id => sessions.safetyTarget(id))
+       const policyChanged: EngineForSettings['policyChanged'] = (from, to, effects) => { this.engine.policyChanged(from, to, effects) }
+       this.settings = new Settings({ store, sources, engine: { policyChanged }, health: board, context: ctx, lifetime: this.lifetime, sessions,
+         sourceHost: this, setup, requestPass: () => { this.passes.request() } })
+diff --git a/upstream/superagent/src/app/sessions.ts b/upstream/superagent/src/app/sessions.ts
+index 791578e..60b9867 100644
+--- a/upstream/superagent/src/app/sessions.ts
++++ b/upstream/superagent/src/app/sessions.ts
+@@ -1,5 +1,6 @@
+ /** Lifecycle, prompt/tool/skill decoration, message delivery, and budget retry tracking for orchestrator and worker DSH sessions. */
+ import { RestrictedSessions } from '../extensions/mesh/restricted-session.ts'
++import type { ManagedSessionTarget } from '../extensions/mesh/session-bindings.ts'
+ import type { Context } from '@deepseek-ai/cordis'
+ import type { Agent } from '@deepseek-ai/dsh-agent'
+ import type { MessageId } from '@deepseek-ai/dsh-llm'
+@@ -100,6 +101,14 @@ export class Sessions {
+   private readonly bindings = new Map<Agent, SessionBinding>()
+   private readonly retryHealth = new RetryHealth()
+   private readonly ctx: Context
++  /** Only already-decorated root Sessions are eligible; child admission remains blocked pending scope integration. */
++  safetyTarget(sessionId: string): ManagedSessionTarget | undefined {
++    const agent = this.ctx.agents.get(sessionId as SessionId)
++    if (!agent || !this.bindings.has(agent) || agent.session.header.parentSession !== undefined) return undefined
++    this.permissions.assert(agent)
++    return { permissions: { tools: { allow: ['read', 'read_image', 'glob', 'grep'], deny: [] },
++      resources: { allow: [`session:${sessionId}`], deny: [] }, environments: { allow: ['SANDBOX'], deny: [] } } }
++  }
+   /** Registers ordered `relay` and `notice` effect handlers that deliver to the main Session. */
+   constructor(private readonly host: SessionsHost) {
+     this.ctx = host.context
+@@ -170,7 +179,11 @@ export class Sessions {
+     if (!this.host.executionReady()) throw new Error('Mesh execution boundary is not ready')
+     const result = await this.ctx.sessionController.resolveAgent(sessionId as SessionId)
+     if ('error' in result) throw result.error
+-    await this.agentDelivery.send(result.agent, key(requestId), text, mode, this.host.lifetime, authorize, accepted)
++    await this.agentDelivery.send(result.agent, key(requestId), text, mode, this.host.lifetime, () => {
++      if (!this.host.executionReady()) throw new Error('Mesh execution boundary is not ready')
++      this.permissions.assert(result.agent)
++      authorize?.()
++    }, accepted)
+   }
+   /** The id of the message `prompt` delivers under `requestId`, which DSH's inbox events name it by. */
+   promptedId(requestId: string): MessageId { return messageId(key(requestId)) }
+@@ -189,7 +202,10 @@ export class Sessions {
+     if ('error' in resolved) return
+     // Deduplicate by notice name and payload hash so retries are idempotent while updated payloads still deliver.
+     const text = JSON.stringify(value)
+-    await this.agentDelivery.send(resolved.agent, `notice:${name}:${key(text)}`, text, { inject: summary }, this.host.lifetime)
++    await this.agentDelivery.send(resolved.agent, `notice:${name}:${key(text)}`, text, { inject: summary }, this.host.lifetime, () => {
++      if (!this.host.executionReady()) throw new Error('Mesh execution boundary is not ready')
++      this.permissions.assert(resolved.agent)
++    })
+   }
+   /** Returns the current prompt revision, the active prompt revision of each loaded Session, and whether the main Session still has a pending `'prompts'` notice. */
+   status() {
+diff --git a/upstream/superagent/src/extensions/mesh/safety.ts b/upstream/superagent/src/extensions/mesh/safety.ts
+index a9e9b46..0b8ea93 100644
+--- a/upstream/superagent/src/extensions/mesh/safety.ts
++++ b/upstream/superagent/src/extensions/mesh/safety.ts
+@@ -8,6 +8,23 @@ export interface SafetyBinding {
+   readonly parentSessionId?: string; readonly expiresAt: number; readonly identityVersion: number
+   readonly safetyPolicyVersion: string; readonly emergencyRevocationEpoch: number
+   readonly trusted: PermissionSet; readonly current: PermissionSet
++  readonly revoked?: true
++}
++/** Validate untrusted persisted JSON too; NaN, missing expiry and malformed lists must never grant. */
++export function validBinding(value: unknown): value is SafetyBinding {
++  if (!value || typeof value !== 'object') return false
++  const b = value as SafetyBinding
++  const text = (s: unknown) => typeof s === 'string' && s.length > 0 && s.length <= 1024
++  const permissions = (p: PermissionSet) => p && ['tools', 'resources', 'environments'].every(key => {
++    const d = p[key as keyof PermissionSet]
++    return d && Array.isArray(d.allow) && Array.isArray(d.deny) && [...d.allow, ...d.deny].every(text)
++  })
++  return [b.sessionId, b.tenantId, b.actorRef, b.role, b.safetyPolicyVersion].every(text)
++    && (b.parentSessionId === undefined || text(b.parentSessionId))
++    && Number.isSafeInteger(b.expiresAt) && b.expiresAt > 0
++    && Number.isSafeInteger(b.identityVersion) && b.identityVersion > 0
++    && Number.isSafeInteger(b.emergencyRevocationEpoch) && b.emergencyRevocationEpoch >= 0
++    && (b.revoked === undefined || b.revoked === true) && !!permissions(b.trusted) && !!permissions(b.current)
+ }
+ /** Every operand must explicitly allow, and any operand's deny wins. No wildcards or inherited implicit grants. */
+ export function effectiveAllows(value: string, ...dimensions: (Dimension | undefined)[]): boolean {
+@@ -24,6 +41,13 @@ export class LocalSafetyGate {
+     try { this.assert(sessionId, tool, resource, environment); return undefined } catch { return 'Mesh safety denied' }
+   }
+   assert(sessionId: string, tool: string, resource: string, environment: string): void {
++    const chain = this.bindings(sessionId)
++    for (const [dimension, value] of [['tools', tool], ['resources', resource], ['environments', environment]] as const) {
++      if (!effectiveAllows(value, ...chain.flatMap(binding => [binding.trusted[dimension], binding.current[dimension]]))) return this.deny(chain[0], 'EFFECTIVE_DENY')
++    }
++  }
++  /** Revalidate the complete recovered chain without implying OS readiness or authorizing a tool. */
++  bindings(sessionId: string): readonly SafetyBinding[] {
+     const seen = new Set<string>(), chain: SafetyBinding[] = []
+     let id: string | undefined = sessionId
+     while (id !== undefined) {
+@@ -31,7 +55,7 @@ export class LocalSafetyGate {
+       seen.add(id)
+       let binding: SafetyBinding | undefined
+       try { binding = this.facts.binding(id) } catch { return this.deny(chain[0], 'INVALID_BINDING') }
+-      if (!binding) return this.deny(chain[0], 'BINDING_UNAVAILABLE')
++      if (!binding || !validBinding(binding)) return this.deny(chain[0], 'BINDING_UNAVAILABLE')
+       chain.push(binding); id = binding.parentSessionId
+     }
+     const root = chain[0]
+@@ -40,13 +64,11 @@ export class LocalSafetyGate {
+       let identity, policy
+       try { identity = this.facts.identity(binding.tenantId, binding.actorRef); policy = this.facts.policy(binding.tenantId) }
+       catch { return this.deny(root, 'INVALID_SECURITY_FACTS') }
+-      if (binding.tenantId !== root.tenantId || !identity || !policy || binding.expiresAt <= this.now() || identity.expiresAt <= this.now()
++      if (binding.revoked || binding.tenantId !== root.tenantId || !identity || !policy || binding.expiresAt <= this.now() || identity.expiresAt <= this.now()
+         || identity.version !== binding.identityVersion || !identity.roles.includes(binding.role)
+         || policy.safetyPolicyVersion !== binding.safetyPolicyVersion || policy.emergencyRevocationEpoch !== binding.emergencyRevocationEpoch) return this.deny(root, 'STALE_BINDING')
+     }
+-    for (const [dimension, value] of [['tools', tool], ['resources', resource], ['environments', environment]] as const) {
+-      if (!effectiveAllows(value, ...chain.flatMap(binding => [binding.trusted?.[dimension], binding.current?.[dimension]]))) return this.deny(root, 'EFFECTIVE_DENY')
+-    }
++    return chain
+   }
+   private deny(binding: SafetyBinding | undefined, reason: string): never {
+     try { this.facts.deny(binding?.tenantId ?? 'UNAUTHENTICATED', binding?.actorRef ?? 'UNKNOWN', 'tool-guard', reason, this.now()) }
+diff --git a/upstream/superagent/src/extensions/mesh/security-store.ts b/upstream/superagent/src/extensions/mesh/security-store.ts
+index e0f2d32..b5de36d 100644
+--- a/upstream/superagent/src/extensions/mesh/security-store.ts
++++ b/upstream/superagent/src/extensions/mesh/security-store.ts
+@@ -1,7 +1,7 @@
+ /** Minimal persistent M0 safety facts on the existing Store connection. */
+ import type { DatabaseSync } from 'node:sqlite'
+ import type { Store } from '../../app/store.ts'
+-import type { SafetyBinding } from './safety.ts'
++import { validBinding, type SafetyBinding } from './safety.ts'
+ 
+ export interface IdentityGrant { tenantId: string; actorRef: string; roles: readonly string[]; expiresAt: number; version: number }
+ export interface SafetyPolicy { tenantId: string; safetyPolicyVersion: string; emergencyRevocationEpoch: number }
+@@ -50,8 +50,10 @@ export function verifyMeshSchema(db: DatabaseSync): void {
+ /** Trusted application-side persistence; never exported through CognitiveMeshService. */
+ export class MeshSecurityStore {
+   constructor(private readonly store: Pick<Store, 'db' | 'atomic'>) {}
++  atomic<T>(work: () => T): T { return this.store.atomic(work) }
+   /** Called only by trusted bootstrap code; conflicting Session reuse never silently widens its binding. */
+   bind(binding: SafetyBinding): void {
++    if (!validBinding(binding) || binding.revoked) throw new Error('Invalid Session safety binding')
+     this.store.atomic(() => {
+       const current = this.binding(binding.sessionId)
+       if (current) {
+@@ -65,9 +67,18 @@ export class MeshSecurityStore {
+     const row = this.store.db.prepare('SELECT tenant_id,binding FROM mesh_session_security WHERE session_id=?').get(sessionId)
+     if (!row) return undefined
+     const value = JSON.parse(String(row.binding)) as SafetyBinding
+-    if (value.sessionId !== sessionId || value.tenantId !== row.tenant_id) throw new Error('Corrupt Session safety binding')
++    if (!validBinding(value) || value.sessionId !== sessionId || value.tenantId !== row.tenant_id) throw new Error('Corrupt Session safety binding')
+     return value
+   }
++  /** A tombstone survives reload and prevents the same Session ID from being reissued. */
++  revokeBinding(tenantId: string, sessionId: string): void {
++    this.store.atomic(() => {
++      const current = this.binding(sessionId)
++      if (!current || current.tenantId !== tenantId) throw new Error('Session binding unavailable')
++      this.store.db.prepare('UPDATE mesh_session_security SET binding=? WHERE session_id=? AND tenant_id=?')
++        .run(JSON.stringify({ ...current, revoked: true }), sessionId, tenantId)
++    })
++  }
+   grant(grant: IdentityGrant): void {
+     if (!grant.tenantId || !grant.actorRef || !Number.isSafeInteger(grant.expiresAt) || !Number.isSafeInteger(grant.version) || grant.version < 1
+         || !Array.isArray(grant.roles) || !grant.roles.every(role => typeof role === 'string' && role.length > 0)) throw new Error('Invalid identity grant')
+diff --git a/upstream/superagent/src/extensions/mesh/service.ts b/upstream/superagent/src/extensions/mesh/service.ts
+index 7364731..1432920 100644
+--- a/upstream/superagent/src/extensions/mesh/service.ts
++++ b/upstream/superagent/src/extensions/mesh/service.ts
+@@ -2,6 +2,7 @@
+ import { MeshAccessDenied, type TrustedIdentityAuthority } from './auth.ts'
+ import { Service, type Context } from '@deepseek-ai/cordis'
+ import { MESH_DEPENDENCIES, type MeshHealth } from './contracts.ts'
++import type { SessionBindingAuthority } from './session-bindings.ts'
+ 
+ declare module '@deepseek-ai/cordis' { interface Context { cognitiveMesh: CognitiveMeshService } }
+ 
+@@ -10,7 +11,12 @@ export class CognitiveMeshService extends Service {
+   readonly securityStatus: (credential: string, hasIdentityClaims?: boolean) => ReturnType<TrustedIdentityAuthority['securityStatus']>
+   readonly health: () => MeshHealth
+   readonly assertReady: () => void
+-  constructor(ctx: Context, config: { lifetime?: AbortSignal; authority?: TrustedIdentityAuthority } = {}) {
++  readonly sessionBinding: (credential: string, sessionId: string, operation: 'issue' | 'restore' | 'revoke') => unknown
++  readonly authorizeRequest: (credential: string, hasIdentityClaims?: boolean) => {
++    check(hasIdentityClaims?: boolean): ReturnType<TrustedIdentityAuthority['securityStatus']>
++    sessionBinding(sessionId: string, operation: 'issue' | 'restore' | 'revoke'): unknown
++  }
++  constructor(ctx: Context, config: { lifetime?: AbortSignal; authority?: TrustedIdentityAuthority; bindings?: SessionBindingAuthority } = {}) {
+     super(ctx, 'cognitiveMesh')
+     this.health = () => {
+       const missing: string[] = MESH_DEPENDENCIES.filter(name => !ctx.get(name))
+@@ -18,11 +24,22 @@ export class CognitiveMeshService extends Service {
+       if (config.lifetime?.aborted) missing.push('runtime-lifetime')
+       return Object.freeze({ state: missing.length ? 'blocked' : 'ready', missing: Object.freeze(missing) })
+     }
+-    this.securityStatus = (credential, hasIdentityClaims) => {
++    this.authorizeRequest = (credential, hasIdentityClaims) => {
+       this.assertReady()
+       if (!config.authority) throw new MeshAccessDenied()
+-      return config.authority.securityStatus(config.authority.authenticate(credential), hasIdentityClaims)
++      const authority = config.authority, context = authority.authenticate(credential)
++      const check = (claims = false) => { this.assertReady(); return authority.securityStatus(context, claims) }
++      check(hasIdentityClaims)
++      return Object.freeze({ check, sessionBinding: (sessionId: string, operation: 'issue' | 'restore' | 'revoke') => {
++        check()
++        if (!config.bindings) throw new MeshAccessDenied()
++        if (operation === 'revoke') { config.bindings.revoke(context, sessionId); return { revoked: true } }
++        if (operation !== 'issue' && operation !== 'restore') throw new MeshAccessDenied()
++        return config.bindings[operation](context, sessionId)
++      } })
+     }
++    this.securityStatus = (credential, claims) => this.authorizeRequest(credential, claims).check()
++    this.sessionBinding = (credential, sessionId, operation) => this.authorizeRequest(credential).sessionBinding(sessionId, operation)
+     this.assertReady = () => {
+       const health = this.health()
+       if (health.state !== 'ready') throw new Error(`CognitiveMesh unavailable: ${health.missing.join(', ')}`)
+diff --git a/upstream/superagent/tests/http.spec.ts b/upstream/superagent/tests/http.spec.ts
+index 3033125..615f67b 100644
+--- a/upstream/superagent/tests/http.spec.ts
++++ b/upstream/superagent/tests/http.spec.ts
+@@ -12,7 +12,7 @@ type Headers = Record<string, string | undefined>
+ /** Mount management HTTP routes on a fake web server and return a request helper that includes default panel headers. */
+ function serve(runtime: Partial<Record<keyof HttpHost, unknown>>, host = '127.0.0.1') {
+   let handler: Handler = async () => {}
+-  const ctx = { get: () => ({ securityStatus: () => ({ tenantId: 'fixture', actorRef: 'admin' }) }), webServer: { host, port: 3082, register: (route: { handler: Handler }) => { handler = route.handler; return () => {} } } }
++  const ctx = { get: () => ({ authorizeRequest: () => ({ check: () => ({ tenantId: 'fixture', actorRef: 'admin' }) }) }), webServer: { host, port: 3082, register: (route: { handler: Handler }) => { handler = route.handler; return () => {} } } }
+   registerHttp(ctx as never, { ready: Promise.resolve(), ...runtime } as unknown as HttpHost)
+   return async (method: string, path: string, body?: unknown, headers: Headers = {}) => {
+     let status = 0, text = ''

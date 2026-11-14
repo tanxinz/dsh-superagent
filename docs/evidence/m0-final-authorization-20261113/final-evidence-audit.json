@@ -1,0 +1,30 @@
+{
+  "evidence_integrity": "PASS",
+  "checks": {
+    "final-auth-checklist-stage": "FAIL",
+    "final-auth-codex-review": "PASS",
+    "final-auth-codex-review-management-only": "PASS",
+    "final-auth-codex-review-reconciled": "PASS",
+    "final-auth-codex-review-recovered": "PASS",
+    "final-auth-full-check-first": "PASS",
+    "final-auth-full-check-management-only": "PASS",
+    "final-auth-full-check-reconciled": "FAIL",
+    "final-auth-full-check-recovered": "PASS",
+    "final-auth-profile-configured": "PASS",
+    "final-auth-profile-dependency": "PASS",
+    "final-auth-profile-final-configured": "PASS",
+    "final-auth-profile-final-dependency": "PASS",
+    "final-auth-profile-final-unconfigured": "PASS",
+    "final-auth-profile-unconfigured": "PASS",
+    "final-auth-regressions-first": "FAIL",
+    "final-auth-regressions-second": "PASS",
+    "final-auth-typecheck-first": "PASS",
+    "management-only-profile-configured": "PASS",
+    "management-only-profile-dependency": "PASS",
+    "management-only-profile-unconfigured": "PASS"
+  },
+  "errors": [],
+  "required_commands_pass": true,
+  "m0_exit": "BLOCKED",
+  "real_session": "NOT_RUN"
+}

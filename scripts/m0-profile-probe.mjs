@@ -133,11 +133,15 @@ try {
     writeFileSync(join(observer, 'index.js'), `export { apply } from ${JSON.stringify(helper)};\n`);
     let fixtureConfig = '';
     if (configuredMode) {
+      // Owned, ephemeral management credential for the native lifecycle observer; never copied to output artifacts.
+      const credentialFile = join(home, 'fixture-management-credential');
+      writeFileSync(credentialFile, env.DSH_MESH_ADMIN_TOKEN, { mode: 0o600 });
       const fixtureCli = join(home, 'fixture-gh');
       writeFileSync(fixtureCli, '#!' + process.execPath + '\nconst args=process.argv.slice(2);\nif(args.join(" ")==="api user") console.log(JSON.stringify({login:"m0-fixture",id:7}));\nelse if(args[0]==="api"&&args[1]==="repos/fixture/m0") console.log(JSON.stringify({name:"fixture/m0",push:true}));\nelse process.exit(70);\n', {mode:0o755});
       report.configured_account = 'FIXTURE_CLI_NOT_REAL_GITHUB';
       report.fixture_cli_sha256 = hash(fixtureCli);
-      fixtureConfig = '        fixtureCli: ' + JSON.stringify(fixtureCli) + '\n';
+      fixtureConfig = '        fixtureCli: ' + JSON.stringify(fixtureCli) + '\n'
+        + '        credentialFile: ' + JSON.stringify(credentialFile) + '\n';
     }
     writeFileSync(join(observer, 'cordis.patch.yml'), '- insert:\n    - id: m0-probe-log\n      name: m0-probe-log\n      config:\n        providerModule: ' + JSON.stringify(providerModule) + '\n        cordisModule: ' + JSON.stringify(cordisModule) + '\n' + fixtureConfig);
   }

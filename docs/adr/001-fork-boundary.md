@@ -31,3 +31,11 @@ M0-05 依赖边界复审追加：Effects 对每个 kind/每个工作项再次检
 允许修改原 Runtime 组合根与 HTTP 就绪 getter/管理认证、原 Sessions 的受限 preset/最终 guard/父链拒绝、原 Store 同步迁移、原管理客户端/CLI 的认证接线；实现模块集中 mesh/auth、security-store、restricted-session、safety。原生数据连接/Engine/Effects 保持单一。只新增已被拒绝/恢复实际使用的最小安全事实，不预建业务表。Runtime 在 OS/网络/绑定路径未验证前保持自动执行关闭，没有生产绕过开关。旧原生业务测试明确 mock 该执行边界，只证明业务回归。完整65文件1252测试与三个原生 profile 模式通过，不宣称业务 Worker 隔离通过。
 
 此增量取代本文早期“未改 Session 权限”的历史描述；最终白名单冻结仍待 M0-14。详见 acceptance/M0-trust-permissions-20261113.md。
+
+## Mac 接续：根 Session 安全绑定
+
+允许增量为 Runtime/Sessions 的受管目标查找与最终递送复查、HTTP 的原始请求上下文保留与受信绑定命令、mesh/session-bindings 的投放/恢复/撤权。沿用原单库 schema2，撤权以原绑定 JSON 的持久 tombstone 表达，不新增业务表或调度器。新模块及测试已登记原架构表；完整67文件1263测试、类型检查/构建及三个真实无模型profile通过。当前只投放受管根Session；子会话、规范化资源和全部Gateway/真实Worker隔离仍待完成，固定OS阻断不能被有效绑定绕过。详见 acceptance/M0-local-bindings-20261113.md。
+
+## 管理命令最终授权增量
+
+原Settings/Setup/SourceContext/Commands/Environment必须将HTTP签发的原授权闭包带到异步校验后的真实Store写入、每个CLI分发、每个环境文件发布和延迟重启。闭包为内部TCB接口，不接受JSON自报身份；原后台路径仅保留其本身的受控生命周期，不继承被撤权的管理操作。环境写入互斥与关闭前drain属于原Setup的文件临界区，不创建第二业务队列。撤权前已提交的事实不伪称回滚，待应用配置仅允许新的管理授权重试；工具/后台保存不得顺带恢复。新增测试已登记007架构表，68文件1278项完整检查和三个真实无模型profile通过。所有源码/失败/复审及剩余边界见 acceptance/M0-final-authorization-20261113.md；M0-14仍未准出。

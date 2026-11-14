@@ -1,0 +1,26 @@
+{
+  "schema_version": 2,
+  "check_id": "final-auth-codex-review",
+  "mode": "OFFLINE_BUILD_OR_TEST",
+  "started_at": "2026-11-13T08:35:17.151228+00:00",
+  "finished_at": "2026-11-13T08:36:50.924720+00:00",
+  "duration_seconds": 93.774,
+  "command": [
+    "codex",
+    "--no-daemon",
+    "review",
+    "--uncommitted"
+  ],
+  "source_commit": "e1bd28add66e95784feaa2b66fa81ddd75a5184a",
+  "exit_code": 0,
+  "timed_out": false,
+  "launch_error": null,
+  "interrupted_signal": null,
+  "status": "PASS",
+  "log": "command.log",
+  "log_sha256": "2bbd614ae42a06a56b845decaf2243bc63cec2e2c3c41d7f23f96e130ab905b4",
+  "lockfile_sha256": null,
+  "online_sdk": "NOT_RUN",
+  "real_session": "NOT_RUN",
+  "m0_exit": "BLOCKED"
+}

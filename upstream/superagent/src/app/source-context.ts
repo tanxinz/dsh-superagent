@@ -30,41 +30,46 @@ export interface SourceContextDeps {
  * Builds the context for one Source kind. Health reports are restricted to entries declared by the kind and
  * bound to the active registration, becoming no-ops once unregistered.
  */
-export function sourceContextOf(deps: SourceContextDeps, kind: { kind: string; health: readonly string[] }): SourceContext {
+export function sourceContextOf(deps: SourceContextDeps, kind: { kind: string; health: readonly string[] }, authorize?: () => void): SourceContext {
   const { store } = deps
   const health = deps.sources.healthEntries(kind.health)
   return {
-    get deployment() { return deps.deployment },
-    commands: deps.commands,
+    get deployment() { authorize?.(); return deps.deployment },
+    commands: authorize ? deps.commands.withAuthorization(authorize) : deps.commands,
     ready: deps.ready,
-    configured: () => deps.configured(),
-    get problem() { return [deps.feishuProblem, deps.setupProblem].find(problem => problem?.place === kind.kind) },
+    configured: () => { authorize?.(); return deps.configured() },
+    get problem() { authorize?.(); return [deps.feishuProblem, deps.setupProblem].find(problem => problem?.place === kind.kind) },
     config: <C extends Record<string, unknown>>(id: string) => {
+      authorize?.()
       const instance = deps.sources.instance<C>(id)
       return instance?.enabled ? instance.config : undefined
     },
-    receive: trigger => deps.receive(trigger),
-    atomic: work => store.atomic(work),
+    receive: trigger => { authorize?.(); return deps.receive(trigger) },
+    atomic: work => {
+      authorize?.() // Reject and persist the audit before entering a transaction which would roll it back.
+      return store.atomic(() => { authorize?.(); return work() })
+    },
     state: {
-      get: name => store.get(name),
-      set: (name, value) => { if (value === undefined) store.delete(name); else store.set(name, value) },
-      keys: prefix => store.keys(prefix),
+      get: name => { authorize?.(); return store.get(name) },
+      set: (name, value) => { authorize?.(); if (value === undefined) store.delete(name); else store.set(name, value) },
+      keys: prefix => { authorize?.(); return store.keys(prefix) },
     },
     threads: {
-      get: key => store.threads.get(key),
-      subscribed: source => store.read.subscribedThreads(source),
-      describe: (key, description) => store.threads.describe(key, description),
-      patch: (key, meta) => { store.threads.patchMeta(key, meta) },
+      get: key => { authorize?.(); return store.threads.get(key) },
+      subscribed: source => { authorize?.(); return store.read.subscribedThreads(source) },
+      describe: (key, description) => { authorize?.(); return store.threads.describe(key, description) },
+      patch: (key, meta) => { authorize?.(); store.threads.patchMeta(key, meta) },
     },
     tickets: {
-      get: id => store.tickets.get(id),
-      open: () => store.tickets.open(),
-      bindThread: (id, thread, own) => { deps.engine.bindThread(id, thread, own) },
-      threadClosed: (thread, outcome, at) => { deps.engine.threadClosed(thread, outcome, at) },
+      get: id => { authorize?.(); return store.tickets.get(id) },
+      open: () => { authorize?.(); return store.tickets.open() },
+      bindThread: (id, thread, own) => { authorize?.(); deps.engine.bindThread(id, thread, own) },
+      threadClosed: (thread, outcome, at) => { authorize?.(); deps.engine.threadClosed(thread, outcome, at) },
     },
-    triggers: { get: id => store.triggers.get(id), latest: thread => store.read.threadTriggers(thread, 1)[0] },
-    notify: message => { deps.outbox.send(message) },
+    triggers: { get: id => { authorize?.(); return store.triggers.get(id) }, latest: thread => { authorize?.(); return store.read.threadTriggers(thread, 1)[0] } },
+    notify: message => { authorize?.(); deps.outbox.send(message) },
     report: (entry, value) => {
+      authorize?.()
       if (!kind.health.includes(entry)) throw new Error(`The ${kind.kind} Source has no health entry ${entry}`)
       health.get(entry)?.set(value)
     },

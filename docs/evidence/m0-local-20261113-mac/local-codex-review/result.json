@@ -1,0 +1,25 @@
+{
+  "schema_version": 2,
+  "check_id": "local-codex-review",
+  "mode": "OFFLINE_BUILD_OR_TEST",
+  "started_at": "2026-11-13T04:53:33.073800+00:00",
+  "finished_at": "2026-11-13T04:53:33.386114+00:00",
+  "duration_seconds": 0.312,
+  "command": [
+    "codex",
+    "review",
+    "--uncommitted"
+  ],
+  "source_commit": "1475ffa241f89ff806c9d5e01684ffa50bd0e246",
+  "exit_code": 1,
+  "timed_out": false,
+  "launch_error": null,
+  "interrupted_signal": null,
+  "status": "FAIL",
+  "log": "command.log",
+  "log_sha256": "2d8b902fb51c4fb0108c58a40b037f3ed52641f00cdae67901d7cbda9b4b8473",
+  "lockfile_sha256": null,
+  "online_sdk": "NOT_RUN",
+  "real_session": "NOT_RUN",
+  "m0_exit": "BLOCKED"
+}

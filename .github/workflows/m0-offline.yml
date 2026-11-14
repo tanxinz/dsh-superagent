@@ -1,9 +1,16 @@
 name: M0 offline review and build
 
 on:
+  # Pull requests that only change Markdown are checked by docs-review.yml.
+  # Any non-Markdown change (including code, tests, CI, dependencies or config)
+  # still triggers the complete original M0 matrix.
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore:
+      - '**/*.md'
+  # Preserve the manual full-validation route for document PRs and M0 release gates.
   workflow_dispatch:
+
 
 env:
   DSH_TELEMETRY_DISABLED: '1'
@@ -130,7 +137,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - label: baseline
+          # Exact upstream commit remains fixed; only the expired test fixture is patched.
+          - label: baseline-fixture-patched
             sha: e8f7b93a344964de3dca1ace9e72b6e4d6de87cb
           - label: matching-release-candidate
             sha: d743267388641bc76f17c45ce8b4c231aed1d32c
@@ -154,6 +162,19 @@ jobs:
         run: |
           test "$(git -C harness-under-test rev-parse HEAD)" = "$EXPECTED_SHA"
           node -e "const p=require('./harness-under-test/package.json'); if(p.packageManager!=='pnpm@11.28.5') process.exit(1)"
+      - name: Apply date-only fixture patch and record original upstream SHA (baseline only)
+        if: matrix.label == 'baseline-fixture-patched'
+        run: |
+          python scripts/ci_record.py --id harness-fixture-patch --cwd harness-under-test --output artifacts --timeout 60 -- bash -euc '
+            test "$(git rev-parse HEAD)" = "e8f7b93a344964de3dca1ace9e72b6e4d6de87cb"
+            patch="$PWD/../patches/harness-baseline-liveshare-horizon-relative-dates.patch"
+            sha256sum "$patch"
+            git apply --check "$patch"
+            git apply "$patch"
+            test "$(git diff --name-only)" = "packages/experimental/liveshare/tests/owner-credential-horizon.host.spec.ts"
+            git diff --exit-code -- package.json pnpm-lock.yaml
+            git diff --check
+          '
       - name: Frozen install
         run: python scripts/ci_record.py --id harness-install --cwd harness-under-test --output artifacts --timeout 1200 -- npm exec --yes --package=pnpm@11.28.5 -- pnpm install --frozen-lockfile
       - name: Prepare and probe upstream Linux sandbox
@@ -171,16 +192,38 @@ jobs:
             artifacts/**/command.log
             artifacts/**/result.json
           if-no-files-found: error
-      - name: Complete original unit test command
+      - name: Full pnpm test on fixture-patched locked baseline (NOT unmodified baseline)
+        if: matrix.label == 'baseline-fixture-patched'
+        run: python scripts/ci_record.py --id harness-test-patched --cwd harness-under-test --output artifacts --timeout 2400 -- npm exec --yes --package=pnpm@11.28.5 -- pnpm test
+      - name: Original full pnpm test on untouched matching candidate
+        if: matrix.label == 'matching-release-candidate'
         run: python scripts/ci_record.py --id harness-test --cwd harness-under-test --output artifacts --timeout 2400 -- npm exec --yes --package=pnpm@11.28.5 -- pnpm test
-      - name: Verify dependency files stayed frozen
-        if: always()
-        run: git -C harness-under-test diff --exit-code -- package.json pnpm-lock.yaml
-      - name: Audit full logs and exact Harness revision
+      - name: Verify exact source, expected patch scope, and immutable dependencies
         if: always()
         env:
           EXPECTED_SHA: ${{ matrix.sha }}
-        run: python scripts/evidence_audit.py artifacts --source "$EXPECTED_SHA" --require harness-install --require harness-sandbox-setup --require harness-build --require harness-workflow-regression --require harness-test --output artifacts/evidence-audit.json
+          ROLE: ${{ matrix.label }}
+        shell: bash
+        run: |
+          test "$(git -C harness-under-test rev-parse HEAD)" = "$EXPECTED_SHA"
+          git -C harness-under-test diff --exit-code -- package.json pnpm-lock.yaml
+          if [ "$ROLE" = "baseline-fixture-patched" ]; then
+            test "$(git -C harness-under-test diff --name-only)" = "packages/experimental/liveshare/tests/owner-credential-horizon.host.spec.ts"
+          else
+            git -C harness-under-test diff --exit-code
+          fi
+      - name: Audit full logs and immutable Harness revision (patch recorded separately)
+        if: always()
+        env:
+          EXPECTED_SHA: ${{ matrix.sha }}
+          ROLE: ${{ matrix.label }}
+        shell: bash
+        run: |
+          if [ "$ROLE" = "baseline-fixture-patched" ]; then
+            python scripts/evidence_audit.py artifacts --source "$EXPECTED_SHA" --require harness-fixture-patch --require harness-install --require harness-sandbox-setup --require harness-build --require harness-workflow-regression --require harness-test-patched --output artifacts/evidence-audit.json
+          else
+            python scripts/evidence_audit.py artifacts --source "$EXPECTED_SHA" --require harness-install --require harness-sandbox-setup --require harness-build --require harness-workflow-regression --require harness-test --output artifacts/evidence-audit.json
+          fi
       - name: Upload offline evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

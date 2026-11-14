@@ -1,5 +1,6 @@
 // Test-only observer for temporary native profiles. Optional account replies are an owned CLI Fixture, never real credentials.
 import { setTimeout as delay } from 'node:timers/promises';
+import { readFileSync } from 'node:fs';
 
 const canonical = value => JSON.stringify(value, (_key, item) => item && typeof item === 'object' && !Array.isArray(item)
   ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b))) : item);
@@ -38,6 +39,8 @@ export async function apply(ctx, config) {
   async function cycle(previous, runtime) {
     previous.assertReady();
     let configuredSession;
+    let binding, bindingAlreadyRevoked = false;
+    const credential = config.fixtureCli ? readFileSync(config.credentialFile, 'utf8') : undefined;
     if (config.fixtureCli) {
       if (!runtime.configured() || runtime.health.runtime.state !== 'paused') throw new Error('Configured fixture did not enter its safety hold');
       const id = runtime.masterId;
@@ -45,6 +48,19 @@ export async function apply(ctx, config) {
       const second = await runtime.sessions.ensure(id, runtime.machine.stateDir, 'M0 fixture role switch', 'worker');
       const service = ctx.get('permissionPresets');
       if (first !== second || service.current(first.session) !== 'read-only') throw new Error('Real Session permissions or same-ID resolution changed');
+      const row = runtime.store.db.prepare('SELECT binding FROM mesh_session_security WHERE session_id=?').get(id);
+      bindingAlreadyRevoked = !!row && JSON.parse(row.binding).revoked === true;
+      if (bindingAlreadyRevoked) {
+        for (const operation of ['issue', 'restore']) {
+          let refused = false;
+          try { previous.sessionBinding(credential, id, operation); } catch { refused = true; }
+          if (!refused) throw new Error('A revoked native Session binding became usable after process restart');
+        }
+      } else {
+        binding = previous.sessionBinding(credential, id, 'issue');
+        const restored = previous.sessionBinding(credential, id, 'restore');
+        if (canonical(binding) !== canonical(restored)) throw new Error('Native Session binding changed on restore');
+      }
       let entered = 0;
       const release = first.ctx.tools.register({ name: 'm0_owned_probe', description: 'Harmless owned counter', parameters: {type:'object',properties:{}},
         output:{schema:{type:'number'},render:()=>[]}, execute:async()=>++entered });
@@ -58,7 +74,8 @@ export async function apply(ctx, config) {
       if (!overrideRefused) throw new Error('Broad Session override was accepted');
       runtime.effects.enqueue('m0-owned-fixture','persisted',{fixture:true});
       await ctx.get('sessionPersistence').flush();
-      configuredSession = { id, preset:service.current(first.session), sameId:true, roleSwitchRestricted:true, overrideRefused, toolBodyEntries:entered, nativeToolDenied:result.isError, modelRequest:first.session.requestHeader() ? 'UNEXPECTED' : 'NOT_RUN' };
+      configuredSession = { id, preset:service.current(first.session), sameId:true, roleSwitchRestricted:true, overrideRefused, toolBodyEntries:entered, nativeToolDenied:result.isError,
+        bindingIssued: !!binding, revokedBindingSurvivedProcessRestart: bindingAlreadyRevoked, modelRequest:first.session.requestHeader() ? 'UNEXPECTED' : 'NOT_RUN' };
       if (configuredSession.modelRequest !== 'NOT_RUN') throw new Error('Unexpected model request');
     }
     const owned = providers();
@@ -92,6 +109,15 @@ export async function apply(ctx, config) {
       const next = ctx.get('orchestrator'); await next.ready;
       const agent = await next.sessions.ensure(next.masterId,next.machine.stateDir,'M0 restored fixture','orchestrator');
       if (next.masterId !== configuredSession.id || ctx.get('permissionPresets').current(agent.session) !== 'read-only') throw new Error('Restored native Session lost its restriction');
+      if (binding) {
+        const recovered = restored.sessionBinding(credential, agent.id, 'restore');
+        if (canonical(recovered) !== canonical(binding)) throw new Error('Native binding changed across dependency restoration');
+        restored.sessionBinding(credential, agent.id, 'revoke');
+        let revokedRefused = false;
+        try { restored.sessionBinding(credential, agent.id, 'restore'); } catch { revokedRefused = true; }
+        if (!revokedRefused) throw new Error('Revoked native binding was accepted');
+        configuredSession = { ...configuredSession, bindingRecoveredUnchanged:true, bindingRevoked:true };
+      }
       const row = next.store.db.prepare("SELECT kind,key FROM effect WHERE kind='m0-owned-fixture' AND key='persisted'").get();
       if (!row) throw new Error('Durable fixture Effect was lost on dependency reload');
       configuredSession = {...configuredSession, restoredRestricted:true, persistedEffectRetained:true, automaticProcessing:'BLOCKED_ISOLATION'};

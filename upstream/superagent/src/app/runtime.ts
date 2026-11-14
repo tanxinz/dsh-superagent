@@ -4,6 +4,7 @@ import { createHash, randomUUID, timingSafeEqual } from 'node:crypto'
 import { TrustedIdentityAuthority } from '../extensions/mesh/auth.ts'
 import { LocalSafetyGate } from '../extensions/mesh/safety.ts'
 import { MeshSecurityStore } from '../extensions/mesh/security-store.ts'
+import { SessionBindingAuthority } from '../extensions/mesh/session-bindings.ts'
 import { CognitiveMeshService } from '../extensions/mesh/service.ts'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import type { SessionId } from '@deepseek-ai/dsh-session'
@@ -100,7 +101,7 @@ export class Runtime extends Service implements SourceHost {
     this.releaseLock = async () => { release() }
     let opened: Store | undefined
     try {
-      const meshConfig: { lifetime: AbortSignal; authority?: TrustedIdentityAuthority } = { lifetime: this.lifetime }
+      const meshConfig: { lifetime: AbortSignal; authority?: TrustedIdentityAuthority; bindings?: SessionBindingAuthority } = { lifetime: this.lifetime }
       const mesh = new CognitiveMeshService(ctx, meshConfig)
       mesh.assertReady()
       const report = (error: unknown) => { ctx.logger.warn('dsh-superagent: %s', String(error)) }
@@ -153,9 +154,10 @@ export class Runtime extends Service implements SourceHost {
         feishuPageSize: () => feishuSettings(sources).readPageSize, sourceLink: link }
       const sessions = this.sessions = new Sessions({ context: ctx, store, prompts, effects, health: board.claim('models'), masterId,
         lifetime: this.lifetime, executionReady: () => this.safetyGate.executionReady(),
-        toolRefusal: (agent, name) => this.safetyGate.refusal(agent.id, name, `session:${agent.id}`, 'SANDBOX'),
+        toolRefusal: (agent, name) => this.safetyGate.refusal(agent.id, name, `session:${agent.id}`, 'SANDBOX', true),
         closing: () => this.closing(), environment,
         tools: (agent, ticket) => ticket ? executorTools(this.toolHost, ticket) : mainTools(this.toolHost, agent) })
+      meshConfig.bindings = new SessionBindingAuthority(authority, safety, this.safetyGate, id => sessions.safetyTarget(id))
       const policyChanged: EngineForSettings['policyChanged'] = (from, to, effects) => { this.engine.policyChanged(from, to, effects) }
       this.settings = new Settings({ store, sources, engine: { policyChanged }, health: board, context: ctx, lifetime: this.lifetime, sessions,
         sourceHost: this, setup, requestPass: () => { this.passes.request() } })
@@ -208,7 +210,7 @@ export class Runtime extends Service implements SourceHost {
   get health(): Readonly<Record<string, Health>> { return this.board.all }
   /** Aborted when dsh-superagent stops or loses its state directory lock, cancelling running reads and subprocesses. */
   get lifetime(): AbortSignal { return this.stopped.signal }
-  context(kind: { kind: string; health: readonly string[] }): SourceContext { return sourceContextOf(this.sourceDeps, kind) }
+  context(kind: { kind: string; health: readonly string[] }, authorize?: () => void): SourceContext { return sourceContextOf(this.sourceDeps, kind, authorize) }
   /** Resolved deployment; throws while waiting for setup (`!configured()`). */
   get deployment(): Deployment { return this.setup.deployment }
   configured(): boolean { return this.setup.configured() }
@@ -225,7 +227,7 @@ export class Runtime extends Service implements SourceHost {
     const { setup: { deployment }, sources } = this
     return ticketEnvironment({ deployment, sources, settings: this.store.settings(), ticket, ...trigger ? { trigger } : {} })
   }
-  checkSetup(): void { this.setup.check() }
+  checkSetup(authorize?: () => void): void { this.setup.check(authorize) }
   receive(trigger: Trigger): ReceiveResult { this.requireMesh(); return this.passes.receive(trigger) }
   idle(): Promise<void> { return this.passes.idle() }
   pump(): Promise<void> { return this.passes.pump() }
@@ -275,7 +277,7 @@ export class Runtime extends Service implements SourceHost {
       get deployment() { return setup.deployment },
       get setupProblem() { return setup.problem }, get feishuProblem() { return setup.feishuProblem },
       configured: () => setup.configured(), links: () => runtime.links(), ticketEnvironment: ticket => runtime.ticketEnvironment(ticket),
-      checkSetup: () => { setup.check() }, requestPass: () => { passes.request() }, models: () => this.ctx.sessionController.modelCatalog() }
+      checkSetup: authorize => { setup.check(authorize) }, requestPass: () => { passes.request() }, models: () => this.ctx.sessionController.modelCatalog() }
   }
   /** Idempotent stop; concurrent or repeated calls share the same shutdown promise. */
   stop(): Promise<void> { return this.stopping ??= this.shutdown() }
@@ -295,6 +297,7 @@ export class Runtime extends Service implements SourceHost {
       await this.ctx.sessionPersistence.flush()
     } finally {
       // Close the database before releasing the directory lock so another process cannot open the database mid-write; a compromised lock may already be released.
+      await this.setup.idle()
       this.setup.restore()
       try { this.store.close() } finally {
         const unreleased = (error: unknown) => { this.ctx.logger.warn('dsh-superagent could not release its state directory lock: %s',

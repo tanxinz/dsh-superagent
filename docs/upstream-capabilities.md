@@ -95,3 +95,12 @@ contracts.ts 的 11 项依赖与 Bundle inject 共享。此处只验证服务可
 - **Schedule**：Host 先保存 Session inbox 后保存 receipt，中间崩溃可能重复投递；必须由业务稳定周期标识及 Engine 幂等处理。Browser MCP 进程在 Session 启动目录启动，后续目录改变不会迁移，不能替代 OS/网络隔离。
 
 本轮只完成公开官方源码核查及设计问题登记；相关运行负例依旧 `NOT_RUN`。参见 [复审记录](reviews/V1.2-DeepSeek-Harness-Static-Review-20261114.md)。
+
+### 第三轮外部反馈：上游限制（2026-11-14）
+
+- **Stagehand Native**：使用独立模型与 API Key，推理和费用不纳入 DSH Session 统计；取消不保证本次推理终止，rc.3 不支持 DeepSeek endpoint/baseURL。业务默认禁用。
+- **Web 最终派发**：WebRuntime 在调用时选择 Provider，DeepSeek Transport 内异步解析凭据/endpoint；当前公共接口无原子业务许可入参。需固定配置的隔离执行域与实际网络出口控制，或经独立验证的最终派发 Gate；不能用预检查代替实际发网验证。
+- **Schedule 手动执行**：runNow() 每次重新生成 occurrenceAt，没有业务 manualExecutionRequestId 参数。必须先持久化人工请求身份，再由 Engine/Effects 去重；未实测时禁止手动调度触发可写业务。
+- **阶段与功能门禁**：可选能力的实际启用需对应 V12-01B、V12-03C、V12-08C、V12-09B、V12-10B、V12-GATE 安全恢复验收，全部 NOT_RUN。
+
+官方源码：[Stagehand Native](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.2-rc.3/packages/experimental/browser-use-stagehand-native/README.md)、[WebRuntime](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.2-rc.3/packages/web/web/src/index.ts)、[Web Transport](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.2-rc.3/packages/web/web-deepseek-api/src/transport.ts)、[Schedule Runtime](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.2-rc.3/packages/schedule/schedule/src/runtime.ts)。

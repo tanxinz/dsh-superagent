@@ -81,10 +81,10 @@
 ### 2.1.2 第二轮复审：Web 的三条执行路径与默认隐性数据外送
 
 1. **Harness 模型 Web 工具**：通过 `web_search/web_fetch` 进入 ToolRuntime，可使用 `ctx.tools.guard()` 作为最终工具拒绝；模型工具仍需要网络目的地限制。
-2. **业务代码直接调用 `ctx.web.search()/fetch()`**：直接 Service 调用不得假设自动经过 ToolRuntime/ToolGuard。必须由现有 Runtime 中的受信 `EvidenceGateway` 逻辑在实际发出前检查租户、actor、来源请求、数据等级、目标、最终 provider/endpoint、credentialRef、预算与实时撤权 epoch；此 Gateway 不是新 HTTP 客户端、Engine、队列或数据库。配置变化导致授权快照与实际派发不一致时拒绝。
+2. **业务代码直接调用 `ctx.web.search()/fetch()`**：直接 Service 调用不得假设自动经过 ToolRuntime/ToolGuard。必须先经过受信 `EvidenceGateway` 的身份、外送范围与预算准入；但 **rc.3 的 `ctx.web` 服务接口不接受不可变的 provider/endpoint/credential 授权凭据，也不证明业务预检查与内部派发使用同一快照**。因此新增能力在满足 §5.1.3 的受控静态运行域或可证明最终拦截前，保持 `DISABLED/FIXTURE_ONLY`，绝不能把调用前配置检查当作已解决竞态。`EvidenceGateway` 为现有 Runtime 的逻辑步骤，不是新 HTTP 客户端、Engine、队列或数据库。
 3. **DeepSeek 服务端 `deepseek_web_search/deepseek_read_url`**：执行发生在模型服务端，不经本地 ToolRuntime；只能按显式模型路由允许低敏研究，不能视为已经完成本地逐工具审批。
 
-**新增 P0 风险**：rc.3 `@deepseek-ai/dsh-web-deepseek-api` 的 `sendOriginalQuestion` **默认 `true`**，会把最近人工提问前 128 字符作为 `ori_question` 发往 Search API；仅脱敏 `query` 仍会泄露原问题。企业受控路线必须显式设置 `sendOriginalQuestion: false`，并以 HTTP 夹具检查真实请求体缺失 `ori_question`。`searchBilling/fetchBilling: auto` 会随会话模型路由、账号/API Key 解析，必须按最终实际 provider、endpoint、凭据/计费来源复核授权。
+**新增 P0 风险**：rc.3 `@deepseek-ai/dsh-web-deepseek-api` 的 `sendOriginalQuestion` **默认 `true`**，会把最近人工提问前 128 字符作为 `ori_question` 发往 Search API；仅脱敏 `query` 仍会泄露原问题。企业受控路线必须显式设置 `sendOriginalQuestion: false`，并以 HTTP 夹具检查真实请求体缺失 `ori_question`。`searchBilling/fetchBilling: auto` 会随会话模型路由、账号/API Key 解析，必须依照 §5.1.3 证明**实际派发**的 provider、endpoint、凭据/计费来源属于批准范围；不能只凭派发前的配置读取作出该结论。
 
 ### 2.2 SuperAgent：业务领域核心与扩展位置
 
@@ -393,6 +393,23 @@ function commitPlanSync(input: VerifiedPlanInput): CommitPlanResult {
 权限检查由受信业务边界和工具/网络限制共同执行；`EvidenceCapture` 不可自带直连隐藏后门或伪造 `TrustedCommandContext`。在 M0 仅完成静态契约和离线 Fixture，正式接入以该阶段上游公共接口、费用和审计证据实测为前提。禁止在 `Store.atomic()` 回调内执行 Web / 模型 / OCR 网络请求。
 
 **只读与写入身份不能混用（V1.2 复审）**：`TrustedRequestContext` 在 §14.4 定义为只读请求的受信身份契约；§5.1 的 `TrustedCommandContext` 是 Engine 写入命令的独立受信输入。二者都须服务端验证并绑定同一真实租户/actor，不能从 LLM/HTTP Body 自报构造。`TrustedRequestContext` **不足以写入** ActionRun；`EvidenceCapture` 直调 `ctx.web` 必须经显式 `EvidenceGateway` 校验而不是假设 ToolGuard 自动覆盖。
+
+### 5.1.3 Web 网络派发的可实施绑定与故障关闭（V1.2 第三轮复审）
+
+**上游限制（源码已核对，组合未测）**：rc.3 `WebRuntime.search()/fetch()` 在调用时才通过 `selectSearchProvider()/selectFetchProvider()` 读取当前可变配置；DeepSeek Provider 的 `dispatchDeepSeekWeb()` 又异步解析密钥和最终 endpoint 后才发出 `fetch()`。公开 `ctx.web` 接口没有“业务审批决定 + 不可变最终 endpoint/凭据绑定”的入参，也没有可由 SuperAgent 完全证明的统一 pre-dispatch Gate。Transport 内部 `waitToSend/recordRequest` 不是已公开的领域授权接口，不能当作所有 Provider 的通用安全钩子。
+
+**优先实现的方案 A（锁版隔离静态执行域，不改上游网络栈）**：
+
+1. 在单独受限容器/进程的固定 profile 中，**只装配一个经批准的 Web Provider**，锁定 Search 与 Fetch 的 Provider ID、最终 base URL、固定计费方式/凭据来源，禁止运行中改配置、热替换或账号路由回退。实际配置及启动环境由部署者控制；不为不可信 Worker 开放 Provider 设置 API、修改环境、读取凭据或任意直接网络出口。
+2. 业务请求首先取得受信 `EvidenceGateway` 只读批准，记录 `authorizationRef/actor/tenant/dataClass/providerId/endpointOrigin/credentialIdentityRef/egressPolicyVersion/budgetRef/revocationEpoch`。此处的身份引用**不是明文 API Key**；业务批准与供应商请求计费、出站审计分别留证。
+3. 通过**不可绕过的出站网络策略/固定代理**将该执行域限制在被批准的目标端点和目的地；验证 HTTPS、重定向、DNS/IP、代理通道及进程级旁路阻断。对于直接 `ctx.web` 与模型侧 `web_search/web_fetch` 均应走同一受限执行域，或分别证明每条真实出口受同等约束。
+4. 安全策略和凭据轮换期间应先暂停接纳新请求/排空或终止旧执行域，再创建经新审批的执行域；中途被撤权的在途网络请求不能声称可自动撤回，须审计并对账。不能证明配置不可变、凭据来源固定及网络边界有效时，**关闭该 Provider 的真实调用**，仅允许离线 Fixture。
+
+**方案 B（仅在需要动态 Provider 时另立隔离验证分支）**：通过锁版最小扩展让 WebRuntime/Provider 向受信最终派发策略传入**已选 Provider ID、请求/数据级别、真实 endpoint origin、凭据引用/类型（不含明文）、预算与撤权 epoch**，在真正发网之前执行原子一致性校验，拒绝未经批准的变化；还须对任何其他 Provider / API / 网络旁路设置隔离。它是**拟新增接口，不是现成 Harness 公共 API**；没有编译、竞态探针、网络阻断和多 Provider 回归证据前禁止使用。不得为实现方案 B 新建第二业务队列/Engine，也不得提前升级 Harness gitlink。
+
+**必测竞态与不可推定能力**：在 Gate 通过后、Provider 选择前切换配置；在凭据异步解析时更换账号或同一 `credentialRef` 内容；在 Provider 已选后改变 endpoint；在取消/撤权与实际发出间制造竞争；绕过 `ctx.web` 直接调用底层 HTTP；模型工具独立路径。记录发网次数、捕获 endpoint/凭据**类型及引用**、策略版本和拒绝证明，**不记录密钥内容**。若任一可写/敏感数据路径无法证明最终出站等同批准值，则 fail-closed。
+
+**结论**：用户界面、Markdown 配置、业务“发出前检查”都不是实际网络策略的证明。只有静态隔离执行域 + 实际出口验证，或经过单独审查与真实运行验证的最终派发拦截，才能使 Web 能力从 `FIXTURE_ONLY` 申请 `READY_READONLY`。只读 ≠ 可无约束外送；任何真实外送都须先通过本功能准入。
 
 ### 5.2 Cordis 服务与扩展领域桥接
 
@@ -967,6 +984,10 @@ M2 可先做无凭据、只读截图与导航 Fixture；表单提交、删除、
 
 **浏览器隔离补充**：实验性 Playwright MCP 的 Browser 进程在 Session 验证的工作目录启动，后续切换 Session 目录不迁移进程；恢复 Session 不恢复页面/登录态。Browser 必须使用专用容器/用户、无生产密钥、最小挂载与出网约束。工具 schema 随提供方版本变化，Provider 断连、初始化失败、取消已发动作与外部附着跨进程竞争均需负向验证。
 
+**Stagehand Native 的单独模型出站（本轮新增 P1-1）**：rc.3 `@deepseek-ai/dsh-experimental-browser-use-stagehand-native` 的 `stagehand_act/observe/extract` 由 Stagehand 浏览器扩展调用**独立配置的模型、API Key、可选 headers**；这些 Token/请求不进入 Harness 主 Session 模型路由、原生凭据复用或使用量统计，且当前 Stagehand Native 不支持 DeepSeek endpoint/baseURL 自定义。取消不保证原生模型推理停止，配置中的模型在导航-only 模式也必填。为避免第二隐性外送通道，**Stagehand 默认不装配，能力状态为 `DISABLED`**；M2/M5 演示优先选择不含独立推理的隔离 Playwright MCP Fixture。
+
+如以后确需 Stagehand，必须单独完成：固定上游原生模型 provider/model/endpoint/凭据归属和审批、网页/DOM/截图/输入传给模型的最小化与密级验证、独立 API 请求数量/时限/费用预算和费用核对、受控代理与密钥隔离、模型取消后仍可能继续出站或操作的故障对账；保留独立的推理请求/响应与使用量审计（脱敏）。未完成全部证明只能在无敏感数据、专用临时账户的隔离 Fixture 中探索，不能标记为业务 `READY_READONLY` 或 `READY_WRITE`。
+
 ## 11. L5 治理、Watchdog 与准出（5A / 5B / 5C）
 
 ### 11.1 5A：Authority & Mandate Gate
@@ -1147,7 +1168,7 @@ Session 绑定启用部分唯一约束，父 Session 结束/撤权时对所有�
 - Schedule 到期投递仅表示 Session inbox 有持久消息；若需业务执行，必须用稳定来源/周期键经 Engine 去重、检查 Mandate 和当前安全版本。Schedule 既不是业务队列，也不提供跨业务系统的恰好一次执行保证。
 - DeepSeek 服务端工具的搜索结果/引用、Fetch Markdown、OCR 文本与模型最终回答必须分别归档证据等级；HTTP `200`、流式片段或 `safety_check` 非拒绝不能作为“任务成功”或“执行许可”。
 
-**Schedule 恢复故障窗口**：Host 可先完成 Session inbox 持久写入，后写 Schedule receipt；中途崩溃可能造成重复投递。业务去重必须采用可信 `scheduleTaskId + scheduledAt` 或等效稳定周期来源，而不是本次 `messageId`。取得不了稳定来源身份时仅允许只读提醒，不得由重复定时消息触发可写 ActionRun；收到任务≠任务完成。
+**Schedule 定时与手动执行需要不同的恢复身份**：Host 先完成 Session inbox 持久写入，后写 Schedule receipt，中途崩溃可能重复投递。**自动定时**仅在权威计划周期稳定且可由受信入口核验时，使用 `scheduleTaskId + authoritativeOccurrenceAt`（结合租户/来源）作业务去重；不能用本次 `messageId` 冒充周期身份。**人工 `runNow()`** 在每次实际调用时生成新的 `occurrenceAt = Date.now()`，重试的时间不同，因此不得使用 `scheduleTaskId + scheduledAt` 判定同一人工业务操作。人工请求须先由受信入口**持久化** `manualExecutionRequestId` 与业务范围，再使用同一 ID 通过 Engine/Effects 处理可写 ActionRun；原生 Schedule `runNow()` 当前不接收该 ID，也不保证可靠关联传给 inbox，**禁止直接通过它派发可写业务**。如以后接入受信关联 Envelope，需分别验证创建、持久 Inbox、receipt 失败、重启后识别同一 ID 及新的真实人工请求不得混同；未经实现/验证仍保持只读通知与人工处理。
 
 ## 14. 插件生命周期、配置与可运维性
 
@@ -1520,6 +1541,25 @@ M0—M5 不要求大规模吞吐、复杂审批、生产渠道送达、正式环
 | V12-09 | Schedule 投递回执与 Engine 业务完成分离；同周期重复触发不产生重复副作用 |
 | V12-10 | 模型/查询/网页/OCR 用量预算、异常退避、取消与日志脱敏生效，且不把测试 Mock 冒称真实在线服务 |
 
+### 16.7 两级准出：项目阶段与可选功能的独立启用许可（V1.2 第三轮复审）
+
+**两套状态不可互相推导**：
+
+- **项目阶段状态**：维持 M0—M5 / G0—G5 的原有依赖、必须完成任务与退出条件；未通过 M0-14 仍禁止 M1 运行集成。
+- **功能准入状态**（拟新增设计状态，非已存在代码）：`DISABLED`（默认无真实调用）、`FIXTURE_ONLY`（隔离无敏感数据）、`READY_READONLY`（仅批准的可审计只读/外送）、`READY_WRITE`（另经业务 Effect/Attempt/授权/对账实测的副作用）。状态必须绑定 `capabilityId + executionMode + upstreamCommit + providerConfigDigest + egressPolicyVersion + requiredCaseRefs + reviewedEvidenceRefs`；配置、版本、路由、隔离边界发生变化须重新评审并降级，不能继续沿用旧 PASS。
+
+**准出规则**：某 M 阶段通过，只代表该阶段规定的必选能力通过。新增的 Web、Stagehand、Browser、AgentTeam、Schedule 功能在其首次真实启用**之前**，必须通过与其模式相关的 V12 子例、静态配置审核、动态安全/恢复测试及独立审核；不是“全部 V12 项必须在 M0 通过”。不满足时保持 `DISABLED/FIXTURE_ONLY`，禁止仅因 M2 或 M5 完成就自动晋级。阶段任务如显式依赖某功能才能达到该阶段真实出口，则须在**该能力真正启用的同一模式**完成其子例；无法完成则保留该阶段对应任务未完成，不可用 Mock 结果冒充真实模式。
+
+| 能力/模式 | 默认 | 首次业务使用前的最低对应 V12 子例 | 验证未完成时 |
+| --- | --- | --- | --- |
+| Web Search/Fetch 本地模型工具或 `ctx.web` 直调 | `DISABLED`（离线 Fixture 除外） | V12-01/01B、02、03/03C、04/05、10：Provider 配置绑定、最终网络出口、异常/来源/预算 | 只允许离线 Fixture；不可向真实外网发敏感请求 |
+| DeepSeek 服务端自动 Web Tools | `DISABLED` | V12-03/03C 与模型路由出站负例及来源/隐私测试 | 禁止该模型路由启用服务端联网 |
+| Playwright MCP Browser（无独立模型） | `FIXTURE_ONLY`（仍需安全隔离） | V12-02、08/08B、10；如可写再加 M2 Effect/Permit 及恢复门禁 | 不允许有凭据/外部副作用 |
+| Stagehand Native（独立模型） | **`DISABLED`** | V12-08C、10B，独立模型出站与调用后预算/取消、凭据与内容审计；可写另验 ActionRun | 仅专用无敏感数据 Fixture 且有显式试验批准 |
+| Schedule 自动 / 手动 | `DISABLED`（可单独开只读通知） | V12-09/09B，自动周期 / 手动受信请求身份与 inbox/receipt 崩溃重试 | 只读提醒；手动 `runNow()` 不得派发可写 |
+
+**两处判定不能混淆**：文档评审通过不等于上述功能准入已 PASS；PR #14 的 CI 即使通过，也仅属于其实际执行的测试和提交，不自动满足 V12。现有 100 项任务和原阶段出口保持不变，本节只是启用**可选**能力之前的强制条件。
+
 ## 17. 工程依赖、风险控制与交付门槛
 
 | 风险 | 级别 | 控制与需验证项 |
@@ -1665,6 +1705,10 @@ M0—M5 不要求大规模吞吐、复杂审批、生产渠道送达、正式环
 ### 17.10 V1.2 第二轮独立复审修订（2026-11-14）
 
 新增修正：① `ori_question` 默认原始问题外送；② `ctx.web` 直调不自动经过本地 ToolRuntime；③ 已有 §14.4 的只读 `TrustedRequestContext` 与 §5.1 写入 `TrustedCommandContext` 必须分别校验；④ 动态 Provider/计费/凭据选择造成的审授权与执行偏差；⑤ 本地 HTTP Fetch 与 DeepSeek 远端 Fetch 错误、重定向证明能力不同；⑥ Browser 进程/Session 状态不等于安全隔离；⑦ Schedule receipt 故障重复入站。均为 **DESIGN_CORRECTED/CODE_UNTESTED**；新增验收仍属于 V12-01—V12-10，见 `docs/reviews/V1.2-DeepSeek-Harness-Static-Review-20261114.md`，没有更改 M0 与 gitlink。
+
+### 17.11 V1.2 第三轮外部反馈处理（2026-11-14；文档层）
+
+外部审查反馈 P1-1 Stagehand 独立模型出站、P1-2 Web 实际派发点缺少可实施绑定、P1-3 Schedule 手动 `runNow()` 周期键变化，以及 P2 阶段/功能门禁不分，分别修订于 §10.6、§5.1.3、§13.6、§16.7 并在 §14.6/开发清单新增验收子例。所有项当前为 `DESIGN_CORRECTED / IMPLEMENTATION_NOT_RUN`，本 PR 不更改产品代码、M0 状态与 Harness gitlink。原独立设计复审记录追加第三轮评估，不冒充不同成员的运行代码审核。
 
 ## 18. 设计依据和技术参考
 

@@ -81,3 +81,15 @@ PR #5 的复测 run 43241222611 也已完成两版原始全量及证据完整性
 ### V1.2 第二轮候选兼容审核补充
 
 新增待测接口与配置：`sendOriginalQuestion: false`、`ori_question` 实际 HTTP 载荷、`searchBilling/fetchBilling` 在不同模型路由下的真实选择、业务直调 `ctx.web` 的独立 EvidenceGateway、`WebFetchResult.statusCode` 与 DeepSeek Fetch Provider Error 差异、Browser MCP 进程目录隔离、Schedule inbox/receipt 重放窗口。涉及不同锁版的公共 API 名称和配置字段必须通过 TypeScript/配置树验证；**不能假定 current DSH 0.2.1-alpha.2 具备 rc.3 行为**。V12-01—V12-10 及其子例目前 `NOT_RUN`，保持 `CANDIDATE_NOT_COMBINED`。
+
+### V1.2 第三轮功能兼容与启用门禁（静态）
+
+| 功能 | 上游约束 | 当前默认 | 启用门禁 |
+| --- | --- | --- | --- |
+| Web Search/Fetch | Provider 与异步凭据/endpoint 解析不提供统一业务原子批准参数 | DISABLED / FIXTURE_ONLY | V12-01B、V12-03C + 网络出口/动态竞态测试 |
+| Stagehand | 原生独立模型/Key/Token/费用及不可保证取消 | DISABLED | V12-08C、V12-10B |
+| Schedule 定时 | Inbox/receipt 故障重复投递 | 只读 Fixture | V12-09B（稳定周期去重） |
+| Schedule 手动 | runNow() 每次产生新 occurrenceAt 且无业务请求 ID 输入 | 只读 Fixture | V12-09B（manualExecutionRequestId 持久关联） |
+| 项目阶段/可选能力 | 两种状态不可互相推定 | 分开维护 | V12-GATE |
+
+**全部 NOT_RUN / CANDIDATE_NOT_COMBINED**。当前 DSH/Cordis/Harness gitlink、CI 记录及 M0-14 BLOCKED 不变。

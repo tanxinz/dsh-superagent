@@ -61,3 +61,35 @@ CI 使用 Ubuntu 24.04 / Node 24.22.1，保留原生 addon 步骤，没有替换
 PR #5 的复测 run 43241222611 也已完成两版原始全量及证据完整性审核，测试/跳过/预期失败计数与第三轮相同。该运行不包含后续 Bridge 源码；完整 ZIP 在 evidence/m0-ci/run-43241222611/，不挪作 Bridge 新 CI 通过证据。
 
 2026-11-13 接续：PR #11 run43328280921 的两版 Harness 原始完整构建/全量均PASS；SuperAgent 的新依赖 probe FAIL（不同 isolation scope 被全局计数误判），本分支已修复。匹配发布 CLI0.2.1-alpha.2 的真实配置夹具 profile/无模型 Session 受限与恢复通过；不是外部账户或真实模型验收，组合仍不提升整项 VERIFIED。新源码CI须独立核验。见 acceptance/M0-trust-permissions-20261113.md。
+
+## 2026-11-14 V1.2 Harness rc.3 兼容性候选（静态，不替代现有 M0 基线）
+
+| 对象 | 当前项目及已验证范围 | v0.2.2-rc.3 公开事实 | 本项目判定 |
+| --- | --- | --- | --- |
+| SuperAgent 依赖 | DSH `0.2.1-alpha.2`、Cordis `4.0.5-alpha.1`、Schemastery `3.18.5-alpha.1` 精确 peer | rc.3 预发布根 `package.json` 使用 pnpm 11.28.5、Node >=24.9.0；实际 workspace 依赖需冻结安装核验 | `CANDIDATE_NOT_COMBINED` |
+| Harness gitlink | 原固定 `e8f7b93`，另有发布匹配候选 `d743267`，两者旧全量测试通过的证据分别保留 | `dsh-v0.2.2-rc.3` tag commit `38a6a5c965aa99ab525161efb7cc5cf1fe62fced` | **不修改 gitlink** |
+| SuperAgent CI | PR #13 报告 68 文件/1278 测试通过、无模型 profile 通过；不能视为 Worker 实际隔离 | rc.3 与 SuperAgent 的 full install/build/test/profile 尚未运行 | `UNTESTED` |
+| Web | 当前锁版具体 Web Provider 必须检查编译及配置树 | rc.3 `@deepseek-ai/dsh-web-deepseek-api` 提供独立 Search/Fetch；默认 Search=DeepSeek API、Fetch=本地 HTTP | `NOT_PORTED` |
+| AgentTeam / Browser | 真实 Worker/子 Session OS/网络/密钥隔离尚未闭合 | rc.3 持久 Team 任务板和实验性 Browser Use，不负责业务授权和远端对账 | `NOT_PORTED` |
+| Schedule | 业务 Engine/Effects 继续负责持久执行 | rc.3 Host Schedule 仅将消息投递至 Session inbox；回执不代表业务执行成功 | `NOT_PORTED` |
+| M0 | M0-01—13 IN_PROGRESS；M0-14 BLOCKED，0/14 整项完成 | 新能力发布不解除现存前置问题 | `M0_BLOCKED` |
+
+**升级门禁**：须在单独验证分支固定完整 Git SHA、Node/pnpm/lockfile、实际解析的 Cordis/Schemastery/DSH 包；各仓库全量 install/build/test 与原始日志不可混用；再做真实配置树、主/Worker/子 Session、ToolGuard/非 Tool Gateway、Store/Effects/Outbox、出站网络隔离、Team/Browser/Schedule/API 用例。所有证据注明真实/Mock、失败、跳过、expected-fail 和命令退出码。未达到兼容准入不提修改原 gitlink/锁文件；M0-14 未准出不进入 M1 运行集成。
+
+详见 [V1.2 详细设计](SuperAgent_Harness_Design_Final.md) 和 [开发清单 V12-01—V12-10](SuperAgent_Harness_Development_Checklist_V1.0_20261112.md)。
+
+### V1.2 第二轮候选兼容审核补充
+
+新增待测接口与配置：`sendOriginalQuestion: false`、`ori_question` 实际 HTTP 载荷、`searchBilling/fetchBilling` 在不同模型路由下的真实选择、业务直调 `ctx.web` 的独立 EvidenceGateway、`WebFetchResult.statusCode` 与 DeepSeek Fetch Provider Error 差异、Browser MCP 进程目录隔离、Schedule inbox/receipt 重放窗口。涉及不同锁版的公共 API 名称和配置字段必须通过 TypeScript/配置树验证；**不能假定 current DSH 0.2.1-alpha.2 具备 rc.3 行为**。V12-01—V12-10 及其子例目前 `NOT_RUN`，保持 `CANDIDATE_NOT_COMBINED`。
+
+### V1.2 第三轮功能兼容与启用门禁（静态）
+
+| 功能 | 上游约束 | 当前默认 | 启用门禁 |
+| --- | --- | --- | --- |
+| Web Search/Fetch | Provider 与异步凭据/endpoint 解析不提供统一业务原子批准参数 | DISABLED / FIXTURE_ONLY | V12-01B、V12-03C + 网络出口/动态竞态测试 |
+| Stagehand | 原生独立模型/Key/Token/费用及不可保证取消 | DISABLED | V12-08C、V12-10B |
+| Schedule 定时 | Inbox/receipt 故障重复投递 | 只读 Fixture | V12-09B（稳定周期去重） |
+| Schedule 手动 | runNow() 每次产生新 occurrenceAt 且无业务请求 ID 输入 | 只读 Fixture | V12-09B（manualExecutionRequestId 持久关联） |
+| 项目阶段/可选能力 | 两种状态不可互相推定 | 分开维护 | V12-GATE |
+
+**全部 NOT_RUN / CANDIDATE_NOT_COMBINED**。当前 DSH/Cordis/Harness gitlink、CI 记录及 M0-14 BLOCKED 不变。

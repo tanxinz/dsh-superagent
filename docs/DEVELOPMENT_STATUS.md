@@ -10,6 +10,10 @@ PR #12 已建立，20c576d的首轮CI43361201100中review、SuperAgent完整检�
 
 更新日期：2026-11-12（北京时间）。本批继续执行 M0；阶段状态 BLOCKED，M0-14 未通过。
 
+> **2026-11-14 V1.2 设计补丁交接（独立文档分支，不计入 M0 实施）**：针对 DeepSeek 2026-11-13 应用 API 与 Harness `dsh-v0.2.2-rc.3` 的复用能力，仅修订 Markdown 设计、开发清单与上游/兼容矩阵；固定当前 SuperAgent/Harness 源码、依赖锁和历史 CI 日志，未运行新版或业务 Worker。新增 V12-01—V12-10 全部 `NOT_RUN`。截至本分支从 PR #13 `bc99a8d` 创建的快照，**M0-01—13 IN_PROGRESS、M0-14 BLOCKED、0/14 整项完成、M1 未准出**。相关版本可用性仅属官方公开资料静态核对，详见 [V1.2 设计](SuperAgent_Harness_Design_Final.md)、[新增开发清单 §14](SuperAgent_Harness_Development_Checklist_V1.0_20261112.md)、[上游能力核验](upstream-capabilities.md)、[兼容矩阵](compatibility-matrix.md)。**本条为从 PR #13 分叉时的状态快照，不代替其后任何新 PR/CI 状态**。
+
+> **2026-11-14 V1.2 第三轮设计复审交接**：PR #14 在外部反馈后继续仅修订文档，补充 Stagehand 独立模型出站默认禁止、Web 冻结配置隔离执行域/候选最终派发 Gate、Schedule 手动 `manualExecutionRequestId` 与 M 阶段/可选能力双门禁。新增 V12-01B/03C/08C/09B/10B/GATE 等回归子例全部 `NOT_RUN`，没有安装/运行 rc.3、改变 DSH gitlink、调整 M0 原 100 项任务或修改 PR #13 的源码。M0-01—13 `IN_PROGRESS`、M0-14 `BLOCKED`、0/14 完成，M1 仍未准出。见 [设计 §5.1.3 / §10.6 / §13.6 / §16.7](SuperAgent_Harness_Design_Final.md) 和 [三轮复审记录](reviews/V1.2-DeepSeek-Harness-Static-Review-20261114.md)。
+
 ## 当前接手：原生 profile 依赖卸载/恢复（2026-11-13）
 
 分支 feat/m0-profile-dependency-lifecycle-20261113，基于 PR #10 的 15364bd。新增真实 DSH 未配置 profile 的依赖切换模式：卸载并恢复原生 PermissionPresetService，验证旧 Mesh/Runtime 拒绝、重新加载后新服务就绪、权限预设保持一致且 provider 唯一。最终两次进程 PASS，Bridge 安装/清理每次各 2、优雅退出 0；原有两次启停模式也通过。SuperAgent 完整检查 62 文件/1233 测试、类型检查和构建 PASS；22 Python /9 Node 回归最终通过，原失败记录保留。新 CI 已接入强制命令证据和完整轨迹工件上传。没有修改产品源码或权限策略。

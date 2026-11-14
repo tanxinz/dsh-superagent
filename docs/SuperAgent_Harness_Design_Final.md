@@ -878,6 +878,8 @@ DeepSeek 2026-11-13 已提供 Messages / Responses / Chat Completions 的模型�
 
 执行端在发送查询前进行数据等级、目的地、权限和预算校验；外部返回的 URL、网页、文档及 OCR 文本一律是**不可信内容**，只可作为引用数据，不允许提升权限、修改策略或要求 Agent 执行其中的“系统提示”。敏感内容需脱敏或拒绝外送。当前 `ctx.web.fetchProvider: http` 不提供内网阻断，必须通过 URL/解析后 IP/重定向复核及容器网络阻断实现 SSRF 防护，或在安全验收前禁止模型触达该提供方。
 
+**Fetch 差异与 SSRF 责任**：本地 HTTP Fetch 对网页 HTTP 404/500 也可能返回正常 `WebFetchResult`，必须检查 `statusCode`、`body.kind`、`truncated` 及业务预期；远端 DeepSeek Fetch Provider 遇到抓取失败可能返回 Provider 错误，并不提供可证明的最终重定向 URL/IP。Fetch Markdown 不能视为原站原始字节，未知 `WebError.code` 必须保留并安全降级。对本地 HTTP Fetch，可信域名字符串/单次 IP 校验不足以防 DNS 重绑定，必须有不可绕过的网络出口限制、受控代理和逐重定向校验；对远端 Fetch，只能在提交 URL 前约束披露范围，不能声称本地验证了远端最终落点。
+
 ## 10. L4 四级异构执行光谱（4A / 4B / 4C / 4D）
 
 ### 10.1 共同执行契约（拟新增）
@@ -963,6 +965,8 @@ Worker 默认运行在独立 OS/容器隔离中，不挂载生产 DB 凭据、�
 
 M2 可先做无凭据、只读截图与导航 Fixture；表单提交、删除、发布、登录态修改及可能产生效果的浏览器操作必须归入具体 `ActionRun`，受末端授权/撤权/预算/效果键控制，返回未知时进入 `UNKNOWN_RECONCILE`，不能根据断线盲目再点击。M5 才按批准范围完善浏览器交互体验。Harness Schedule 只负责 Host 持久定时投递，其 Receipt 证明写入 Session inbox 而**不是**模型完成、业务成功或恰好一次执行；真正业务处理必须通过 Engine/Effects 的幂等入口。
 
+**浏览器隔离补充**：实验性 Playwright MCP 的 Browser 进程在 Session 验证的工作目录启动，后续切换 Session 目录不迁移进程；恢复 Session 不恢复页面/登录态。Browser 必须使用专用容器/用户、无生产密钥、最小挂载与出网约束。工具 schema 随提供方版本变化，Provider 断连、初始化失败、取消已发动作与外部附着跨进程竞争均需负向验证。
+
 ## 11. L5 治理、Watchdog 与准出（5A / 5B / 5C）
 
 ### 11.1 5A：Authority & Mandate Gate
@@ -1013,6 +1017,8 @@ SuperAgent Outbox 仍是唯一渠道消息发起者。`DELIVERABLE_VERIFIED` 在
 3. **Browser/MCP**：以每个具体工具调用及真实目标资源判定读/写权限；执行前和派发点复核撤权 epoch，隔离 Session、进程、凭据及网络；已发出动作只能记录并对账，不能称为撤销成功。
 4. **输入可信度与审计**：工具响应、页面、OCR、MCP server instructions 均标记不可信，不能生成 TrustedContext/Mandate；结果日志脱敏并记录拒绝原因和版本，不存明文 API Key。
 5. **失败关闭**：Guard/网络/证据服务缺失时拒绝可写执行；安全 API `safety_check` 仅作为附加审核，不取代确定性权限及业务策略。
+
+**三路径最终拒绝证明不可互借**：模型 `web_search/web_fetch` 经过 Harness ToolRuntime；业务直调 `ctx.web.search/fetch` 由受信 EvidenceGateway 单独校验；DeepSeek 服务端 `deepseek_web_search/deepseek_read_url` 由路由/数据出站策略限制。任一路通过不能证明其余两路安全；服务端执行不能宣称逐调用受本地 ToolGuard 拦截。
 
 ## 12. 三个业务场景的详细端到端时序
 
@@ -1140,6 +1146,8 @@ Session 绑定启用部分唯一约束，父 Session 结束/撤权时对所有�
 - Browser Session / Cookie 不属于可重放业务事实。取消、断网、崩溃或重试后，任何可能已触发外部效果的操作记录为 `UNKNOWN_RECONCILE`；通过远端可验证状态、幂等接口或人工核查结清，不自动重复提交。
 - Schedule 到期投递仅表示 Session inbox 有持久消息；若需业务执行，必须用稳定来源/周期键经 Engine 去重、检查 Mandate 和当前安全版本。Schedule 既不是业务队列，也不提供跨业务系统的恰好一次执行保证。
 - DeepSeek 服务端工具的搜索结果/引用、Fetch Markdown、OCR 文本与模型最终回答必须分别归档证据等级；HTTP `200`、流式片段或 `safety_check` 非拒绝不能作为“任务成功”或“执行许可”。
+
+**Schedule 恢复故障窗口**：Host 可先完成 Session inbox 持久写入，后写 Schedule receipt；中途崩溃可能造成重复投递。业务去重必须采用可信 `scheduleTaskId + scheduledAt` 或等效稳定周期来源，而不是本次 `messageId`。取得不了稳定来源身份时仅允许只读提醒，不得由重复定时消息触发可写 ActionRun；收到任务≠任务完成。
 
 ## 14. 插件生命周期、配置与可运维性
 
@@ -1323,6 +1331,8 @@ interface DemoRunTrace {
 新增**配置约束而不是第二套配置服务**：显式登记 `providerId、searchProvider、fetchProvider、selectedModelRoute、serverWebToolsEnabled` 和选用的认证来源；敏感凭据仅经 Harness 已验证的受信凭据服务解析，绝不写入仓库、Session 明文日志或证据工件。`ctx.web` 当前默认本地 HTTP Fetch 不限制目的地，未通过 SSRF 与网络隔离验证前不可给不可信网页或 Agent 暴露。
 
 按每一受信 Ticket/Session 及根预算限制最大外部查询次数、Fetched 页面数、OCR 页数、模型 Token、并发数、墙钟时间与重试次数；单独记账模型推理与 DeepSeek Search/Fetch 的计费请求，避免误以为工具调用包含在 Token 费用中。异常按服务端明确的可重试类别和幂等条件退避；对可写浏览器/RPC 不自动盲目重试。日志记录目标域和用量摘要但须脱敏；预算未知时采取保守限制或拒绝新的收费调用。
+
+**新增配置与测试要求**：将 `sendOriginalQuestion: false`（真实出站没有 `ori_question`）、`searchBilling/fetchBilling` 的实际账户/API Key 和 endpoint、provider 动态变更后的授权重核，作为新 Web 能力准入条件。插件 `searchRequestsPerSecond` 仅限制当前插件实例，不能替代跨实例/账号限速与根业务预算；模型工具、业务直调、服务端 Web Tools 三条路径须分别测试，不以 ToolGuard 单路通过推断全部安全。
 
 ## 15. 分阶段实施计划（学习版 M0—M5 与完整目标 G0—G5）
 
@@ -1651,6 +1661,10 @@ M0—M5 不要求大规模吞吐、复杂审批、生产渠道送达、正式环
 | P2-01—02 OCR 图文精度和浏览器/Team UI | §15.2.1、§16.6 | 分阶段再立真实验收任务 |
 
 **审核声明**：上述“设计修订”只修正文义、职责和测试契约，不代表源码问题已修复、用例已运行、依赖已升级或 M0/M1 已准出。保持五层 17 模块、原 100 项清单、受信 Engine 单写、SQLite + 原生 Effects、Jev 不签发权限及 M0—M5/G0—G5 双门槛。
+
+### 17.10 V1.2 第二轮独立复审修订（2026-11-14）
+
+新增修正：① `ori_question` 默认原始问题外送；② `ctx.web` 直调不自动经过本地 ToolRuntime；③ 已有 §14.4 的只读 `TrustedRequestContext` 与 §5.1 写入 `TrustedCommandContext` 必须分别校验；④ 动态 Provider/计费/凭据选择造成的审授权与执行偏差；⑤ 本地 HTTP Fetch 与 DeepSeek 远端 Fetch 错误、重定向证明能力不同；⑥ Browser 进程/Session 状态不等于安全隔离；⑦ Schedule receipt 故障重复入站。均为 **DESIGN_CORRECTED/CODE_UNTESTED**；新增验收仍属于 V12-01—V12-10，见 `docs/reviews/V1.2-DeepSeek-Harness-Static-Review-20261114.md`，没有更改 M0 与 gitlink。
 
 ## 18. 设计依据和技术参考
 
